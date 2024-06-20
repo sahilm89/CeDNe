@@ -115,8 +115,10 @@ class NervousSystem(nx.MultiDiGraph):
         self.worm.networks[network] = self
         self.groups = {}
 
-        self.neurons = NeuronGroup(self, group_name='all_neurons')  # dictionary of all neurons in the nervous system 
-        self.connections = ConnectionGroup(self, group_name='all_connections')  # dictionary of all connections in the nervous system
+        self.neurons = NeuronGroup(self, group_name='all_neurons')  \
+            # dictionary of all neurons in the nervous system 
+        self.connections = ConnectionGroup(self, group_name='all_connections') \
+              # dictionary of all connections in the nervous system
 
         self._filtered_nodes = set()
         self._filtered_edges = set()
@@ -433,7 +435,8 @@ class NervousSystem(nx.MultiDiGraph):
         source_neuron, target_neuron = pair
         if copy_graph:
             new_graph = self.copy()
-            new_graph = new_graph.contract_neurons((source_neuron, target_neuron, contracted_name), copy_graph=False)
+            new_graph = new_graph.contract_neurons((source_neuron, target_neuron, contracted_name)\
+                                                   , copy_graph=False)
             return new_graph
         else:
             nx.contracted_nodes(self, self.neurons[source_neuron], self.neurons[target_neuron],\
@@ -486,8 +489,8 @@ class NervousSystem(nx.MultiDiGraph):
             The subgraph will only include neurons that have all the specified attributes\
             and values. Defaults to an empty dictionary.
             connections_have (dict): A dictionary of connection attributes and their corresponding\
-            values. The subgraph will only include connections that have all the specified attributes\
-            and values. Defaults to an empty dictionary.
+            values. The subgraph will only include connections that have all the specified \
+            attributes and values. Defaults to an empty dictionary.
             condition (str): The condition to apply when filtering neurons and connections.
             Can be 'AND' or 'OR'. Default is 'AND'.
 
@@ -555,7 +558,8 @@ class NervousSystem(nx.MultiDiGraph):
         Returns a deep copy of the Nervous System object.
 
         Parameters:
-            as_view (bool): If True, the copy will be a view of the original graph. Default is False.
+            as_view (bool): If True, the copy will be a view of the original graph. \
+            Default is False.
 
         Returns:
             object: a deep copy of the Nervous System object.
@@ -587,7 +591,7 @@ class NervousSystem(nx.MultiDiGraph):
             NeuronGroup: The created neuron group.
         """
         return NeuronGroup(self, members, group_name)
-    
+
     def delete_neuron_group(self, groupname):
         """
         Deletes a neuron group with the specified name.
@@ -599,7 +603,7 @@ class NervousSystem(nx.MultiDiGraph):
             None
         """
         del self.groups[groupname]
-    
+
     def make_connection_group(self, members, group_name=None):
         """
         Creates a connection group with the specified members.
@@ -613,7 +617,7 @@ class NervousSystem(nx.MultiDiGraph):
             ConnectionGroup: The created connection group.
         """
         return ConnectionGroup(self, members, group_name)
-    
+
     def delete_connection_group(self, groupname):
         """
         Deletes a connection group with the specified name.
@@ -625,7 +629,7 @@ class NervousSystem(nx.MultiDiGraph):
             None
         """
         del self.groups[groupname]
-    
+
     def __delete__(self, neuron):
         """
         Deletes the object from the network.
@@ -769,13 +773,13 @@ class ConnectionGroup:
         if members is None:
             members = []
         else:
-            assert all([isinstance(m, Connection)for m in members]), "Connection group members must be\
-        #      of type Connection"
+            assert all([isinstance(m, Connection)for m in members]),\
+                  "Connection group members must be of type Connection"
         self.members = members
         self.connections = {m._id:m for m in members}
         self.network = network
-        assert self.group_name not in self.network.groups, "Group name {} already exists\
-             in the network".format(self.group_name)
+        assert self.group_name not in self.network.groups, f"Group name {self.group_name} already exists\
+             in the network"
         self.network.groups.update({self.group_name: self})
 
     def __iter__(self):
@@ -820,7 +824,7 @@ class ConnectionGroup:
         Returns True if the connection with the specified name is in the group, False otherwise.
         """
         return connection in self.connections
-    
+
     def __getitem__(self, connection_id):
         """
         Returns the connection with the specified name in the group.
@@ -838,7 +842,8 @@ class ConnectionGroup:
         """
         Updates the list of members in the group.
         """
-        assert all([isinstance(connection, Connection) for ename, connection in member_dict.items()]), "Connection group members must be\
+        assert all([isinstance(connection, Connection) for ename, connection in \
+                    member_dict.items()]), "Connection group members must be\
              of type Connection"
         self.connections.update(member_dict)
         self.members = self.connections.values()
@@ -1005,6 +1010,7 @@ class Connection:
 
         self.pre_neuron.out_connections[self._id] = self
         self.post_neuron.in_connections[self._id] = self
+
     @property
     def by_name(self):
         return (self.pre_neuron.name, self.post_neuron.name)
@@ -1277,17 +1283,16 @@ def join_networks(networks, copy_graph=False):
             fold_dict[node.name] = [node]
         else:
             fold_dict[node.name].append(node)
-    
+
     for nodename, nodes_to_fold in fold_dict.items():
         node1 = fold_dict[nodename][0]
         for node2 in nodes_to_fold[1:]:
             network_composed = nx.contracted_nodes(network_composed, node1, node2,\
                                  copy=copy_graph)
-    
+
     network_composed.update_neurons()
     network_composed.update_connections()
     return network_composed
-
 
 # Transformations
 def _linear_transform(value, minvalue, maxvalue):
