@@ -133,10 +133,14 @@ class NervousSystem(nx.MultiDiGraph):
         electrical synapses, and positions.
 
         Args:
-            neuron_data (str): The path to the pickle file containing neuron data.
-            chem_synapses (str): The path to the pickle file containing chemical synapses.
-            elec_synapses (str): The path to the pickle file containing electrical synapses.
-            positions (str): The path to the pickle file containing positions.
+            neuron_data (str): 
+                The path to the pickle file containing neuron data.
+            chem_synapses (str): 
+                The path to the pickle file containing chemical synapses.
+            elec_synapses (str): 
+                The path to the pickle file containing electrical synapses.
+            positions (str): 
+                The path to the pickle file containing positions.
 
         Returns:
             None
@@ -172,9 +176,13 @@ class NervousSystem(nx.MultiDiGraph):
     def build_network(self, neurons, adj, label):
         """
         Make a network with the neurons
-        :param neurons: The file containing neuron information
-        :param adj: The adjacency matrix
-        :param label: The label for the network
+        Args:
+            neurons: 
+                The file containing neuron information
+            adj: 
+                The adjacency matrix
+            label: 
+                The label for the network
         """
         with open(neurons, 'rb') as neuron_file:
             node_dict = pickle.load(neuron_file)
@@ -227,11 +235,16 @@ class NervousSystem(nx.MultiDiGraph):
           types, categories, modalities, and positions.
 
         Args:
-            labels (list): A list of labels for the neurons.
-            neuron_types (list, optional): A list of types for the neurons. Defaults to None.
-            categories (list, optional): A list of categories for the neurons. Defaults to None.
-            modalities (list, optional): A list of modalities for the neurons. Defaults to None.
-            positions (dict, optional): A dictionary mapping labels to positions. Defaults to None.
+            labels (list): 
+                A list of labels for the neurons.
+            neuron_types (list, optional): 
+                A list of types for the neurons. Defaults to None.
+            categories (list, optional): 
+                A list of categories for the neurons. Defaults to None.
+            modalities (list, optional): 
+                A list of modalities for the neurons. Defaults to None.
+            positions (dict, optional): 
+                A dictionary mapping labels to positions. Defaults to None.
 
         Returns:
             None
@@ -307,8 +320,8 @@ class NervousSystem(nx.MultiDiGraph):
 
         Parameters:
             gap_junction_adjacency (dict): A dictionary representing the adjacency of gap junctions.
-                The keys are source neurons and the values are dictionaries where the keys are \
-                    target neurons and the values are dictionaries containing the connection data.
+                The keys are source neurons and the values are dictionaries where the keys are
+                target neurons and the values are dictionaries containing the connection data.
 
         Returns:
             None
@@ -423,12 +436,15 @@ class NervousSystem(nx.MultiDiGraph):
         Contract two neurons together.
 
         Args:
-            pair (tuple): Pair of neuron names to contract.
-            copy_graph (bool): If True, returns a new graph with the contraction.
-            Otherwise, modifies the current graph.
+            pair (tuple): 
+                Pair of neuron names to contract.
+            copy_graph (bool): 
+                If True, returns a new graph with the contraction.
+                Otherwise, modifies the current graph.
 
         Returns:
-            NervousSystem: A deep copy of the subgraph generated from the neuron_names.
+            NervousSystem: 
+                A deep copy of the subgraph generated from the neuron_names.
                 The subgraph contains a dictionary of neurons with their names as keys.
                 Only returned if copy_graph is True.
         """
@@ -447,11 +463,11 @@ class NervousSystem(nx.MultiDiGraph):
 
 
     def neurons_have(self, key):
-        ''' Returns an arbitrary attribute for the neurons'''
+        ''' Returns neuron attributes'''
         return nx.get_node_attributes(self, key)
 
     def connections_have(self, key):
-        ''' Gets an arbitrary attribute for the connections'''
+        ''' Gets connection attributes'''
         return nx.get_edge_attributes(self, key)
 
     def __filter_node__(self, node):
@@ -471,9 +487,12 @@ class NervousSystem(nx.MultiDiGraph):
         Checks if a specific edge is filtered within the network.
 
         Parameters:
-            n1: The starting node of the edge.
-            n2: The ending node of the edge.
-            key: The key identifying the edge.
+            n1: 
+                The starting node of the edge.
+            n2: 
+                The ending node of the edge.
+            key: 
+                The key identifying the edge.
 
         Returns:
             Boolean: True if the edge is in the filtered edges, False otherwise.
@@ -485,14 +504,17 @@ class NervousSystem(nx.MultiDiGraph):
         Returns a subgraph view of the current network based on the specified conditions.
 
         Parameters:
-            neurons_have (dict): A dictionary of neuron attributes and their corresponding values.
-            The subgraph will only include neurons that have all the specified attributes\
-            and values. Defaults to an empty dictionary.
-            connections_have (dict): A dictionary of connection attributes and their corresponding\
-            values. The subgraph will only include connections that have all the specified \
-            attributes and values. Defaults to an empty dictionary.
-            condition (str): The condition to apply when filtering neurons and connections.
-            Can be 'AND' or 'OR'. Default is 'AND'.
+            neurons_have (dict): 
+                A dictionary of neuron attributes and their corresponding values.
+                The subgraph will only include neurons that have all the specified attributes
+                and values. Defaults to an empty dictionary.
+            connections_have (dict):
+                A dictionary of connection attributes and their corresponding
+                values. The subgraph will only include connections that have all the specified
+                attributes and values. Defaults to an empty dictionary.
+            condition (str): 
+                The condition to apply when filtering neurons and connections.
+                Can be 'AND' or 'OR'. Default is 'AND'.
 
         Returns:
             networkx.classes.Graph: A subgraph view of the current network that satisfies
@@ -558,11 +580,13 @@ class NervousSystem(nx.MultiDiGraph):
         Returns a deep copy of the Nervous System object.
 
         Parameters:
-            as_view (bool): If True, the copy will be a view of the original graph. \
-            Default is False.
+            as_view (bool): 
+                If True, the copy will be a view of the original graph.
+                Default is False.
 
         Returns:
-            object: a deep copy of the Nervous System object.
+            object: 
+                a deep copy of the Nervous System object.
         """
         return self.copy(as_view=as_view)
         #return deepcopy(self)
@@ -583,9 +607,12 @@ class NervousSystem(nx.MultiDiGraph):
         Creates a neuron group with the specified members.
 
         Parameters:
-            members (List[str]): The list of members in the neuron group.
-            groupname (str): The name of the neuron group. Defaults to None.
-            group_id (int, optional): The ID of the neuron group. Defaults to 0.
+            members (List[str]): 
+                The list of members in the neuron group.
+            groupname (str): 
+                The name of the neuron group. Defaults to None.
+            group_id (int, optional): 
+                The ID of the neuron group. Defaults to 0.
 
         Returns:
             NeuronGroup: The created neuron group.
@@ -609,9 +636,12 @@ class NervousSystem(nx.MultiDiGraph):
         Creates a connection group with the specified members.
 
         Parameters:
-            members (List[str]): The list of members in the connection group.
-            groupname (str): The name of the connection group. Defaults to None.
-            group_id (int, optional): The ID of the connection group. Defaults to 0.
+            members (List[str]): 
+                The list of members in the connection group.
+            groupname (str): 
+                The name of the connection group. Defaults to None.
+            group_id (int, optional): 
+                The ID of the connection group. Defaults to 0.
 
         Returns:
             ConnectionGroup: The created connection group.
@@ -644,9 +674,12 @@ class NeuronGroup:
         Initializes a new instance of the NeuronGroup class.
 
         Parameters:
-            groupname (str): The name of the neuron group.
-            members (List[str]): The list of members in the neuron group.
-            group_id (int, optional): The ID of the neuron group. Defaults to 0.
+            groupname (str): 
+                The name of the neuron group.
+            members (List[str]): 
+                The list of members in the neuron group.
+            group_id (int, optional): 
+                The ID of the neuron group. Defaults to 0.
 
         Returns:
             None
@@ -758,9 +791,12 @@ class ConnectionGroup:
         Initializes a new instance of the NeuronGroup class.
 
         Parameters:
-            groupname (str): The name of the neuron group.
-            members (List[str]): The list of members in the neuron group.
-            group_id (int, optional): The ID of the neuron group. Defaults to 0.
+            groupname (str): 
+                The name of the neuron group.
+            members (List[str]): 
+                The list of members in the neuron group.
+            group_id (int, optional): 
+                The ID of the neuron group. Defaults to 0.
 
         Returns:
             None
@@ -875,15 +911,22 @@ class Neuron:
         Initializes a new instance of the Neuron class.
 
         Args:
-            name (str): The name of the neuron.
-            network (NeuronalNetwork): The neuronal network to which the neuron belongs.
-            type (str, optional): The type of the neuron. Defaults to ''.
-            category (str, optional): The category of the neuron. Defaults to ''.
-            modality (str, optional): The modality of the neuron. Defaults to ''.
-            position (dict, optional): The position of the neuron. Defaults to None.
-            presynapses (list, optional): The list of presynaptic components. Defaults to None.
-            postsynapses (dict, optional): The dictionary of postsynaptic components.
-            Defaults to None.
+            name (str): 
+                The name of the neuron.
+            network (NeuronalNetwork): 
+                The neuronal network to which the neuron belongs.
+            type (str, optional): 
+                The type of the neuron. Defaults to ''.
+            category (str, optional): 
+                The category of the neuron. Defaults to ''.
+            modality (str, optional): 
+                The modality of the neuron. Defaults to ''.
+            position (dict, optional): 
+                The position of the neuron. Defaults to None.
+            presynapses (list, optional): 
+                The list of presynaptic components. Defaults to None.
+            postsynapses (dict, optional): 
+                The dictionary of postsynaptic components. Defaults to None.
         """
         self.name = name
         self.group_id = 0
@@ -981,7 +1024,7 @@ class Neuron:
         nx.set_node_attributes(self.network, {self: {property_name: property_value}})
 
     def get_property(self, key):
-        ''' Gets an arbitrary attribute for the class'''
+        ''' Gets an attribute for the class'''
         return getattr(self, key)
 
 class Connection:
@@ -991,11 +1034,16 @@ class Connection:
         Initializes a new instance of the Connection class.
 
         Args:
-            pre_neuron (Neuron): The neuron sending the connection.
-            post_neuron (Neuron): The neuron receiving the connection.
-            uid (int, optional): The unique identifier for the connection.
-            edge_type (str, optional): The type of the connection.
-            weight (float, optional): The weight of the connection.
+            pre_neuron (Neuron): 
+                The neuron sending the connection.
+            post_neuron (Neuron): 
+                The neuron receiving the connection.
+            uid (int, optional): 
+                The unique identifier for the connection.
+            edge_type (str, optional): 
+                The type of the connection.
+            weight (float, optional): 
+                The weight of the connection.
 
         Raises:
             AssertionError: If the neural networks of the pre and post neurons are not the same.
@@ -1023,12 +1071,12 @@ class Connection:
         nx.set_edge_attributes(self.network, {self._id:{'weight':self.weight}})
 
     def set_property(self, key, val):
-        ''' Sets an arbitrary attribute for the class'''
+        ''' Sets an attribute for the class'''
         setattr(self, key, val)
         nx.set_edge_attributes(self.network.graph, {self._id:{key:val}})
     
     def get_property(self, key):
-        ''' Gets an arbitrary attribute for the class'''
+        ''' Gets an attribute for the class'''
         return getattr(self, key)
 
 class Trial:
@@ -1038,8 +1086,10 @@ class Trial:
         Initializes the Trial object with the given parent and trial number.
 
         Parameters:
-            parent (datatype): Description of the parameter.
-            trialNum (datatype): Description of the parameter.
+            parent (datatype): 
+                Description of the parameter.
+            trialNum (datatype): 
+                Description of the parameter.
 
         Returns:
             None
@@ -1089,10 +1139,14 @@ class StimResponse:
         Initializes a StimResponse object.
 
         Parameters:
-            trial (Trial): The trial object associated with the stimulus and response.
-            stimulus (array-like): The stimulus signal.
-            response (array-like): The response signal.
-            baseline (int): The number of baseline samples to consider for the response.
+            trial (Trial): 
+                The trial object associated with the stimulus and response.
+            stimulus (array-like): 
+                The stimulus signal.
+            response (array-like): 
+                The response signal.
+            baseline (int): 
+                The number of baseline samples to consider for the response.
 
         Returns:
             None
@@ -1114,15 +1168,24 @@ class StimResponse:
 
         Parameters:
             feature_index (int): The index of the feature to extract. Possible values are:
-                0: Maximum value of the response.
-                1: Area under the curve of the response.
-                2: Mean value of the response.
-                3: Time to peak of the response.
-                4: Area under the curve to peak of the response.
-                5: Minimum value of the response.
-                6: Onset time of the response.
-                7: Positive area of the response.
-                8: Absolute area under the curve of the response.
+                0: 
+                    Maximum value of the response.
+                1: 
+                    Area under the curve of the response.
+                2: 
+                    Mean value of the response.
+                3: 
+                    Time to peak of the response.
+                4: 
+                    Area under the curve to peak of the response.
+                5: 
+                    Minimum value of the response.
+                6: 
+                    Onset time of the response.
+                7: 
+                    Positive area of the response.
+                8: 
+                    Absolute area under the curve of the response.
 
         Returns:
             The extracted feature value. The return type depends on the feature index.
@@ -1270,8 +1333,10 @@ def join_networks(networks, copy_graph=False):
     A function to join multiple networks into a single composed network.
     
     Parameters:
-        networks (list): List of networks to be joined.
-        copy_graph (bool, optional): Whether to create a copy of the graph. Defaults to False.
+        networks (list): 
+            List of networks to be joined.
+        copy_graph (bool, optional): 
+            Whether to create a copy of the graph. Defaults to False.
     
     Returns:
         network_composed: The composed network after joining all input networks.

@@ -4,7 +4,8 @@
 
 import numpy as np
 import pandas as pd
-from . import cedne
+import cedne as ced
+from cedne import cedne
 import matplotlib.pyplot as plt
 import networkx as nx
 import matplotlib.cm as cm
@@ -16,9 +17,20 @@ import textalloc as ta
 
 ## Directories
 
-TOPDIR = '/Users/sahilmoza/Documents/Codes/CedNe/' ## Change this to cedne and write a function to download data from an online server for heavy data.
+def get_root_path():
+    """Returns the path to the root directory of the library."""
+    return '/'.join(ced.__path__[0].split('/')[:-2])
+
+root_path = get_root_path()
+
+TOPDIR = root_path + '/' ## Change this to cedne and write a function to download data from an online server for heavy data.
 DATADIR = TOPDIR + 'data_sources/'
 DOWNLOAD_DIR = TOPDIR + 'data_sources/downloads/'
+
+prefix_NT = 'Wang_2019/'
+prefix_CENGEN = 'CENGEN/'
+prefix_NP = 'Ripoll-Sanchez_2023/'
+prefix_synaptic_weights = 'Randi_2023/'
 
 ## Loading and building functions
 cell_list = DATADIR + "Cell_list.pkl"
@@ -32,18 +44,13 @@ def makeWorm(name=''):
     return w
 
 ## Neurotransmitter tables
-prefix_NT = 'Wang_2019/'
-npr_file = DOWNLOAD_DIR + prefix_NT + 'GenesExpressing-BATCH-thrs4_use.xlsx'
-lig_file = DOWNLOAD_DIR + prefix_NT +'ligand-table.xlsx'
-npr = pd.read_excel(npr_file, sheet_name='npr', true_values='TRUE', false_values='FALSE', engine='openpyxl')
-ligmap = pd.read_excel(npr_file, sheet_name='ligmap', engine='openpyxl')
-ligtable = pd.read_excel(lig_file, sheet_name='Hermaphrodite, sorted by neuron', skiprows=7, engine='openpyxl')
-
 suffixes = ['', 'D', 'V', 'L', 'R', 'DL', 'DR', 'VL', 'VR', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13']
 present = False
 
-def getLigands(ligtable, neuron):
+def getLigands(neuron):
     ''' Returns ligand for each neuron'''
+    lig_file = DOWNLOAD_DIR + prefix_NT +'ligand-table.xlsx'
+    ligtable = pd.read_excel(lig_file, sheet_name='Hermaphrodite, sorted by neuron', skiprows=7, engine='openpyxl')
     a,b = ligtable['Neurotransmitter 1'][ligtable['Neuron']==neuron].to_list(), ligtable['Neurotransmitter 2'][ligtable['Neuron']==neuron].to_list()
     if len(b) and type(b[0])==str:
         return [a[0],b[0]]
@@ -66,8 +73,13 @@ def getLigandsAndReceptors(npr, ligmap, col):
     return receptor_ligand
 
 
-def loadNeurotransmitters(nn, npr=npr, ligmap=ligmap):
+def loadNeurotransmitters(nn):
     ''' Loads Neurotransmitters into neurons using Wang et al 2024'''
+    
+    npr_file = DOWNLOAD_DIR + prefix_NT + 'GenesExpressing-BATCH-thrs4_use.xlsx'
+    npr = pd.read_excel(npr_file, sheet_name='npr', true_values='TRUE', false_values='FALSE', engine='openpyxl')
+    ligmap = pd.read_excel(npr_file, sheet_name='ligmap', engine='openpyxl')
+
     for n in nn.neurons:
         neuron = nn.neurons[n]
         if not hasattr(neuron, 'preSynapse'):
@@ -81,17 +93,18 @@ def loadNeurotransmitters(nn, npr=npr, ligmap=ligmap):
                 nn.neurons[col + suffix].postSynapse.update(getLigandsAndReceptors(npr, ligmap, col))
                 #present = True
     for n in nn.neurons:
-        nn.neurons[n].preSynapse += getLigands(ligtable, n)
+        nn.neurons[n].preSynapse += getLigands(n)
 
 ## Neuropeptides tables
-prefix_NP = 'Ripoll-Sanchez_2023/'
-csvfile = DOWNLOAD_DIR + prefix_NP + 'neuropeptideConnectome.txt'
-lrm = DOWNLOAD_DIR +  prefix_NP + 'NPP_GPCR_networks_long_range_model_2.csv'
-nid = DOWNLOAD_DIR +  prefix_NP + '26012022_num_neuronID.txt'
-np_order = DOWNLOAD_DIR +  prefix_NP + '91-NPPGPCR networks'
 
-def loadNeuropeptides(w, lrm=lrm, nid=nid, np_order=np_order, neuropeps= 'all'):
+def loadNeuropeptides(w, neuropeps:str= 'all'):
     ''' Loads Neuropeptides into neurons using Ripoll-Sanchez et al. 2023'''
+
+    #csvfile = DOWNLOAD_DIR + prefix_NP + 'neuropeptideConnectome.txt'
+    lrm = DOWNLOAD_DIR +  prefix_NP + 'NPP_GPCR_networks_long_range_model_2.csv'
+    nid = DOWNLOAD_DIR +  prefix_NP + '26012022_num_neuronID.txt'
+    np_order = DOWNLOAD_DIR +  prefix_NP + '91-NPPGPCR networks'
+
     model = pd.read_csv(lrm,encoding= 'unicode_escape')
     neuronID = pd.read_csv(nid,encoding= 'unicode_escape', sep='\t', index_col=0, names=['NID', "Neuron"]) 
     neuropep_rec = pd.read_csv(np_order, sep=',', index_col=0)
@@ -126,7 +139,6 @@ def loadNeuropeptides(w, lrm=lrm, nid=nid, np_order=np_order, neuropeps= 'all'):
 
 
 ## Load CENGEN tables
-prefix_CENGEN = 'CENGEN/'
 thres_1 = DOWNLOAD_DIR + prefix_CENGEN + 'liberal_threshold1.csv'
 thres_2 = DOWNLOAD_DIR + prefix_CENGEN + 'medium_threshold2.csv'
 thres_3 = DOWNLOAD_DIR + prefix_CENGEN + 'conservative_threshold3.csv'
@@ -137,12 +149,18 @@ def returnThresholdDict(th1, th2, th3, th4, nnames, cengen_neurons):
     Generate a dictionary of thresholds using CENGEN levels of sensitivity.
 
     Args:
-        th1 (dict): A dictionary mapping neuron names to their corresponding CENGEN threshold values for level 1.
-        th2 (dict): A dictionary mapping neuron names to their corresponding CENGEN threshold values for level 2.
-        th3 (dict): A dictionary mapping neuron names to their corresponding CENGEN threshold values for level 3.
-        th4 (dict): A dictionary mapping neuron names to their corresponding CENGEN threshold values for level 4.
-        nnames (list): A list of neuron names.
-        cengen_neurons (dict): A dictionary mapping neuron names to their corresponding indices.
+        th1 (dict): 
+            A dictionary mapping neuron names to their corresponding CENGEN threshold values for level 1.
+        th2 (dict): 
+            A dictionary mapping neuron names to their corresponding CENGEN threshold values for level 2.
+        th3 (dict): 
+            A dictionary mapping neuron names to their corresponding CENGEN threshold values for level 3.
+        th4 (dict): 
+            A dictionary mapping neuron names to their corresponding CENGEN threshold values for level 4.
+        nnames (list): 
+            A list of neuron names.
+        cengen_neurons (dict): 
+            A dictionary mapping neuron names to their corresponding indices.
 
     Returns:
         dict: A dictionary containing four dictionaries, each representing a level of sensitivity. Each inner dictionary maps gene names to a list of threshold values for that gene across all neurons.
@@ -278,28 +296,26 @@ def get_enriched_neurons(network, target_neurons, excluded_neurons=None, thresho
 
     return enriched_neurons
 
-## Load synaptic weights from Excel file
-prefix_synaptic_weights = 'Randi_2023/'
-weight_file = DOWNLOAD_DIR + prefix_synaptic_weights + "41586_2023_6683_MOESM13_ESM.xls"
-
-def loadSynapticWeights(nn, weightMatrix = weight_file):
+## Synaptic weights
+def loadSynapticWeights(nn):
     """
     Load synaptic weights from an Excel file into the given neural network.
 
     Parameters:
         nn (NeuralNetwork): The neural network object to update with synaptic weights.
         weightMatrix (str, optional): The path to the Excel file containing synaptic weights. 
-            Defaults to leiferFile.
+        Defaults to leiferFile.
 
     Returns:
         None
     """
+    ## Load synaptic weights from Excel file
+    weightMatrix = DOWNLOAD_DIR + prefix_synaptic_weights + "41586_2023_6683_MOESM13_ESM.xls"
     wtMat = pd.read_excel(weightMatrix, index_col=0, engine='openpyxl').T
     for sid in list(nn.edges):
         if sid[0].name in wtMat:
             if sid[1].name in wtMat[sid[0].name]:
                 nn.connections[sid].updateWeight(wtMat[sid[0].name][sid[1].name])
-
 
 ### Plotting functions
 
