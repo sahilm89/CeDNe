@@ -1,0 +1,970 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.3, pytest-8.2.2, pluggy-1.5.0
+rootdir: /Users/sahilmoza/Documents/Codes/CeDNe
+configfile: pyproject.toml
+collected 44 items
+
+test_cedne.py ..F..FFFF.FFFFF.F...FFF..FFFFFFFFFFFFFFF....               [100%]
+
+=================================== FAILURES ===================================
+____________________________ TestBehavior.test_init ____________________________
+
+self = <test_cedne.TestBehavior object at 0x134079e50>
+behavior = <cedne.cedne.Behavior object at 0x127b05370>
+
+    def test_init(self, behavior):
+        """
+        Tests if the Behavior object is initialized correctly.
+        """
+        assert behavior.worm is not None
+>       assert behavior.condition == "Neutral"
+E       AttributeError: 'Behavior' object has no attribute 'condition'
+
+test_cedne.py:45: AttributeError
+_________________ TestNervousSystem.test_build_nervous_system __________________
+
+self = <test_cedne.TestNervousSystem object at 0x13407a390>
+tmpdir = local('/private/var/folders/j8/lrv376sd73l_40xn8sj9cwbh0000gn/T/pytest-of-sahilmoza/pytest-1/test_build_nervous_system0')
+
+    def test_build_nervous_system(self, tmpdir):
+        """
+        Tests if the NervousSystem object can be built correctly.
+        """
+        nervous_system = NervousSystem()
+        neuron_data = tmpdir.join('neuron_data.pkl')
+        chem_synapses = tmpdir.join('chem_synapses.pkl')
+        elec_synapses = tmpdir.join('elec_synapses.pkl')
+        positions = tmpdir.join('positions.pkl')
+    
+        # Check if the files exist before writing to them
+        assert not neuron_data.exists()
+        assert not chem_synapses.exists()
+        assert not elec_synapses.exists()
+        assert not positions.exists()
+    
+        # Check if the files exist after writing to them
+>       assert neuron_data.exists()
+E       AssertionError: assert False
+E        +  where False = <bound method LocalPath.exists of local('/private/var/folders/j8/lrv376sd73l_40xn8sj9cwbh0000gn/T/pytest-of-sahilmoza/pytest-1/test_build_nervous_system0/neuron_data.pkl')>()
+E        +    where <bound method LocalPath.exists of local('/private/var/folders/j8/lrv376sd73l_40xn8sj9cwbh0000gn/T/pytest-of-sahilmoza/pytest-1/test_build_nervous_system0/neuron_data.pkl')> = local('/private/var/folders/j8/lrv376sd73l_40xn8sj9cwbh0000gn/T/pytest-of-sahilmoza/pytest-1/test_build_nervous_system0/neuron_data.pkl').exists
+
+test_cedne.py:86: AssertionError
+_____________________ TestNervousSystem.test_build_network _____________________
+
+self = <test_cedne.TestNervousSystem object at 0x13407a570>
+tmpdir = local('/private/var/folders/j8/lrv376sd73l_40xn8sj9cwbh0000gn/T/pytest-of-sahilmoza/pytest-1/test_build_network0')
+
+    def test_build_network(self, tmpdir):
+        """
+        Tests if the NervousSystem object can be built from a pickle file.
+        """
+        nervous_system = NervousSystem()
+        neurons = tmpdir.join('neuron_data.pkl')
+        adj = {}
+        label = 'test'
+>       nervous_system.build_network(str(neurons), adj, label)
+
+test_cedne.py:105: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.NervousSystem object at 0x1340a7140>
+neurons = '/private/var/folders/j8/lrv376sd73l_40xn8sj9cwbh0000gn/T/pytest-of-sahilmoza/pytest-1/test_build_network0/neuron_data.pkl'
+adj = {}, label = 'test'
+
+    def build_network(self, neurons, adj, label):
+        """
+        Make a network with the neurons
+        :param neurons: The file containing neuron information
+        :param adj: The adjacency matrix
+        :param label: The label for the network
+        """
+>       with open(neurons, 'rb') as neuron_file:
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/j8/lrv376sd73l_40xn8sj9cwbh0000gn/T/pytest-of-sahilmoza/pytest-1/test_build_network0/neuron_data.pkl'
+
+../src/cedne/cedne.py:187: FileNotFoundError
+____________________ TestNervousSystem.test_update_neurons _____________________
+
+self = <test_cedne.TestNervousSystem object at 0x13407a6f0>
+nervous_system = <cedne.cedne.NervousSystem object at 0x1340a7950>
+
+    def test_update_neurons(self, nervous_system):
+        """
+        Tests if the NervousSystem object updates the neurons dictionary correctly.
+        """
+        nervous_system.update_neurons()
+>       assert len(nervous_system.neurons) > 0
+E       assert 0 > 0
+E        +  where 0 = len({})
+E        +    where {} = <cedne.cedne.NervousSystem object at 0x1340a7950>.neurons
+
+test_cedne.py:114: AssertionError
+___________________ TestNervousSystem.test_setup_connections ___________________
+
+self = <test_cedne.TestNervousSystem object at 0x13407a870>
+nervous_system = <cedne.cedne.NervousSystem object at 0x1341e4440>
+
+    def test_setup_connections(self, nervous_system):
+        """
+        Tests if the NervousSystem object sets up connections correctly.
+        """
+        adjacency_matrix = {0: {1: {'weight': 1}}}
+>       nervous_system.setup_connections(adjacency_matrix, 'test')
+
+test_cedne.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.NervousSystem object at 0x1341e4440>
+adjacency_matrix = {0: {1: {'weight': 1}}}, edge_type = 'test'
+
+    def setup_connections(self, adjacency_matrix, edge_type):
+        """
+        Set up connections between neurons based on the adjacency matrix and edge type.
+        """
+        for source_id, neighbors in adjacency_matrix.items():
+            for target_id, properties in neighbors.items():
+                if properties['weight'] > 0:
+>                   source_neuron = self.neurons[source_id]
+E                   KeyError: 0
+
+../src/cedne/cedne.py:211: KeyError
+______________ TestNervousSystem.test_setup_chemical_connections _______________
+
+self = <test_cedne.TestNervousSystem object at 0x13407ab70>
+nervous_system = <cedne.cedne.NervousSystem object at 0x1341e6870>
+
+    def test_setup_chemical_connections(self, nervous_system):
+        """
+        Tests if the NervousSystem object sets up chemical connections correctly.
+        """
+        chemical_adjacency = {0: {1: {'weight': 1}}}
+>       nervous_system.setup_chemical_connections(chemical_adjacency)
+
+test_cedne.py:137: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.NervousSystem object at 0x1341e6870>
+chemical_adjacency = {0: {1: {'weight': 1}}}
+
+    def setup_chemical_connections(self, chemical_adjacency):
+        """
+        Set up chemical connections in the network based on the given adjacency dictionary.
+    
+        Parameters:
+            chemical_adjacency (dict): A dictionary representing the adjacency of chemical synapses.
+                The keys are source neurons and the values are dictionaries where the keys are
+                target neurons and the values are dictionaries containing the connection data.
+    
+        Returns:
+            None
+    
+        This function iterates over the `chemical_adjacency` dictionary and adds chemical synapse
+        edges between source neurons and target neurons if the connection weight is greater than 0.
+        It uses the `add_edge` method to add the edge to the network and creates a `Connection`
+        object to store the connection details. The created connection is added to the `connections`
+        dictionary using a tuple of the source neuron, target neuron, and edge key as the key.
+    
+        Note:
+            - The `add_edge` method is assumed to be defined in the class.
+            - The `Connection` class is assumed to be defined in the class.
+            - The `neurons` dictionary is assumed to be defined in the class.
+        """
+        edge_type='chemical-synapse'
+        for source_neuron, target_neurons in chemical_adjacency.items():
+            for target_neuron, connection_data in target_neurons.items():
+                if connection_data['weight'] > 0:
+                    edge_key = self.add_edge(
+>                       self.neurons[source_neuron],
+                        self.neurons[target_neuron],
+                        weight=connection_data['weight'],
+                        color='orange',
+                        edgeType=edge_type
+                    )
+E                   KeyError: 0
+
+../src/cedne/cedne.py:287: KeyError
+__________________ TestNervousSystem.test_setup_gap_junctions __________________
+
+self = <test_cedne.TestNervousSystem object at 0x13407acf0>
+nervous_system = <cedne.cedne.NervousSystem object at 0x1341e7260>
+
+    def test_setup_gap_junctions(self, nervous_system):
+        """
+        Tests if the NervousSystem object sets up gap junctions correctly.
+        """
+        gap_junction_adjacency = {0: {1: {'weight': 1}}}
+>       nervous_system.setup_gap_junctions(gap_junction_adjacency)
+
+test_cedne.py:145: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.NervousSystem object at 0x1341e7260>
+gap_junction_adjacency = {0: {1: {'weight': 1}}}
+
+    def setup_gap_junctions(self, gap_junction_adjacency):
+        """
+        Set up gap junctions in the network based on the given adjacency dictionary.
+    
+        Parameters:
+            gap_junction_adjacency (dict): A dictionary representing the adjacency of gap junctions.
+                The keys are source neurons and the values are dictionaries where the keys are \
+                    target neurons and the values are dictionaries containing the connection data.
+    
+        Returns:
+            None
+    
+        This function iterates over the `gap_junction_adjacency` dictionary and adds gap junction
+        edges between source neurons and target neurons if the connection weight is greater than 0.
+        It uses the `add_edge` method to add the edge to the network and creates a `Connection`
+        object to store the connection details. The created connection is added to the `connections`
+        dictionary using a tuple of the source neuron, target neuron, and edge key as the key.
+    
+        Note:
+            - The `add_edge` method is assumed to be defined in the class.
+            - The `Connection` class is assumed to be defined in the class.
+            - The `neurons` dictionary is assumed to be defined in the class.
+        """
+        edge_type = 'gap-junction'
+        for source_neuron, target_neurons in gap_junction_adjacency.items():
+            for target_neuron, connection_data in target_neurons.items():
+                if connection_data['weight'] > 0:
+                    edge_key = self.add_edge(
+>                       self.neurons[source_neuron],
+                        self.neurons[target_neuron],
+                        weight=connection_data['weight'],
+                        color='gray',
+                        edge_type=edge_type
+                    )
+E                   KeyError: 0
+
+../src/cedne/cedne.py:332: KeyError
+______________________ TestNervousSystem.test_subnetwork _______________________
+
+self = <test_cedne.TestNervousSystem object at 0x13407aea0>
+nervous_system = <cedne.cedne.NervousSystem object at 0x110e34d70>
+
+    def test_subnetwork(self, nervous_system):
+        """
+        Tests if the NervousSystem object generates a subnetwork correctly.
+        """
+        neuron_names = ['test']
+>       subnetwork = nervous_system.subnetwork(neuron_names)
+
+test_cedne.py:153: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.NervousSystem object at 0x110e34d70>
+neuron_names = ['test']
+
+    def subnetwork(self, neuron_names):
+        """
+        Generates a subgraph of the network based on the given list of neuron names.
+    
+        Args:
+            neuron_names (List[str]): List of neuron names to include in the subgraph.
+    
+        Returns:
+            NervousSystem: A deep copy of the subgraph generated from the neuron_names.
+                The subgraph contains a dictionary of neurons with their names as keys.
+        """
+>       subgraph_nodes = [self.neurons[name] for name in neuron_names]
+E       KeyError: 'test'
+
+../src/cedne/cedne.py:369: KeyError
+_____________________ TestNervousSystem.test_fold_network ______________________
+
+self = <test_cedne.TestNervousSystem object at 0x13407b080>
+nervous_system = <cedne.cedne.NervousSystem object at 0x1340a74a0>
+
+    def test_fold_network(self, nervous_system):
+        """
+        Tests if the NervousSystem object folds the network correctly.
+        """
+        nervous_system.fold_network(('test', 'test'))
+>       assert len(nervous_system.neurons) == 1
+E       assert 0 == 1
+E        +  where 0 = len({})
+E        +    where {} = <cedne.cedne.NervousSystem object at 0x1340a74a0>.neurons
+
+test_cedne.py:161: AssertionError
+___________________ TestNervousSystem.test_contract_neurons ____________________
+
+self = <test_cedne.TestNervousSystem object at 0x13407b260>
+nervous_system = <cedne.cedne.NervousSystem object at 0x1340a6d50>
+
+    def test_contract_neurons(self, nervous_system):
+        """
+        Tests if the NervousSystem object contracts neurons correctly.
+        """
+>       nervous_system.contract_neurons(('test', 'test'))
+
+test_cedne.py:167: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.NervousSystem object at 0x1340a6d50>
+pair = ('test', 'test'), copy_graph = False
+
+    def contract_neurons(self, pair, copy_graph=False):
+        """
+        Contract two neurons together.
+    
+        Args:
+            pair (tuple): Pair of neuron names to contract.
+            copy_graph (bool): If True, returns a new graph with the contraction.
+                Otherwise, modifies the current graph.
+    
+        Returns:
+            NervousSystem: A deep copy of the subgraph generated from the neuron_names.
+                The subgraph contains a dictionary of neurons with their names as keys.
+                Only returned if copy_graph is True.
+        """
+        source_neuron, target_neuron = pair
+        if copy_graph:
+            new_graph = self.copy()
+            new_graph = new_graph.contract_neurons((source_neuron, target_neuron), copy_graph=False)
+            return new_graph
+        else:
+>           nx.contracted_nodes(self, self.neurons[source_neuron], self.neurons[target_neuron],\
+                                 copy=copy_graph)
+E           KeyError: 'test'
+
+../src/cedne/cedne.py:420: KeyError
+_________________________ TestNervousSystem.test_copy __________________________
+
+self = <test_cedne.TestNervousSystem object at 0x13407b620>
+nervous_system = <cedne.cedne.NervousSystem object at 0x1341e77a0>
+
+    def test_copy(self, nervous_system):
+        """
+        Tests if the NervousSystem object can be copied correctly.
+        """
+>       copied_nervous_system = nervous_system.copy()
+
+test_cedne.py:181: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+../src/cedne/cedne.py:545: in copy
+    return self.copy(as_view=as_view)
+../src/cedne/cedne.py:545: in copy
+    return self.copy(as_view=as_view)
+E   RecursionError: maximum recursion depth exceeded
+!!! Recursion detected (same locals & position)
+_____________________ TestNeuron.test_get_all_connections ______________________
+
+self = <test_cedne.TestNeuron object at 0x13407bc80>
+
+    def test_get_all_connections(self):
+        """
+        Tests if the `get_all_connections` method returns all connections that the neuron is involved in correctly.
+        """
+        network = NervousSystem()
+        neuron1 = Neuron('test1', network)
+        neuron2 = Neuron('test2', network)
+        network.add_edge(neuron1, neuron2)
+>       assert neuron1.get_all_connections() == [(neuron1, neuron2)]
+E       assert [(<cedne.cedn...340a6870>, 0)] == [(<cedne.cedn...0x1340a6870>)]
+E         
+E         At index 0 diff: (<cedne.cedne.Neuron object at 0x1340a67e0>, <cedne.cedne.Neuron object at 0x1340a6870>, 0) != (<cedne.cedne.Neuron object at 0x1340a67e0>, <cedne.cedne.Neuron object at 0x1340a6870>)
+E         Use -v to get more diff
+
+test_cedne.py:223: AssertionError
+___________________________ TestNeuron.test_outgoing ___________________________
+
+self = <test_cedne.TestNeuron object at 0x13407bc20>
+
+    def test_outgoing(self):
+        """
+        Tests if the `outgoing` method returns all outgoing connections from the current object correctly.
+        """
+        network = NervousSystem()
+        neuron1 = Neuron('test1', network)
+        neuron2 = Neuron('test2', network)
+        network.add_edge(neuron1, neuron2)
+>       assert neuron1.outgoing() == []
+E       assert {} == []
+E         
+E         Use -v to get more diff
+
+test_cedne.py:233: AssertionError
+___________________________ TestNeuron.test_incoming ___________________________
+
+self = <test_cedne.TestNeuron object at 0x13407b7d0>
+
+    def test_incoming(self):
+        """
+        Tests if the `incoming` method returns all incoming connections to the current object correctly.
+        """
+        network = NervousSystem()
+        neuron1 = Neuron('test1', network)
+        neuron2 = Neuron('test2', network)
+        network.add_edge(neuron1, neuron2)
+>       assert neuron1.incoming() == [(neuron1, neuron2)]
+E       assert {} == [(<cedne.cedn...0x1341819d0>)]
+E         
+E         Use -v to get more diff
+
+test_cedne.py:244: AssertionError
+_______________________ TestTrial.test_recording_discard _______________________
+
+self = <test_cedne.TestTrial object at 0x13407a990>
+
+    def test_recording_discard(self):
+        """
+        Tests the recording property of the Trial class with discard.
+        """
+        trial = Trial(None, 0)
+>       trial.recording = np.array([1, 2, 3, 4, 5]), 2
+
+test_cedne.py:272: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.Trial object at 0x134180ef0>
+_data = (array([1, 2, 3, 4, 5]), 2), discard = 0
+
+    @recording.setter
+    def recording(self, _data, discard=0):
+        """
+        Set the recording data for the Trial object.
+    
+        Parameters:
+            signal (array-like): The timecourse signal to be recorded.
+    
+        Raises:
+            ValueError: If the length of the signal is not 451 or 601.
+    
+        Returns:
+            None
+        """
+        if not discard:
+            self.discard = []
+>           self._data = _data.astype(np.float64)
+E           AttributeError: 'tuple' object has no attribute 'astype'
+
+../src/cedne/cedne.py:726: AttributeError
+_______________________ TestTrial.test_recording_invalid _______________________
+
+self = <test_cedne.TestTrial object at 0x13407a2d0>
+
+    def test_recording_invalid(self):
+        """
+        Tests the recording property of the Trial class with an invalid length.
+        """
+        trial = Trial(None, 0)
+>       with pytest.raises(ValueError):
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+test_cedne.py:281: Failed
+__________________ TestTrial.test_recording_negative_discard ___________________
+
+self = <test_cedne.TestTrial object at 0x13407bdd0>
+
+    def test_recording_negative_discard(self):
+        """
+        Tests the recording property of the Trial class with a negative discard value.
+        """
+        trial = Trial(None, 0)
+        with pytest.raises(ValueError):
+>           trial.recording = np.array([1, 2, 3]), -1
+
+test_cedne.py:290: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.Trial object at 0x1341826c0>, _data = (array([1, 2, 3]), -1)
+discard = 0
+
+    @recording.setter
+    def recording(self, _data, discard=0):
+        """
+        Set the recording data for the Trial object.
+    
+        Parameters:
+            signal (array-like): The timecourse signal to be recorded.
+    
+        Raises:
+            ValueError: If the length of the signal is not 451 or 601.
+    
+        Returns:
+            None
+        """
+        if not discard:
+            self.discard = []
+>           self._data = _data.astype(np.float64)
+E           AttributeError: 'tuple' object has no attribute 'astype'
+
+../src/cedne/cedne.py:726: AttributeError
+___________________ TestStimResponse.test_extract_feature_0 ____________________
+
+self = <test_cedne.TestStimResponse object at 0x13407bf80>
+
+    def test_extract_feature_0(self):
+>       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
+
+test_cedne.py:295: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.StimResponse object at 0x134183500>, trial = None
+stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
+
+    def __init__(self, trial, stimulus, response, baseline) -> None:
+        """
+        Initializes a StimResponse object.
+    
+        Parameters:
+            trial (Trial): The trial object associated with the stimulus and response.
+            stimulus (array-like): The stimulus signal.
+            response (array-like): The response signal.
+            baseline (int): The number of baseline samples to consider for the response.
+    
+        Returns:
+            None
+        """
+        self.stim = stimulus
+        self.response = response
+        self.feature = {}
+>       self.neuron = trial.parent
+E       AttributeError: 'NoneType' object has no attribute 'parent'
+
+../src/cedne/cedne.py:753: AttributeError
+___________________ TestStimResponse.test_extract_feature_1 ____________________
+
+self = <test_cedne.TestStimResponse object at 0x1340a4140>
+
+    def test_extract_feature_1(self):
+>       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
+
+test_cedne.py:299: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.StimResponse object at 0x1341c6120>, trial = None
+stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
+
+    def __init__(self, trial, stimulus, response, baseline) -> None:
+        """
+        Initializes a StimResponse object.
+    
+        Parameters:
+            trial (Trial): The trial object associated with the stimulus and response.
+            stimulus (array-like): The stimulus signal.
+            response (array-like): The response signal.
+            baseline (int): The number of baseline samples to consider for the response.
+    
+        Returns:
+            None
+        """
+        self.stim = stimulus
+        self.response = response
+        self.feature = {}
+>       self.neuron = trial.parent
+E       AttributeError: 'NoneType' object has no attribute 'parent'
+
+../src/cedne/cedne.py:753: AttributeError
+___________________ TestStimResponse.test_extract_feature_2 ____________________
+
+self = <test_cedne.TestStimResponse object at 0x1340a42c0>
+
+    def test_extract_feature_2(self):
+>       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
+
+test_cedne.py:303: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.StimResponse object at 0x134183890>, trial = None
+stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
+
+    def __init__(self, trial, stimulus, response, baseline) -> None:
+        """
+        Initializes a StimResponse object.
+    
+        Parameters:
+            trial (Trial): The trial object associated with the stimulus and response.
+            stimulus (array-like): The stimulus signal.
+            response (array-like): The response signal.
+            baseline (int): The number of baseline samples to consider for the response.
+    
+        Returns:
+            None
+        """
+        self.stim = stimulus
+        self.response = response
+        self.feature = {}
+>       self.neuron = trial.parent
+E       AttributeError: 'NoneType' object has no attribute 'parent'
+
+../src/cedne/cedne.py:753: AttributeError
+___________________ TestStimResponse.test_extract_feature_3 ____________________
+
+self = <test_cedne.TestStimResponse object at 0x1340a4440>
+
+    def test_extract_feature_3(self):
+>       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
+
+test_cedne.py:307: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.StimResponse object at 0x134182cf0>, trial = None
+stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
+
+    def __init__(self, trial, stimulus, response, baseline) -> None:
+        """
+        Initializes a StimResponse object.
+    
+        Parameters:
+            trial (Trial): The trial object associated with the stimulus and response.
+            stimulus (array-like): The stimulus signal.
+            response (array-like): The response signal.
+            baseline (int): The number of baseline samples to consider for the response.
+    
+        Returns:
+            None
+        """
+        self.stim = stimulus
+        self.response = response
+        self.feature = {}
+>       self.neuron = trial.parent
+E       AttributeError: 'NoneType' object has no attribute 'parent'
+
+../src/cedne/cedne.py:753: AttributeError
+___________________ TestStimResponse.test_extract_feature_4 ____________________
+
+self = <test_cedne.TestStimResponse object at 0x1340a45c0>
+
+    def test_extract_feature_4(self):
+>       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
+
+test_cedne.py:311: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.StimResponse object at 0x134180ef0>, trial = None
+stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
+
+    def __init__(self, trial, stimulus, response, baseline) -> None:
+        """
+        Initializes a StimResponse object.
+    
+        Parameters:
+            trial (Trial): The trial object associated with the stimulus and response.
+            stimulus (array-like): The stimulus signal.
+            response (array-like): The response signal.
+            baseline (int): The number of baseline samples to consider for the response.
+    
+        Returns:
+            None
+        """
+        self.stim = stimulus
+        self.response = response
+        self.feature = {}
+>       self.neuron = trial.parent
+E       AttributeError: 'NoneType' object has no attribute 'parent'
+
+../src/cedne/cedne.py:753: AttributeError
+___________________ TestStimResponse.test_extract_feature_5 ____________________
+
+self = <test_cedne.TestStimResponse object at 0x1340a4740>
+
+    def test_extract_feature_5(self):
+>       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
+
+test_cedne.py:315: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.StimResponse object at 0x13407b5c0>, trial = None
+stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
+
+    def __init__(self, trial, stimulus, response, baseline) -> None:
+        """
+        Initializes a StimResponse object.
+    
+        Parameters:
+            trial (Trial): The trial object associated with the stimulus and response.
+            stimulus (array-like): The stimulus signal.
+            response (array-like): The response signal.
+            baseline (int): The number of baseline samples to consider for the response.
+    
+        Returns:
+            None
+        """
+        self.stim = stimulus
+        self.response = response
+        self.feature = {}
+>       self.neuron = trial.parent
+E       AttributeError: 'NoneType' object has no attribute 'parent'
+
+../src/cedne/cedne.py:753: AttributeError
+___________________ TestStimResponse.test_extract_feature_6 ____________________
+
+self = <test_cedne.TestStimResponse object at 0x1340a48c0>
+
+    def test_extract_feature_6(self):
+>       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
+
+test_cedne.py:319: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.StimResponse object at 0x1340a7f20>, trial = None
+stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
+
+    def __init__(self, trial, stimulus, response, baseline) -> None:
+        """
+        Initializes a StimResponse object.
+    
+        Parameters:
+            trial (Trial): The trial object associated with the stimulus and response.
+            stimulus (array-like): The stimulus signal.
+            response (array-like): The response signal.
+            baseline (int): The number of baseline samples to consider for the response.
+    
+        Returns:
+            None
+        """
+        self.stim = stimulus
+        self.response = response
+        self.feature = {}
+>       self.neuron = trial.parent
+E       AttributeError: 'NoneType' object has no attribute 'parent'
+
+../src/cedne/cedne.py:753: AttributeError
+___________________ TestStimResponse.test_extract_feature_7 ____________________
+
+self = <test_cedne.TestStimResponse object at 0x1340a4a40>
+
+    def test_extract_feature_7(self):
+>       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
+
+test_cedne.py:323: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.StimResponse object at 0x1341c6300>, trial = None
+stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
+
+    def __init__(self, trial, stimulus, response, baseline) -> None:
+        """
+        Initializes a StimResponse object.
+    
+        Parameters:
+            trial (Trial): The trial object associated with the stimulus and response.
+            stimulus (array-like): The stimulus signal.
+            response (array-like): The response signal.
+            baseline (int): The number of baseline samples to consider for the response.
+    
+        Returns:
+            None
+        """
+        self.stim = stimulus
+        self.response = response
+        self.feature = {}
+>       self.neuron = trial.parent
+E       AttributeError: 'NoneType' object has no attribute 'parent'
+
+../src/cedne/cedne.py:753: AttributeError
+___________________ TestStimResponse.test_extract_feature_8 ____________________
+
+self = <test_cedne.TestStimResponse object at 0x1340a4bc0>
+
+    def test_extract_feature_8(self):
+>       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
+
+test_cedne.py:327: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.StimResponse object at 0x1340a75f0>, trial = None
+stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
+
+    def __init__(self, trial, stimulus, response, baseline) -> None:
+        """
+        Initializes a StimResponse object.
+    
+        Parameters:
+            trial (Trial): The trial object associated with the stimulus and response.
+            stimulus (array-like): The stimulus signal.
+            response (array-like): The response signal.
+            baseline (int): The number of baseline samples to consider for the response.
+    
+        Returns:
+            None
+        """
+        self.stim = stimulus
+        self.response = response
+        self.feature = {}
+>       self.neuron = trial.parent
+E       AttributeError: 'NoneType' object has no attribute 'parent'
+
+../src/cedne/cedne.py:753: AttributeError
+___________________________ TestConnection.test_init ___________________________
+
+self = <test_cedne.TestConnection object at 0x1340a4d70>
+
+    def test_init(self):
+>       pre_neuron = Neuron(None, 0, 'regular')
+
+test_cedne.py:333: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.Neuron object at 0x1341816d0>, name = None, network = 0
+neuron_type = 'regular', category = '', modality = '', position = None
+presynapse = None, postsynapse = None
+
+    def __init__(self, name, network, neuron_type='', category='', modality='',\
+         position=None, presynapse=None, postsynapse=None):
+        """
+        Initializes a new instance of the Neuron class.
+    
+        Args:
+            name (str): The name of the neuron.
+            network (NeuronalNetwork): The neuronal network to which the neuron belongs.
+            type (str, optional): The type of the neuron. Defaults to ''.
+            category (str, optional): The category of the neuron. Defaults to ''.
+            modality (str, optional): The modality of the neuron. Defaults to ''.
+            position (dict, optional): The position of the neuron. Defaults to None.
+            presynapses (list, optional): The list of presynaptic components. Defaults to None.
+            postsynapses (dict, optional): The dictionary of postsynaptic components.
+            Defaults to None.
+        """
+        self.name = name
+        self.group_id = 0
+        self._data = {}
+        self.trial = {}
+        self.features = {0: 'Ca_max', 1: 'Ca_area', 2: 'Ca_avg',
+                         3: 'Ca_time_to_peak', 4: 'Ca_area_to_peak',
+                         5: 'Ca_min', 6: 'Ca_onset', 7: 'positive_area', 8: 'positive_time'}
+        self.type = neuron_type
+        self.category = category
+        self.modality = modality
+        self.position = position or {'AP': 0, 'LR': 0, 'DV': 0}
+        self.presynapse = presynapse or []
+        self.postsynapse = postsynapse or {}
+        self.in_connections = {}
+        self.out_connections = {}
+        self.network = network
+>       self.network.add_node(self, type=self.type, category=self.category, modality=self.modality)
+E       AttributeError: 'int' object has no attribute 'add_node'
+
+../src/cedne/cedne.py:601: AttributeError
+______________________ TestConnection.test_update_weight _______________________
+
+self = <test_cedne.TestConnection object at 0x1340a4ef0>
+
+    def test_update_weight(self):
+>       pre_neuron = Neuron(None, 0, 'regular')
+
+test_cedne.py:343: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.Neuron object at 0x134183950>, name = None, network = 0
+neuron_type = 'regular', category = '', modality = '', position = None
+presynapse = None, postsynapse = None
+
+    def __init__(self, name, network, neuron_type='', category='', modality='',\
+         position=None, presynapse=None, postsynapse=None):
+        """
+        Initializes a new instance of the Neuron class.
+    
+        Args:
+            name (str): The name of the neuron.
+            network (NeuronalNetwork): The neuronal network to which the neuron belongs.
+            type (str, optional): The type of the neuron. Defaults to ''.
+            category (str, optional): The category of the neuron. Defaults to ''.
+            modality (str, optional): The modality of the neuron. Defaults to ''.
+            position (dict, optional): The position of the neuron. Defaults to None.
+            presynapses (list, optional): The list of presynaptic components. Defaults to None.
+            postsynapses (dict, optional): The dictionary of postsynaptic components.
+            Defaults to None.
+        """
+        self.name = name
+        self.group_id = 0
+        self._data = {}
+        self.trial = {}
+        self.features = {0: 'Ca_max', 1: 'Ca_area', 2: 'Ca_avg',
+                         3: 'Ca_time_to_peak', 4: 'Ca_area_to_peak',
+                         5: 'Ca_min', 6: 'Ca_onset', 7: 'positive_area', 8: 'positive_time'}
+        self.type = neuron_type
+        self.category = category
+        self.modality = modality
+        self.position = position or {'AP': 0, 'LR': 0, 'DV': 0}
+        self.presynapse = presynapse or []
+        self.postsynapse = postsynapse or {}
+        self.in_connections = {}
+        self.out_connections = {}
+        self.network = network
+>       self.network.add_node(self, type=self.type, category=self.category, modality=self.modality)
+E       AttributeError: 'int' object has no attribute 'add_node'
+
+../src/cedne/cedne.py:601: AttributeError
+_______________________ TestConnection.test_set_property _______________________
+
+self = <test_cedne.TestConnection object at 0x1340a5070>
+
+    def test_set_property(self):
+>       pre_neuron = Neuron(None, 0, 'regular')
+
+test_cedne.py:352: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <cedne.cedne.Neuron object at 0x1341c63f0>, name = None, network = 0
+neuron_type = 'regular', category = '', modality = '', position = None
+presynapse = None, postsynapse = None
+
+    def __init__(self, name, network, neuron_type='', category='', modality='',\
+         position=None, presynapse=None, postsynapse=None):
+        """
+        Initializes a new instance of the Neuron class.
+    
+        Args:
+            name (str): The name of the neuron.
+            network (NeuronalNetwork): The neuronal network to which the neuron belongs.
+            type (str, optional): The type of the neuron. Defaults to ''.
+            category (str, optional): The category of the neuron. Defaults to ''.
+            modality (str, optional): The modality of the neuron. Defaults to ''.
+            position (dict, optional): The position of the neuron. Defaults to None.
+            presynapses (list, optional): The list of presynaptic components. Defaults to None.
+            postsynapses (dict, optional): The dictionary of postsynaptic components.
+            Defaults to None.
+        """
+        self.name = name
+        self.group_id = 0
+        self._data = {}
+        self.trial = {}
+        self.features = {0: 'Ca_max', 1: 'Ca_area', 2: 'Ca_avg',
+                         3: 'Ca_time_to_peak', 4: 'Ca_area_to_peak',
+                         5: 'Ca_min', 6: 'Ca_onset', 7: 'positive_area', 8: 'positive_time'}
+        self.type = neuron_type
+        self.category = category
+        self.modality = modality
+        self.position = position or {'AP': 0, 'LR': 0, 'DV': 0}
+        self.presynapse = presynapse or []
+        self.postsynapse = postsynapse or {}
+        self.in_connections = {}
+        self.out_connections = {}
+        self.network = network
+>       self.network.add_node(self, type=self.type, category=self.category, modality=self.modality)
+E       AttributeError: 'int' object has no attribute 'add_node'
+
+../src/cedne/cedne.py:601: AttributeError
+=========================== short test summary info ============================
+FAILED test_cedne.py::TestBehavior::test_init - AttributeError: 'Behavior' ob...
+FAILED test_cedne.py::TestNervousSystem::test_build_nervous_system - Assertio...
+FAILED test_cedne.py::TestNervousSystem::test_build_network - FileNotFoundErr...
+FAILED test_cedne.py::TestNervousSystem::test_update_neurons - assert 0 > 0
+FAILED test_cedne.py::TestNervousSystem::test_setup_connections - KeyError: 0
+FAILED test_cedne.py::TestNervousSystem::test_setup_chemical_connections - Ke...
+FAILED test_cedne.py::TestNervousSystem::test_setup_gap_junctions - KeyError: 0
+FAILED test_cedne.py::TestNervousSystem::test_subnetwork - KeyError: 'test'
+FAILED test_cedne.py::TestNervousSystem::test_fold_network - assert 0 == 1
+FAILED test_cedne.py::TestNervousSystem::test_contract_neurons - KeyError: 't...
+FAILED test_cedne.py::TestNervousSystem::test_copy - RecursionError: maximum ...
+FAILED test_cedne.py::TestNeuron::test_get_all_connections - assert [(<cedne....
+FAILED test_cedne.py::TestNeuron::test_outgoing - assert {} == []
+FAILED test_cedne.py::TestNeuron::test_incoming - assert {} == [(<cedne.cedn....
+FAILED test_cedne.py::TestTrial::test_recording_discard - AttributeError: 'tu...
+FAILED test_cedne.py::TestTrial::test_recording_invalid - Failed: DID NOT RAI...
+FAILED test_cedne.py::TestTrial::test_recording_negative_discard - AttributeE...
+FAILED test_cedne.py::TestStimResponse::test_extract_feature_0 - AttributeErr...
+FAILED test_cedne.py::TestStimResponse::test_extract_feature_1 - AttributeErr...
+FAILED test_cedne.py::TestStimResponse::test_extract_feature_2 - AttributeErr...
+FAILED test_cedne.py::TestStimResponse::test_extract_feature_3 - AttributeErr...
+FAILED test_cedne.py::TestStimResponse::test_extract_feature_4 - AttributeErr...
+FAILED test_cedne.py::TestStimResponse::test_extract_feature_5 - AttributeErr...
+FAILED test_cedne.py::TestStimResponse::test_extract_feature_6 - AttributeErr...
+FAILED test_cedne.py::TestStimResponse::test_extract_feature_7 - AttributeErr...
+FAILED test_cedne.py::TestStimResponse::test_extract_feature_8 - AttributeErr...
+FAILED test_cedne.py::TestConnection::test_init - AttributeError: 'int' objec...
+FAILED test_cedne.py::TestConnection::test_update_weight - AttributeError: 'i...
+FAILED test_cedne.py::TestConnection::test_set_property - AttributeError: 'in...
+======================== 29 failed, 15 passed in 0.98s =========================

@@ -15,12 +15,6 @@ Classes:
 - StimResponse
 - Connection
 - Mapping
-
-TODO:
-1. More inbuilt layers in the network.
-    1.1 Integrate behavioral components deeper.
-2. Clean up the neurotransmitter table.
-3. Add G-protein-Neuropeptide relations.
 """
 from copy import deepcopy
 import string
@@ -36,21 +30,6 @@ from scipy import signal
 # Superparameters
 RANDOM_SEED = 42
 F_SAMPLE = 5 # Hz
-
-
-def generate_random_string(length: int = 8) -> str:
-    """
-    Generates a random string of given length.
-
-    Args:
-        length (int): The length of the string to generate.
-
-    Returns:
-        str: A random string of the specified length.
-    """
-    characters = string.ascii_letters + string.digits
-    return ''.join(random.choice(characters) for _ in range(length))
-
 class Worm:
     ''' This is a full organism class'''
     def __init__(self, name='', stage='Day-1 Adult', sex='Hermaphrodite', genotype='N2') -> None:
@@ -58,11 +37,11 @@ class Worm:
         Initializes a Worm object.
 
         Parameters:
-            name (str): The name of the worm. If empty, 
+            name (str): The name of the worm. If empty,
                 a random alphanumeric string will be generated.
             stage (str): The stage of the worm. Default is 'Day-1 Adult'.
               Other options can be L1, L2, L3, L4, Day-2 Adult, etc.
-            sex (str): The sex of the worm. Default is 'Hermaphrodite'. 
+            sex (str): The sex of the worm. Default is 'Hermaphrodite'.
                 Other options can be 'Male'.
             genotype (str): The genotype of the worm. Default is 'N2'.
                 Other options can be mutant names.
@@ -76,9 +55,9 @@ class Worm:
         self.stage = stage
         self.sex = sex
         self.genotype = genotype
-        self.conditions = {}
+        self.networks = {}
 
-    def save_to_pickle(self, file_path):
+    def save(self, file_path):
         """
         Saves the Worm object to a pickle file at the specified file path.
 
@@ -86,7 +65,7 @@ class Worm:
             file_path (str): The path to the pickle file.
         """
         with open(file_path, 'wb') as pickle_file:
-            pickle.dump(self, pickle_file)
+            pickle.dump(self, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
 
 def load_worm(file_path):
     """
@@ -103,43 +82,48 @@ def load_worm(file_path):
 
 class Behavior:
     ''' This is a behavior class for the organism'''
-    def __init__(self, worm: Worm = None, condition: str = "Neutral") -> None:
+    def __init__(self, worm: Worm = None, network: str = "Neutral") -> None:
         """
         Initializes a Behavior object.
 
         Args:
             worm (Worm, optional): The worm object associated with the behavior. Defaults to None.
-            condition (str, optional): The condition of the behavior. Defaults to "Neutral".
+            network (str, optional): The network for the behavior. Defaults to "Neutral".
         """
         self.worm = worm or Worm()
-        if self.worm.conditions.get(condition) is None:
-            self.worm.conditions[condition] = self
+        if self.worm.networks.get(network) is None:
+            self.worm.networks[network] = self
 
 class NervousSystem(nx.MultiDiGraph):
-    ''' 
+    '''
     This is the Nervous System class. This inherits from networkx.MultiDiGraph
       and is the main high level class for the nervous system. '''
-    def __init__(self, worm: Worm = None, condition: str = "Neutral") -> None:
+    def __init__(self, worm: Worm = None, network: str = "Neutral") -> None:
         """
-        Initializes the NervousSystem object with the given worm and condition.
+        Initializes the NervousSystem object with the given worm and network.
 
         Args:
-            worm (Worm, optional): The worm object associated with the nervous system. 
+            worm (Worm, optional): The worm object associated with the nervous system.
             Defaults to None.
-            condition (str, optional): The condition of the nervous system. 
+            network (str, optional): The network for the nervous system. Can be different
+            conditions or network types.
             Defaults to "Neutral".
         """
         super().__init__()
 
         self.worm = worm or Worm()
-        self.worm.conditions[condition] = self
+        self.worm.networks[network] = self
+        self.groups = {}
 
-        self.neurons = {}
-        self.connections = {}
+        self.neurons = NeuronGroup(self, group_name='all_neurons')  # dictionary of all neurons in the nervous system 
+        self.connections = ConnectionGroup(self, group_name='all_connections')  # dictionary of all connections in the nervous system
 
-        self.num_groups = 1
         self._filtered_nodes = set()
         self._filtered_edges = set()
+
+    @property
+    def num_groups(self):
+        return len(self.groups)
 
     def build_nervous_system(self, neuron_data, chem_synapses, elec_synapses, positions):
         """
@@ -190,8 +174,8 @@ class NervousSystem(nx.MultiDiGraph):
         :param adj: The adjacency matrix
         :param label: The label for the network
         """
-        with open(neurons, 'rb') as ns:
-            node_dict = pickle.load(ns)
+        with open(neurons, 'rb') as neuron_file:
+            node_dict = pickle.load(neuron_file)
             node_labels, l1_list, l2_list, l3_list = node_dict.iloc[:,0].to_list(),\
                   node_dict.iloc[:,1].to_list(), \
                     node_dict.iloc[:,2].to_list(), \
@@ -203,9 +187,17 @@ class NervousSystem(nx.MultiDiGraph):
         """
         Update the dictionary of neurons
         """
-        self.neurons = {}
-        for n in self.nodes:
-            self.neurons.update({n.name:n})
+        self.neurons.clear()
+        for node in self.nodes:
+            self.neurons.update({node.name:node})
+    
+    def update_connections(self):
+        """
+        Update the dictionary of connections. Need more precaution here.
+        """
+        for connection_id, connection in self.connections.items():
+            if connection_id not in self.edges:
+                self.connections.pop(connection_id)
 
     def setup_connections(self, adjacency_matrix, edge_type):
         """
@@ -219,7 +211,7 @@ class NervousSystem(nx.MultiDiGraph):
                     edge_weight = properties['weight']
                     edge_id = self.add_edge(
                         source_neuron, target_neuron,
-                        weight=edge_weight, color='purple', edge_type=edge_type
+                        weight=edge_weight, color='k', edge_type=edge_type
                     )
                     connection = Connection(
                         source_neuron, target_neuron, edge_id, edge_type, weight=edge_weight
@@ -231,22 +223,22 @@ class NervousSystem(nx.MultiDiGraph):
         """
         Creates a set of Neuron objects based on the given labels,
           types, categories, modalities, and positions.
-        
+
         Args:
             labels (list): A list of labels for the neurons.
             neuron_types (list, optional): A list of types for the neurons. Defaults to None.
             categories (list, optional): A list of categories for the neurons. Defaults to None.
             modalities (list, optional): A list of modalities for the neurons. Defaults to None.
             positions (dict, optional): A dictionary mapping labels to positions. Defaults to None.
-        
+
         Returns:
             None
-        
+
         This function iterates over the labels, types, categories, modalities, and positions
-        using the zip function. For each combination, it checks if the label is present in the 
-        positions dictionary. If it is, it creates a Neuron object with the given label, type, 
-        category, modality, and position. Otherwise, it creates a Neuron object with the given 
-        label, type, category, and modality. The Neuron object is then added to the neurons 
+        using the zip function. For each combination, it checks if the label is present in the
+        positions dictionary. If it is, it creates a Neuron object with the given label, type,
+        category, modality, and position. Otherwise, it creates a Neuron object with the given
+        label, type, category, and modality. The Neuron object is then added to the neurons
         dictionary with the label as the key.
         """
         neuron_types = [None] * len(labels) if neuron_types is None else neuron_types
@@ -268,15 +260,15 @@ class NervousSystem(nx.MultiDiGraph):
 
         Parameters:
             chemical_adjacency (dict): A dictionary representing the adjacency of chemical synapses.
-                The keys are source neurons and the values are dictionaries where the keys are 
+                The keys are source neurons and the values are dictionaries where the keys are
                 target neurons and the values are dictionaries containing the connection data.
 
         Returns:
             None
 
-        This function iterates over the `chemical_adjacency` dictionary and adds chemical synapse 
+        This function iterates over the `chemical_adjacency` dictionary and adds chemical synapse
         edges between source neurons and target neurons if the connection weight is greater than 0.
-        It uses the `add_edge` method to add the edge to the network and creates a `Connection` 
+        It uses the `add_edge` method to add the edge to the network and creates a `Connection`
         object to store the connection details. The created connection is added to the `connections`
         dictionary using a tuple of the source neuron, target neuron, and edge key as the key.
 
@@ -322,7 +314,7 @@ class NervousSystem(nx.MultiDiGraph):
         This function iterates over the `gap_junction_adjacency` dictionary and adds gap junction
         edges between source neurons and target neurons if the connection weight is greater than 0.
         It uses the `add_edge` method to add the edge to the network and creates a `Connection`
-        object to store the connection details. The created connection is added to the `connections` 
+        object to store the connection details. The created connection is added to the `connections`
         dictionary using a tuple of the source neuron, target neuron, and edge key as the key.
 
         Note:
@@ -361,30 +353,40 @@ class NervousSystem(nx.MultiDiGraph):
         ''' Standard formats to load data into the network'''
         #pass
 
-    def generate_subnetwork(self, neuron_names):
+    def subnetwork(self, neuron_names=None, connections=None, as_view=True):
         """
         Generates a subgraph of the network based on the given list of neuron names.
 
         Args:
             neuron_names (List[str]): List of neuron names to include in the subgraph.
+            connections (List[tuple]): List of connections to include in the subgraph.
 
         Returns:
-            NervousSystem: A deep copy of the subgraph generated from the neuron_names.
-                The subgraph contains a dictionary of neurons with their names as keys.
+            NervousSystem: A deep copy of the subgraph generated from the neuron_names
+            or connections. The subgraph contains a dictionary of neurons with their
+            names as keys.
         """
-        subgraph_nodes = [self.neurons[name] for name in neuron_names]
-        subgraph = self.subgraph(subgraph_nodes)
-        subgraph.neurons = {neuron.name: neuron for neuron in subgraph.nodes}
-        return deepcopy(subgraph)
 
-    def fold_network(self, fold_by):
+        assert not (neuron_names and connections),\
+            "Specify either neuron_names or connections, not both."
+        if neuron_names is not None:
+            subgraph_nodes = [self.neurons[name] for name in neuron_names]
+            subgraph = self.subgraph(subgraph_nodes)
+        elif connections is not None:
+            subgraph = self.edge_subgraph(connections)
+        else:
+            subgraph = self
+        subgraph.update_neurons()
+        return subgraph #subgraph.copy(as_view)
+
+    def fold_network(self, fold_by, exceptions=None):
         """
         Fold the network based on a filter.
 
         Args:
             fold_by (tuple): A tuple of length 2 specifying the neurons to fold.
-                The first element is the neuron to fold, and the second element
-                is the neuron to merge into.
+                The first element is the neurons to fold, and the second element
+                is the neurons that are exempt from folding.
                 The tuple can contain any neuron name as a string.
 
         Returns:
@@ -397,20 +399,31 @@ class NervousSystem(nx.MultiDiGraph):
             This function folds the network by contracting the specified neurons.
             The neurons specified in exceptions will not be folded.
         """
-        assert len(fold_by) == 2, "fold_by must be a tuple of length 2."
-        allowed, exceptions = fold_by
-        for npair in allowed:
-            if not npair[0] in exceptions and not npair[1] in exceptions:
-                self.contract_neurons(npair)
+        assert isinstance(fold_by, dict), "Enter a dictionary with neuron class\
+            names as keys and the neurons to fold as values. If there is only one\
+                neuron in the list of values, the neuron will be renamed to the key."
+        if exceptions is None:
+            exceptions = []
+        for merged_nodename, nodes_to_fold in fold_by.items():
+            if len(nodes_to_fold) >1:
+                merged_node = nodes_to_fold[0]
+                for j in range(1,len(nodes_to_fold)):
+                    npair = (merged_node, nodes_to_fold[j])
+                    if not npair[0] in exceptions and not npair[1] in exceptions:
+                        self.contract_neurons(npair, merged_nodename)
+                        merged_node = merged_nodename
+            else:
+                self.neurons[nodes_to_fold[0]].name = merged_nodename
+                self.update_neurons()
 
-    def contract_neurons(self, pair, copy_graph=False):
+    def contract_neurons(self, pair, contracted_name, copy_graph=False):
         """
         Contract two neurons together.
 
         Args:
             pair (tuple): Pair of neuron names to contract.
             copy_graph (bool): If True, returns a new graph with the contraction.
-                Otherwise, modifies the current graph.
+            Otherwise, modifies the current graph.
 
         Returns:
             NervousSystem: A deep copy of the subgraph generated from the neuron_names.
@@ -420,11 +433,12 @@ class NervousSystem(nx.MultiDiGraph):
         source_neuron, target_neuron = pair
         if copy_graph:
             new_graph = self.copy()
-            new_graph = new_graph.contract_neurons((source_neuron, target_neuron), copy_graph=False)
+            new_graph = new_graph.contract_neurons((source_neuron, target_neuron, contracted_name), copy_graph=False)
             return new_graph
         else:
             nx.contracted_nodes(self, self.neurons[source_neuron], self.neurons[target_neuron],\
                                  copy=copy_graph)
+            self.neurons[source_neuron].name = contracted_name
             self.update_neurons()
             return self
 
@@ -449,7 +463,7 @@ class NervousSystem(nx.MultiDiGraph):
         """
         return node in self._filtered_nodes
 
-    def __filter_edge__(self, n1,n2,key):
+    def __filter_edge__(self, neuron_1,neuron_2,key):
         """
         Checks if a specific edge is filtered within the network.
 
@@ -461,23 +475,21 @@ class NervousSystem(nx.MultiDiGraph):
         Returns:
             Boolean: True if the edge is in the filtered edges, False otherwise.
         """
-        return (n1,n2,key) in self._filtered_edges
+        return (neuron_1,neuron_2,key) in self._filtered_edges
 
     def return_network_where(self, neurons_have=None, connections_have=None, condition='AND'):
         """
         Returns a subgraph view of the current network based on the specified conditions.
+
         Parameters:
-            neurons_have (dict): A dictionary of neuron attributes and their corresponding values. 
-                The subgraph will only include neurons that have all the specified attributes
-                and values.
-                Default is an empty dictionary.
-            connections_have (dict): A dictionary of connection attributes and their 
-            corresponding values. 
-                The subgraph will only include connections that have all the specified attributes
-                and values.
-                Default is an empty dictionary.
-            condition (str): The condition to apply when filtering neurons and connections. 
-                Can be 'AND' or 'OR'. Default is 'AND'.
+            neurons_have (dict): A dictionary of neuron attributes and their corresponding values.
+            The subgraph will only include neurons that have all the specified attributes\
+            and values. Defaults to an empty dictionary.
+            connections_have (dict): A dictionary of connection attributes and their corresponding\
+            values. The subgraph will only include connections that have all the specified attributes\
+            and values. Defaults to an empty dictionary.
+            condition (str): The condition to apply when filtering neurons and connections.
+            Can be 'AND' or 'OR'. Default is 'AND'.
 
         Returns:
             networkx.classes.Graph: A subgraph view of the current network that satisfies
@@ -493,9 +505,9 @@ class NervousSystem(nx.MultiDiGraph):
         if len(neurons_have):
             for (key, value) in neurons_have.items():
                 each_filter = []
-                for n, val in self.neurons_have(key).items():
+                for node, val in self.neurons_have(key).items():
                     if val==value:
-                        each_filter.append(n)
+                        each_filter.append(node)
                 total_node_list.append(each_filter)
             if condition=='AND':
                 filtered_node_list = [node for _n,node in self.neurons.items()\
@@ -516,18 +528,18 @@ class NervousSystem(nx.MultiDiGraph):
         if len(connections_have):
             for (key, value) in connections_have.items():
                 each_filter = []
-                for e, val in self.connections_have(key).items():
+                for edge, val in self.connections_have(key).items():
                     if val==value:
-                        each_filter.append(e)
+                        each_filter.append(edge)
                 total_edge_list.append(each_filter)
             #print(totalList)
             if condition=='AND':
-                filtered_edge_list = [edge for e,edge in self.connections.items()\
-                                       if all(e in sublist for sublist in total_edge_list)]
+                filtered_edge_list = [edge for _e,edge in self.connections.items()\
+                                       if all(_e in sublist for sublist in total_edge_list)]
 
             elif condition=='OR':
-                filtered_edge_list = [edge for e,edge in self.connections.items()\
-                                       if any(e in sublist for sublist in total_edge_list)]
+                filtered_edge_list = [edge for _e,edge in self.connections.items()\
+                                       if any(_e in sublist for sublist in total_edge_list)]
             else:
                 raise ValueError("condition must be 'AND' or 'OR'")
         else:
@@ -538,22 +550,92 @@ class NervousSystem(nx.MultiDiGraph):
         return nx.subgraph_view(self, filter_node=self.__filter_node__,\
                                  filter_edge=self.__filter_edge__)
 
-def copy(self, as_view=False):
-    """
-    Returns a deep copy of the Nervous System object.
+    def copy(self, as_view=False):
+        """
+        Returns a deep copy of the Nervous System object.
 
-    Parameters:
-        as_view (bool): If True, the copy will be a view of the original graph. Default is False.
+        Parameters:
+            as_view (bool): If True, the copy will be a view of the original graph. Default is False.
 
-    Returns:
-        object: a deep copy of the Nervous System object.
-    """
-    return self.copy(as_view=as_view)
-    #return deepcopy(self)
+        Returns:
+            object: a deep copy of the Nervous System object.
+        """
+        return self.copy(as_view=as_view)
+        #return deepcopy(self)
+        #return deepcopy(self)
+
+    def remove_unconnected_neurons(self):
+        """
+        Removes neurons that are not connected to any other neurons.
+
+        Returns:
+            None
+        """
+        self.remove_nodes_from(list(nx.isolates(self)))
+        self.update_neurons()
+
+    def make_neuron_group(self, members, group_name=None):
+        """
+        Creates a neuron group with the specified members.
+
+        Parameters:
+            members (List[str]): The list of members in the neuron group.
+            groupname (str): The name of the neuron group. Defaults to None.
+            group_id (int, optional): The ID of the neuron group. Defaults to 0.
+
+        Returns:
+            NeuronGroup: The created neuron group.
+        """
+        return NeuronGroup(self, members, group_name)
+    
+    def delete_neuron_group(self, groupname):
+        """
+        Deletes a neuron group with the specified name.
+
+        Parameters:
+            groupname (str): The name of the neuron group to be deleted.
+
+        Returns:
+            None
+        """
+        del self.groups[groupname]
+    
+    def make_connection_group(self, members, group_name=None):
+        """
+        Creates a connection group with the specified members.
+
+        Parameters:
+            members (List[str]): The list of members in the connection group.
+            groupname (str): The name of the connection group. Defaults to None.
+            group_id (int, optional): The ID of the connection group. Defaults to 0.
+
+        Returns:
+            ConnectionGroup: The created connection group.
+        """
+        return ConnectionGroup(self, members, group_name)
+    
+    def delete_connection_group(self, groupname):
+        """
+        Deletes a connection group with the specified name.
+
+        Parameters:
+            groupname (str): The name of the connection group to be deleted.
+
+        Returns:
+            None
+        """
+        del self.groups[groupname]
+    
+    def __delete__(self, neuron):
+        """
+        Deletes the object from the network.
+        """
+        self.remove_node(neuron)
+        self.update_neurons()
 
 class NeuronGroup:
-    ''' This is a subgroup of the whole neuronal network'''
-    def __init__(self, groupname, members, group_id = 0) -> None:
+    ''' This contains a group of neurons in the network'''
+    def __init__(self, network, members=None, group_name=None) -> None:
         """
         Initializes a new instance of the NeuronGroup class.
 
@@ -565,14 +647,225 @@ class NeuronGroup:
         Returns:
             None
         """
-        self.group_name = groupname
-        self.group_id = group_id
+        if group_name is None:
+            self.group_name = 'Group-'+ generate_random_string(8)
+        else:
+            self.group_name = group_name
+
+        if members is None:
+            members = []
+        else:
+            assert all([isinstance(m, Neuron)for m in members]), "Neuron group members must be\
+                 of type Neuron"
         self.members = members
+        self.neurons = {m.name: m for m in members}
+        self.network = network
+        assert self.group_name not in self.network.groups, "Group name {} already exists\
+             in the network".format(self.group_name)
+        self.network.groups.update({self.group_name: self})
+
+    def __iter__(self):
+        """
+        Returns an iterator over the members of the group.
+        """
+        return iter(self.neurons)
+
+    def items(self):
+        """
+        Returns an iterator over the members of the group.
+        """
+        for key, value in self.neurons.items():
+            yield key, value
+    def keys(self):
+        """
+        Returns an iterator over the members of the group.
+        """
+        return self.neurons.keys()
+    def values(self):
+        """
+        Returns an iterator over the members of the group.
+        """
+        return self.neurons.values()
+
+    def __len__(self):
+        """
+        Returns the number of members in the group.
+        """
+        return len(self.neurons)
+
+    def __contains__(self, neuron):
+        """
+        Returns True if the neuron with the specified name is in the group, False otherwise.
+        """
+        return neuron in self.neurons
+
+    def __getitem__(self, neuron_name):
+        """
+        Returns the neuron with the specified name in the group.
+        """
+        return self.neurons[neuron_name]
+
+    def __setitem__(self, neuron_name, neuron):
+        """
+        Sets the neuron with the specified name in the group.
+        """
+        assert isinstance(neuron, Neuron), "Neuron group members must be of type Neuron"
+        self.neurons[neuron_name] = neuron
+    
+    def clear(self):
+        """
+        Removes all neurons from the group.
+        """
+        self.neurons = {}
+        self.members = []
+
+    def update(self, member_dict):
+        """
+        Updates the list of members in the group.
+        """
+        assert all([isinstance(neuron, Neuron) for nname,neuron in member_dict.items()]), "Neuron group members must be\
+             of type Neuron"
+        self.neurons.update(member_dict)
+        self.members = self.neurons.values()
+        
+    def pop(self, neuron_name):
+        """
+        Deletes the neuron with the specified name from the group.
+        """
+        self.neurons.pop(neuron_name)
+
+    def set_property(self, property_name, property_value):
+        """
+        Sets a new property attribute for all neurons in the group.
+        """
+        for neuron in self.members:
+            neuron.set_property(property_name, property_value)
+    
+    def get_property(self, property_name):
+        """
+        Returns the value of the specified property for all neurons in the group.
+        """
+        return [neuron.get_property(property_name) for neuron in self.members]
+
+class ConnectionGroup:
+    ''' This is a group of connections in the network'''
+    def __init__(self, network, members=None, group_name=None) -> None:
+        """
+        Initializes a new instance of the NeuronGroup class.
+
+        Parameters:
+            groupname (str): The name of the neuron group.
+            members (List[str]): The list of members in the neuron group.
+            group_id (int, optional): The ID of the neuron group. Defaults to 0.
+
+        Returns:
+            None
+        """
+        if group_name is None:
+            self.group_name = 'Group-'+ generate_random_string(8)
+        else:
+            self.group_name = group_name
+
+        if members is None:
+            members = []
+        else:
+            assert all([isinstance(m, Connection)for m in members]), "Connection group members must be\
+        #      of type Connection"
+        self.members = members
+        self.connections = {m._id:m for m in members}
+        self.network = network
+        assert self.group_name not in self.network.groups, "Group name {} already exists\
+             in the network".format(self.group_name)
+        self.network.groups.update({self.group_name: self})
+
+    def __iter__(self):
+        """
+        Returns an iterator over the members of the group.
+        """
+        return iter(self.connections)
+
+    def items(self):
+        """
+        Returns an iterator over the members of the group.
+        """
+        for key, value in self.connections.items():
+            yield key, value
+
+    def clear(self):
+        """
+        Removes all connections from the group.
+        """
+        self.connections = {}
+        self.members = []
+    def keys(self):
+        """
+        Returns an iterator over the members of the group.
+        """
+        return self.connections.keys()
+
+    def values(self):
+        """
+        Returns an iterator over the members of the group.
+        """
+        return self.connections.values()
+
+    def __len__(self):
+        """
+        Returns the number of members in the group.
+        """
+        return len(self.connections)
+
+    def __contains__(self, connection):
+        """
+        Returns True if the connection with the specified name is in the group, False otherwise.
+        """
+        return connection in self.connections
+    
+    def __getitem__(self, connection_id):
+        """
+        Returns the connection with the specified name in the group.
+        """
+        return self.connections[connection_id]
+
+    def __setitem__(self, connection_id, connection):
+        """
+        Sets the connection with the specified name in the group.
+        """
+        assert isinstance(connection, Connection), "Connection must be of type Connection"
+        self.connections[connection_id] = connection
+
+    def update(self, member_dict):
+        """
+        Updates the list of members in the group.
+        """
+        assert all([isinstance(connection, Connection) for ename, connection in member_dict.items()]), "Connection group members must be\
+             of type Connection"
+        self.connections.update(member_dict)
+        self.members = self.connections.values()
+
+    def pop(self, connection_id):
+        """
+        Deletes the connection with the specified name from the group.
+        """
+        self.connections.pop(connection_id)
+
+    def set_property(self, property_name, property_value):
+        """
+        Sets a new property attribute for all connections in the group.
+        """
+        for connection in self.members:
+            connection.set_property(property_name, property_value)
+
+    def get_property(self, property_name):
+        """
+        Gets the property attribute for all connections in the group.
+        """
+        return [connection.get_property(property_name) for connection in self.members]
 
 class Neuron:
     ''' Models a biological neuron'''
     def __init__(self, name, network, neuron_type='', category='', modality='',\
-                  position=None, presynapse=None, postsynapse=None):
+         position=None, presynapse=None, postsynapse=None):
         """
         Initializes a new instance of the Neuron class.
 
@@ -584,7 +877,7 @@ class Neuron:
             modality (str, optional): The modality of the neuron. Defaults to ''.
             position (dict, optional): The position of the neuron. Defaults to None.
             presynapses (list, optional): The list of presynaptic components. Defaults to None.
-            postsynapses (dict, optional): The dictionary of postsynaptic components. 
+            postsynapses (dict, optional): The dictionary of postsynaptic components.
             Defaults to None.
         """
         self.name = name
@@ -603,7 +896,7 @@ class Neuron:
         self.in_connections = {}
         self.out_connections = {}
         self.network = network
-        self.network.add_node(self, self.type, self.category, self.modality)
+        self.network.add_node(self, type=self.type, category=self.category, modality=self.modality)
 
     def set_presynapse(self, presynapse):
         """
@@ -638,16 +931,16 @@ class Neuron:
 
     def add_trial(self, trial_num=0):
         """
-        Adds a new trial to the `trial` dictionary of the current object with the given `trial_num`. 
-        If `trial_num` is not provided, it defaults to 0. 
-        
+        Adds a new trial to the `trial` dictionary of the current object with the given `trial_num`.
+        If `trial_num` is not provided, it defaults to 0.
+
         Returns:
             Trial: The newly added trial object.
         """
         self.trial[trial_num] = Trial(self, trial_num)
         return self.trial[trial_num]
 
-    def get_all_connections(self):
+    def get_connections(self):
         """
         Returns all connections that the neuron is involved in.
 
@@ -682,6 +975,52 @@ class Neuron:
         setattr(self, property_name, property_value)
         nx.set_node_attributes(self.network, {self: {property_name: property_value}})
 
+    def get_property(self, key):
+        ''' Gets an arbitrary attribute for the class'''
+        return getattr(self, key)
+
+class Connection:
+    ''' This class represents a connection between two neurons. '''
+    def __init__(self, pre_neuron, post_neuron, uid=0, edge_type='chemical-synapse', weight=1):
+        """
+        Initializes a new instance of the Connection class.
+
+        Args:
+            pre_neuron (Neuron): The neuron sending the connection.
+            post_neuron (Neuron): The neuron receiving the connection.
+            uid (int, optional): The unique identifier for the connection.
+            edge_type (str, optional): The type of the connection.
+            weight (float, optional): The weight of the connection.
+
+        Raises:
+            AssertionError: If the neural networks of the pre and post neurons are not the same.
+        """
+        self.pre_neuron = pre_neuron
+        self.post_neuron = post_neuron
+        self.network = post_neuron.network
+        self.uid = uid
+        self._id = (pre_neuron, post_neuron, self.uid)
+        self.edge_type = edge_type
+        self.weight = weight
+
+        self.pre_neuron.out_connections[self._id] = self
+        self.post_neuron.in_connections[self._id] = self
+    @property
+    def by_name(self):
+        return (self.pre_neuron.name, self.post_neuron.name)
+    def update_weight(self, weight, delta=False):
+        ''' Sets the connection weight '''
+        if not delta:
+            self.weight = weight
+        else:
+            self.weight += weight
+        nx.set_edge_attributes(self.network, {self._id:{'weight':self.weight}})
+
+    def set_property(self, key, val):
+        ''' Sets an arbitrary attribute for the class'''
+        setattr(self, key, val)
+        nx.set_edge_attributes(self.network.graph, {self._id:{key:val}})
+    
     def get_property(self, key):
         ''' Gets an arbitrary attribute for the class'''
         return getattr(self, key)
@@ -730,7 +1069,7 @@ class Trial:
             self.discard = []
             self._data = _data.astype(np.float64)
         elif discard>0:
-            self.discard = discard*F_SAMPLE #Initial points to be discarded due to bleaching
+            self.discard = discard*F_SAMPLE #Initial points to be discarded due to bleaching, etc.
             self._data = _data[discard*F_SAMPLE:].astype(np.float64)
         else:
             raise ValueError("Discard cannot be negative")
@@ -839,7 +1178,7 @@ class StimResponse:
         return auctp
 
     def _find_onset_time(self, step=2, slide = 1, init_pval_tolerance=0.5):
-        ''' Find the onset of the curve using a 2 sample KS test 
+        ''' Find the onset of the curve using a 2 sample KS test
 	maxOnset, step and slide are in ms'''
 
         window_size = int(step*self.f_sample)
@@ -871,10 +1210,6 @@ class StimResponse:
     #        print "No response measured in trial {}".format(self.index)
     #        return 1  # Flagged as noisy
 
-    # Transformations
-    def _linear_transform(self, value, minvalue, maxvalue):
-        return (value - minvalue)/(maxvalue - minvalue)
-
     def _normalize_to_baseline(self, baseline_window):
         '''normalizes the vector to an average baseline'''
         baseline = np.average(baseline_window)
@@ -887,65 +1222,73 @@ class StimResponse:
             trace = self.response
         if ts_filter == 'bessel': # f_sample/2 is Niquist, cutoff is the low-pass cutoff.
             cutoff_to_niquist_ratio = 2*cutoff/(self.f_sample)
-            b, a = signal.bessel(order, cutoff_to_niquist_ratio, analog=False)
-            trace =  signal.filtfilt(b, a, trace)
+            _b, _a = signal.bessel(order, cutoff_to_niquist_ratio, analog=False)
+            trace =  signal.filtfilt(_b, _a, trace)
         return trace
 
     def _smoothen(self, smoothening_time):
         '''normalizes the vector to an average baseline'''
-        smoothening_window = smoothening_time*1e-3*self.f_sample
+        smoothening_window = smoothening_time*self.f_sample
         window = np.ones(int(smoothening_window)) / float(smoothening_window)
         self.response = np.convolve(self.response, window, 'same')  # Convolving with a rectangle
         return self.response
 
-class Connection:
-    ''' This class represents a connection between two neurons. '''
-    def __init__(self, pre_neuron, post_neuron, uid=0, edge_type='chemical-synapse', weight=1):
-        """
-        Initializes a new instance of the Connection class.
-
-        Args:
-            pre_neuron (Neuron): The neuron sending the connection.
-            post_neuron (Neuron): The neuron receiving the connection.
-            uid (int, optional): The unique identifier for the connection.
-            edge_type (str, optional): The type of the connection.
-            weight (float, optional): The weight of the connection.
-
-        Raises:
-            AssertionError: If the neural networks of the pre and post neurons are not the same.
-        """
-        self.pre_neuron = pre_neuron
-        self.post_neuron = post_neuron
-        self.network = post_neuron.network
-        self.uid = uid
-        self.id = (pre_neuron, post_neuron, self.uid)
-        self.edge_type = edge_type
-        self.weight = weight
-
-        self.pre_neuron.outConnections[self.id] = self
-        self.post_neuron.inConnections[self.id] = self
-
-    def update_weight(self, weight, delta=False):
-        ''' Sets the connection weight '''
-        if not delta:
-            self.weight = weight
-        else:
-            self.weight += weight
-        nx.set_edge_attributes(self.network, {self.id:{'weight':self.weight}})
-
-    def set_property(self, key, val):
-        ''' Sets an arbitrary attribute for the class'''
-        setattr(self, key, val)
-        nx.set_edge_attributes(self.network.graph, {self.id:{key:val}})
-
-class Map(nx.DiGraph):
-    ''' This class represents a directed graph that can be mapped to any 
+class Mapping(nx.DiGraph):
+    ''' This class represents a directed graph that can be mapped to any
     property of worm/nervous system or neurons that have graph-based properties.
-     This can be used to map neurotransmitters or neuropeptides to their corresponding
-       receptors, protein-protein interactions, etc.
+    This can be used to map neurotransmitters or neuropeptides to their corresponding
+    receptors, protein-protein interactions, etc.
     '''
     def __init__(self):
         """
         Initialize a directed graph representing a map.
         """
         super().__init__()
+
+## Functions
+def generate_random_string(length: int = 8) -> str:
+    """
+    Generates a random string of given length.
+
+    Args:
+        length (int): The length of the string to generate.
+
+    Returns:
+        str: A random string of the specified length.
+    """
+    characters = string.ascii_letters + string.digits
+    return ''.join(random.choice(characters) for _ in range(length))
+
+def join_networks(networks, copy_graph=False):
+    """
+    A function to join multiple networks into a single composed network.
+    
+    Parameters:
+        networks (list): List of networks to be joined.
+        copy_graph (bool, optional): Whether to create a copy of the graph. Defaults to False.
+    
+    Returns:
+        network_composed: The composed network after joining all input networks.
+    """
+    network_composed = nx.compose_all(networks)
+    fold_dict = {}
+    for node in network_composed.nodes:
+        if not node.name in fold_dict:
+            fold_dict[node.name] = [node]
+        else:
+            fold_dict[node.name].append(node)
+    
+    for nodename, nodes_to_fold in fold_dict.items():
+        node1 = fold_dict[nodename][0]
+        for node2 in nodes_to_fold[1:]:
+            network_composed = nx.contracted_nodes(network_composed, node1, node2,\
+                                 copy=copy_graph)
+    
+    network_composed.update_neurons()
+    network_composed.update_connections()
+    return network_composed
+
+
+# Transformations
+def _linear_transform(value, minvalue, maxvalue):
+    return (value - minvalue)/(maxvalue - minvalue)

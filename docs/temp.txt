@@ -1,0 +1,29 @@
+.. autoclass:: Worm 
+   :members:
+   :undoc-members:
+
+.. autoclass:: NervousSystem 
+   :members:
+   :undoc-members:
+
+.. autoclass:: NeuronGroup
+   :members:
+   :undoc-members:
+
+.. autoclass:: ConnectionGroup
+   :members:
+   :undoc-members:
+
+.. autoclass:: Neuron
+   :members:
+   :undoc-members:
+
+.. autoclass:: Connection
+   :members:
+   :undoc-members:
+
+.. autoclass:: Trial
+   :members:
+   :undoc-members:
+
+

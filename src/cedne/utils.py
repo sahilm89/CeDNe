@@ -16,23 +16,25 @@ import textalloc as ta
 
 ## Directories
 
-TOPDIR = '/Users/sahilmoza/Documents/Codes/WholeBrain/' ## Change this to cedne and write a function to download data from an online server for heavy data.
-DATADIR = TOPDIR + 'data-sources/'
+TOPDIR = '/Users/sahilmoza/Documents/Codes/CedNe/' ## Change this to cedne and write a function to download data from an online server for heavy data.
+DATADIR = TOPDIR + 'data_sources/'
+DOWNLOAD_DIR = TOPDIR + 'data_sources/downloads/'
 
 ## Loading and building functions
-celllist = DATADIR + "Cell_list.pkl"
+cell_list = DATADIR + "Cell_list.pkl"
 chemsyns = DATADIR + "chem_adj.pkl"
 elecsyns = DATADIR + "gapjn_symm_adj.pkl"
 neuronPositions = DATADIR + "neuronPosition.pkl"
 def makeWorm(name=''):
     w = cedne.Worm(name)
     nn = cedne.NervousSystem(w)
-    nn.build_nervous_system(neuron_data=celllist, chem_synapses=chemsyns, elec_synapses=elecsyns, positions=neuronPositions)
+    nn.build_nervous_system(neuron_data=cell_list, chem_synapses=chemsyns, elec_synapses=elecsyns, positions=neuronPositions)
     return w
 
 ## Neurotransmitter tables
-npr_file = DATADIR + 'GenesExpressing-BATCH-thrs4_use.xlsx'
-lig_file = DATADIR + 'Ligand-table.xlsx'
+prefix_NT = 'Wang_2019/'
+npr_file = DOWNLOAD_DIR + prefix_NT + 'GenesExpressing-BATCH-thrs4_use.xlsx'
+lig_file = DOWNLOAD_DIR + prefix_NT +'ligand-table.xlsx'
 npr = pd.read_excel(npr_file, sheet_name='npr', true_values='TRUE', false_values='FALSE', engine='openpyxl')
 ligmap = pd.read_excel(npr_file, sheet_name='ligmap', engine='openpyxl')
 ligtable = pd.read_excel(lig_file, sheet_name='Hermaphrodite, sorted by neuron', skiprows=7, engine='openpyxl')
@@ -82,10 +84,11 @@ def loadNeurotransmitters(nn, npr=npr, ligmap=ligmap):
         nn.neurons[n].preSynapse += getLigands(ligtable, n)
 
 ## Neuropeptides tables
-csvfile = DATADIR + 'neuropeptideConnectome.txt'
-lrm = DATADIR + 'NPP_GPCR_networks_long_range_model_2.csv'
-nid = DATADIR + '26012022_num_neuronID.txt'
-np_order = DATADIR + '91-NPPGPCR networks'
+prefix_NP = 'Ripoll-Sanchez_2023/'
+csvfile = DOWNLOAD_DIR + prefix_NP + 'neuropeptideConnectome.txt'
+lrm = DOWNLOAD_DIR +  prefix_NP + 'NPP_GPCR_networks_long_range_model_2.csv'
+nid = DOWNLOAD_DIR +  prefix_NP + '26012022_num_neuronID.txt'
+np_order = DOWNLOAD_DIR +  prefix_NP + '91-NPPGPCR networks'
 
 def loadNeuropeptides(w, lrm=lrm, nid=nid, np_order=np_order, neuropeps= 'all'):
     ''' Loads Neuropeptides into neurons using Ripoll-Sanchez et al. 2023'''
@@ -108,20 +111,26 @@ def loadNeuropeptides(w, lrm=lrm, nid=nid, np_order=np_order, neuropeps= 'all'):
                 models_dict[nprc][n1][n2] = {'weight':models[npNum][i][j]}
 
     npepreclist = neuropep_rec['pair_names_NPP'].tolist()
+    if neuropeps != 'all':
+        npepreclist_filter = neuropeps
+    else:
+        npepreclist_filter = npepreclist
     for nprc, model in zip(npepreclist, models ):
-        if type(w)==cedne.Worm:
-            nn_np = cedne.NervousSystem(w, condition="{}".format(nprc))
-            nn_np.build_network(neurons='Cell_list.pkl', adj=models_dict[nprc], label=nprc)
-        elif type(w)==cedne.NervousSystem:
-            w.setupConnections(adj=models_dict[nprc], edge_type=nprc)
+        if nprc in npepreclist_filter:
+            if type(w)==cedne.Worm:
+                print(nprc, model, models_dict[nprc])
+                nn_np = cedne.NervousSystem(w, network="{}".format(nprc))
+                nn_np.build_network(neurons=cell_list, adj=models_dict[nprc], label=nprc)
+            elif type(w)==cedne.NervousSystem:
+                w.setup_connections(adjacency_matrix=models_dict[nprc], edge_type=nprc)
 
 
 ## Load CENGEN tables
-
-thres_1 = DATADIR + 'cengen/liberal_threshold1.csv'
-thres_2 = DATADIR + 'cengen/medium_threshold2.csv'
-thres_3 = DATADIR + 'cengen/conservative_threshold3.csv'
-thres_4 = DATADIR + 'cengen/stringent_threshold4.csv'
+prefix_CENGEN = 'CENGEN/'
+thres_1 = DOWNLOAD_DIR + prefix_CENGEN + 'liberal_threshold1.csv'
+thres_2 = DOWNLOAD_DIR + prefix_CENGEN + 'medium_threshold2.csv'
+thres_3 = DOWNLOAD_DIR + prefix_CENGEN + 'conservative_threshold3.csv'
+thres_4 = DOWNLOAD_DIR + prefix_CENGEN + 'stringent_threshold4.csv'
 
 def returnThresholdDict(th1, th2, th3, th4, nnames, cengen_neurons):
     """
@@ -164,7 +173,7 @@ def returnThresholdDict(th1, th2, th3, th4, nnames, cengen_neurons):
     threshold_dict = {'1': th1_f, '2': th2_f, '3': th3_f, '4': th4_f}
     return threshold_dict
 
-def loadTranscripts(nn, thres_1=thres_1, thres_2=thres_2, thres_3=thres_3, thres_4=thres_4):
+def loadTranscripts(nn, threshold=4):
     """
     Loads transcripts from CENGEN data files and assigns them to neuron objects.
     
@@ -241,34 +250,39 @@ def loadTranscripts(nn, thres_1=thres_1, thres_2=thres_2, thres_3=thres_3, thres
 
     th_i = [th1, th2, th3, th4]
     for n in nn.neurons:
-        nn.neurons[n].set_property('transcript', {i:th_i[i-1][cengen_neurons[n]] for i in range(1,5)})
+        nn.neurons[n].set_property('transcript', th_i[threshold-1][cengen_neurons[n]])
 
-def return_enriched_transcripts(nn, neurons_of_interest, neurons_to_exclude='all', th=4):
+def get_enriched_neurons(network, target_neurons, excluded_neurons=None, threshold=4):
     """
-    Returns the enriched neurons of interest in the given neural network.
+    Returns the enriched neurons from the target neurons in the given neural network.
 
-    Parameters:
-        nn (NeuralNetwork): The neural network object to get enriched neurons from.
-        neurons_of_interest (list): A list of neuron names to include in the enriched neurons.
-        neurons_to_exclude (list, optional): A list of neuron names to exclude from the enriched neurons. Defaults to [].
-        th (int, optional): The threshold value to use for determining enriched neurons. Defaults to 4.
+    Args:
+        network (NeuralNetwork): The neural network object.
+        target_neurons (list): List of target neuron names.
+        excluded_neurons (list, optional): List of neuron names to exclude. Defaults to None.
+        threshold (int, optional): Threshold value. Defaults to 4.
 
     Returns:
-        enrichedNeurons (list): A list of enriched neuron names.
+        enriched_neurons (list): List of enriched neuron names.
     """
-    enrichedNeurons = []
-    for n in neurons_of_interest:
-        if nn.neurons[n].transcript[th] > 0:
-            enrichedNeurons.append(n)
-    for n in neurons_to_exclude:
-        if n in enrichedNeurons:
-            enrichedNeurons.remove(n)
-    return enrichedNeurons
+    enriched_neurons = [
+        neuron for neuron in target_neurons
+        if network.neurons[neuron].transcript[threshold] > 0
+    ]
+
+    if excluded_neurons is not None:
+        enriched_neurons = [
+            neuron for neuron in enriched_neurons
+            if neuron not in excluded_neurons
+        ]
+
+    return enriched_neurons
 
 ## Load synaptic weights from Excel file
-leiferFile = DATADIR + "leifer/41586_2023_6683_MOESM13_ESM.xls"
+prefix_synaptic_weights = 'Randi_2023/'
+weight_file = DOWNLOAD_DIR + prefix_synaptic_weights + "41586_2023_6683_MOESM13_ESM.xls"
 
-def loadSynapticWeights(nn, weightMatrix = leiferFile):
+def loadSynapticWeights(nn, weightMatrix = weight_file):
     """
     Load synaptic weights from an Excel file into the given neural network.
 
@@ -287,7 +301,7 @@ def loadSynapticWeights(nn, weightMatrix = leiferFile):
                 nn.connections[sid].updateWeight(wtMat[sid[0].name][sid[1].name])
 
 
-### Graphing functions
+### Plotting functions
 
 def simpleaxis(axes, every=False, outward=False):
     """
@@ -318,44 +332,45 @@ def simpleaxis(axes, every=False, outward=False):
 
 
 def groupPosition(pos, type_cat):
-    """
-    Group the positions of nodes based on their categories.
 
-    Parameters:
-        pos (dict): A dictionary containing the positions of nodes.
-        type_cat (dict): A dictionary containing the categories of nodes.
-
-    Returns:
-        tuple: A tuple containing two dictionaries. The first dictionary, pos2, maps each node to its position. The second dictionary, boxes, maps each category to its bounding box coordinates.
-    """
     x,y = zip(*pos.values())
     x = np.array(x)
     yax = sorted(set(y))[::-1]
+
     new_pos = {}
     for i,yi in enumerate(yax):
         new_pos[i] = [(xi,yi) for xi in sorted(x[np.where(y==yi)])]
-
+    # print([(i,len(v)) for (i,v) in new_pos.items()])
+    # print(type_cat)
     pos2 = {}
     boxes = {}
     order = ['sensory', 'interneuron', 'motorneuron']
+    box_height = 0.025
     for i,o in enumerate(order):
         boxes[o] = {}
         j=0
-        sortedKeys = sorted(type_cat[o].keys())
-        if o == "interneuron":
-            p = [sortedKeys[0]]
-            sortedKeys= sortedKeys[1:4] + p + [sortedKeys[4]]
-        for cat in sortedKeys: 
-            cat_pos = []
-            for n in sorted(type_cat[o][cat]):
-               pos2[n] = new_pos[i][j]
-               cat_pos.append(pos2[n])
-               j+=1
-            boxes[o][cat] = [(cat_pos[0][0]-0.035, cat_pos[0][1]-0.02), (cat_pos[-1][0] - cat_pos[0][0]) + 0.07, 0.04]
+        if o in type_cat:
+            sortedKeys = sorted(type_cat[o].keys())
+            if o == "interneuron":
+                intOrder = ['layer 1 interneuron', 'layer 2 interneuron', 'layer 3 interneuron', 'category 4 interneuron', 'linker to pharynx', 'pharynx', 'endorgan']
+                sortedKeys = [intn for intn in intOrder if intn in sortedKeys]
+                # p = [sortedKeys[0]]
+                # print(p, sortedKeys)
+                # sortedKeys= sortedKeys[1:4] + p + [sortedKeys[4]]
+                
+            for cat in sortedKeys: 
+                cat_pos = []
+                # print(cat, len(new_pos[i]), len(type_cat[o][cat]))
+                for n in sorted(type_cat[o][cat]):
+                #print(n, cat, new_pos[i], i, j )
+                    pos2[n] = new_pos[i][j]
+                    cat_pos.append(pos2[n])
+                    j+=1
+                boxes[o][cat] = [(cat_pos[0][0]-0.035, cat_pos[0][1]-(box_height/2)), (cat_pos[-1][0] - cat_pos[0][0]) + 0.07, box_height]
 
     return pos2, boxes
 
-def makeSpiral(neunet, save=False):
+def plot_spiral(neunet, save=False):
     """
     Generates a spiral layout for the network.
 
@@ -365,7 +380,7 @@ def makeSpiral(neunet, save=False):
     Returns:
     - pos (dict): A dictionary mapping node names to their positions in the graph.
     """
-    node_color = ['gray' for node in neunet.nodes]
+    node_color = ['lightgray' for node in neunet.nodes]
     edge_color = []
     edge_weight = []
     for (u,v,attrib_dict) in list(neunet.edges.data()):
@@ -380,7 +395,57 @@ def makeSpiral(neunet, save=False):
     plt.show()
     plt.close()
 
-def makeGraph(interesting_conns, edgeColors, nodeColors, title, neunet, save=False, extraNodes=[], extraEdges=[], pos=[], mark_anatomical=False):
+def plot_shell(neunet, center=None, save=False, figsize=(8,8), fontsize=11):
+    """
+    Generates a shell layout for the network.
+
+    Parameters:
+    - neunet (NeuralNetwork): The neural network object.
+
+    Returns:
+    - pos (dict): A dictionary mapping node names to their positions in the graph.
+    """
+    if isinstance(center, str):
+        assert center in neunet.neurons
+        shells = [[neunet.neurons[center]], [neu for nname,neu in neunet.neurons.items() if nname !=center]]
+    elif isinstance(center, list):
+        #print(center, neunet.neurons.keys(), [c in neunet.neurons.keys() for c in center])
+        assert all([c in neunet.neurons.keys() for c in center])
+        shells = [[neunet.neurons[c] for c in center], [neu for nname,neu in neunet.neurons.items() if nname not in center]]
+    else:
+        raise ValueError("center must be a neuron name or a list of neuron names")
+    node_color = ['lightgray' if not hasattr(node, 'color') else node.color for node in neunet.nodes]
+    edge_color = ['lightgray' if not hasattr(edge, 'color') else edge.color for edge in neunet.edges]
+    # edge_color = []
+    # edge_weight = []
+    # for (u,v,attrib_dict) in list(neunet.edges.data()):
+    #     edge_color.append(attrib_dict['color'])
+    #     edge_weight.append(attrib_dict['weight'])
+
+    pos = nx.shell_layout(neunet, nlist=shells)
+    fig, ax = plt.subplots(figsize=figsize)
+    # print(len(pos))
+    # print([(n, pos[neu]) for (n,neu) in neunet.neurons.items()])
+    nx.draw(neunet, node_size = 800, ax=ax, pos=pos, with_labels=False, node_color = node_color, edge_color=edge_color)
+
+    for node, (x, y) in pos.items():
+        label = str(node.name)
+        if len(label)>3:
+            if (x>0 and y>0) or (x<0 and y<0):
+                plt.text(x, y, label, fontsize=fontsize, rotation=45, ha='center', va='center')
+            elif (x>0 and y<0) or (x<0 and y>0):
+                plt.text(x, y, label, fontsize=fontsize, rotation=-45, ha='center', va='center')
+            else:
+                plt.text(x, y, label, fontsize=fontsize, ha='center', va='center')
+        else:
+            plt.text(x, y, label, fontsize=fontsize, ha='center', va='center')
+    if save:
+        plt.savefig(save)
+    plt.show()
+    plt.close()
+    
+    
+def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, save=False, title='', extraNodes=[], extraEdges=[], pos=[], mark_anatomical=False):
     """
     Generates a graph visualization of a given neural network. Change this function to make more streamlined.
 
@@ -399,20 +464,35 @@ def makeGraph(interesting_conns, edgeColors, nodeColors, title, neunet, save=Fal
     Returns:
     - pos (dict): A dictionary mapping node names to their positions in the graph.
     """
-    
-    G = nx.Graph()
-    G.add_edges_from(interesting_conns)
-
-    cmap2 = plt.get_cmap('RdYlGn')
-    #cmap2 = sns.diverging_palette(220, 20, as_cmap=True)
-    cmap = plt.get_cmap('PuOr') 
-    norm = matplotlib.colors.Normalize(vmin=-1.,vmax=1.)
-    m = cm.ScalarMappable(norm=norm, cmap=cmap)
-    norm2 = matplotlib.colors.Normalize(vmin=-1.5,vmax=1.5)
-    o = cm.ScalarMappable(norm=norm2, cmap=cmap2)
     classcolor = 'green'
 
-    edge_color = [m.to_rgba(col) for col in edgeColors]
+    G = nx.Graph()
+    G.add_edges_from(interesting_conns)
+    if edgeColors is None:
+        edge_color=[]
+    elif isinstance(edgeColors, str):
+        edge_color = [edgeColors for e in interesting_conns]
+    elif len(edgeColors) == len(interesting_conns):
+        if all (isinstance(ec, str) for ec in edgeColors):
+            edge_color = [ec for ec in edgeColors]
+        elif all (isinstance(ec, float) for ec in edgeColors):
+            #cmap2 = sns.diverging_palette(220, 20, as_cmap=True)
+            cmap = plt.get_cmap('PuOr') 
+            norm = matplotlib.colors.Normalize(vmin=-1.,vmax=1.)
+            m = cm.ScalarMappable(norm=norm, cmap=cmap)
+            edge_color = [m.to_rgba(col) for col in edgeColors]
+    else:
+        raise ValueError('edge_colors must either be a string or a list of strings or floats \
+            of the same length as interesting_conns')
+    
+    if nodeColors is None:
+        node_color=[]
+    elif all (isinstance(nc, str) for nc in nodeColors):
+        node_color = [nc for nc in nodeColors]
+    else:
+        cmap2 = plt.get_cmap('RdYlGn')
+        norm2 = matplotlib.colors.Normalize(vmin=-1.5,vmax=1.5)
+        o = cm.ScalarMappable(norm=norm2, cmap=cmap2)
 
     if mark_anatomical:
         for i,e in enumerate(G.edges):
@@ -463,7 +543,8 @@ def makeGraph(interesting_conns, edgeColors, nodeColors, title, neunet, save=Fal
         if n in oriNodes:
             if n in nodeColors.keys():
                 #print("Y", n, nodeColors.keys())
-                node_color[neunet.neurons[n].type].append(o.to_rgba(nodeColors[n]))
+                # node_color[neunet.neurons[n].type].append(o.to_rgba(nodeColors[n]))
+                node_color[neunet.neurons[n].type].append(nodeColors[n])
                 node_alpha[neunet.neurons[n].type].append(0.8)
             else:
                 #print(n, nodeColors.keys())
@@ -490,7 +571,6 @@ def makeGraph(interesting_conns, edgeColors, nodeColors, title, neunet, save=Fal
             else:
                 type_cat[cat[0]][cat_alt].append(n) 
 
-
     array_op = lambda x, sx: np.array([x[0]*sx, x[1]])
     sx=2
     #pos =  nx.spring_layout(G, k=1, iterations=70)# 
@@ -502,17 +582,25 @@ def makeGraph(interesting_conns, edgeColors, nodeColors, title, neunet, save=Fal
         print(boxes)
     
     #print(edges_within, edges_across)
-    fig, ax = plt.subplots(figsize=(30,4))
+    fig, ax = plt.subplots(figsize=(40,4))
     #edge_color = 'k'
     #nx.draw(G, node_size = 1000, ax=ax, pos=pos, with_labels=True, edge_color=edge_color, node_color = node_color)#, width=weights, font_size=12)
     #plotNodes = []
-    node_size=  2400
+    node_size=  2000
     for type in node_types:
         nx.draw_networkx_nodes(node_types[type], node_shape=node_shapes[type], node_size = node_size, ax=ax, pos=pos, node_color = node_color[type],  linewidths=1, alpha=0.8)#node_alpha[type]))#, width=weights, font_size=12)
-    nx.draw_networkx_labels(G, pos=pos, labels={o:o for o in oriNodes}, ax=ax, font_size=20)
+    for node, (x, y) in pos.items():
+        label = str(node)
+        if len(label)>3:
+            plt.text(x, y, label, fontsize=20, rotation=45, ha='center', va='center')
+        else:
+            plt.text(x, y, label, fontsize=20, ha='center', va='center')
+
+    # nx.draw_networkx_labels(G, pos=pos, labels={o:o for o in oriNodes if len(o)<4}, ax=ax, font_size=20)
+    # nx.draw_networkx_labels(G, pos=pos, labels={o:o for o in oriNodes if len(o)>3}, ax=ax, font_size=20, rotation=45)
     #nx.draw_networkx_edges(G, edgelist=interesting_conns, ax=ax, pos=pos, edge_color=edge_color, node_size = node_size, arrows=True, connectionstyle='arc3, rad=0.3', width=2)#colors_2, style='--')
-    nx.draw_networkx_edges(G, edgelist=edges_within, ax=ax, pos=pos, edge_color=color_within, node_size = node_size, arrows=True, connectionstyle='arc3, rad=0.3', width=2)#colors_2, style='--')
-    nx.draw_networkx_edges(G, edgelist=edges_across, ax=ax, pos=pos, edge_color=color_across, node_size = node_size, arrows=True, width=2)#, connectionstyle='arc3, rad=0.3')#colors_2, style='--')
+    nx.draw_networkx_edges(G, edgelist=edges_within, ax=ax, pos=pos, edge_color=color_within, node_size = node_size, width=2, arrows=True, connectionstyle='arc3, rad=0.3')#colors_2, style='--')
+    nx.draw_networkx_edges(G, edgelist=edges_across, ax=ax, pos=pos, edge_color=color_across, node_size = node_size, width=2, arrows=True)#, connectionstyle='arc3, rad=0.3')#colors_2, style='--')
 
     within_extra = []
     across_extra = []
@@ -525,15 +613,15 @@ def makeGraph(interesting_conns, edgeColors, nodeColors, title, neunet, save=Fal
     nx.draw_networkx_edges(G, edgelist = within_extra, ax=ax, edge_color='gray', pos=pos, alpha=0.2, width=1, arrows=True, connectionstyle='arc3, rad=0.3')
     nx.draw_networkx_edges(G, edgelist = across_extra, ax=ax, edge_color='gray', pos=pos, alpha=0.2, width=1)
     #nx.draw_networkx_edge_labels(G, pos, label_pos=0.5, edge_labels=edge_labels, ax=ax)
-    divider = make_axes_locatable(ax)
+    # divider = make_axes_locatable(ax)
     
-    cax = inset_axes(ax, loc='upper right', width="100%", height="100%",
-                   bbox_to_anchor=(0.75,0.85,.05,.05), bbox_transform=ax.transAxes) #
-    cax.set_xticks([-1,0,1])
-    cax.set_title("$\\Delta$ correlation", fontsize=24)
-    #cax = divider.append_axes("right", size="1%", pad=0.05)    
-    cbar = plt.colorbar(m, cax= cax, orientation='horizontal')
-    cbar.ax.tick_params(labelsize=24) 
+    # cax = inset_axes(ax, loc='upper right', width="100%", height="100%",
+    #                bbox_to_anchor=(0.75,0.85,.05,.05), bbox_transform=ax.transAxes) #
+    # cax.set_xticks([-1,0,1])
+    # cax.set_title("$\\Delta$ correlation", fontsize=24)
+    # #cax = divider.append_axes("right", size="1%", pad=0.05)    
+    # cbar = plt.colorbar(m, cax= cax, orientation='horizontal')
+    # cbar.ax.tick_params(labelsize=24) 
 
     #cax2 = divider.append_axes("bottom", size="1%", pad=0.05)
     # cbar2= plt.colorbar(o, cax=cax2, orientation='horizontal')
@@ -544,11 +632,15 @@ def makeGraph(interesting_conns, edgeColors, nodeColors, title, neunet, save=Fal
             xy, width, height = pars[0], pars[1], pars[2]
             rect = matplotlib.patches.Rectangle(xy,width,height, linewidth=1, edgecolor='gray', facecolor='none', alpha=0.75, linestyle='dashed')
             if cat in ['linker to pharynx']:
+                cat = "link. to phar."
                 cat = cat.replace(' ', '\n')
+            elif cat in ['sex-specific neuron']:
+                cat = 'sex-spec'
+                #cat = cat.replace(' ', '\n')]
             for suffix in ["interneuron", "motor neuron"]:
                 if suffix in cat:
                     cat = cat.replace(suffix,'')
-            ax.text(xy[0], xy[1]-0.01, cat, #-height
+            ax.text(xy[0], xy[1]-0.002, cat, #-height
             horizontalalignment='left',
             verticalalignment='top', fontsize=28, color=classcolor)
             # Add the patch to the Axes
@@ -571,7 +663,8 @@ def makeGraph(interesting_conns, edgeColors, nodeColors, title, neunet, save=Fal
 active_color, passive_color = "#CC5500", "lightgrey"
 booleanDictionary = {True: active_color, False: passive_color}
 
-def plot_position(nn, axis='AP-DV', highlight=[], booleanDictionary=booleanDictionary, title='', label=True, save=False):
+
+def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=booleanDictionary, title='', label=True, save=False):
     """
     A function to plot the positions of neurons based on their coordinates and attributes.
 
@@ -587,8 +680,12 @@ def plot_position(nn, axis='AP-DV', highlight=[], booleanDictionary=booleanDicti
         None
     """
     coords = ['AP', 'DV', 'LR']
-    nlabels = [n for n in nn.neurons ]
+    nlabels = np.array([n for n in nn.neurons])
     pos = [[] for i in range(len(nlabels))]
+    if highlight is None:
+        highlight = []
+    else:
+        assert all([n in nn.neurons for n in highlight]), "Neuron(s) not found in the network."
             
     for i,n in enumerate(nlabels):
         if n in ['CANL']:
@@ -600,13 +697,14 @@ def plot_position(nn, axis='AP-DV', highlight=[], booleanDictionary=booleanDicti
                 if x in nn.neurons[n].position: 
                     pos[i].append(nn.neurons[n].position[x])
                 else:
-                    print(n,x)
+                    raise ValueError(f"Neuron {n} has no position in axis {x}.")
     pos = np.array(pos)
     posDict = dict(zip(coords, pos.T))
     posDict['LR'] = -posDict['LR'] # flipping LR for plotting in the correct direction
     posDict['DV'] = -posDict['DV'] # flipping DV for plotting in the correct direction
     facecolors = np.array([booleanDictionary[n in highlight] for n in nlabels])
     alphas = np.array([1 if n in highlight else 0.25 for n in nlabels])
+    print([(n,facecolors[j]) for j,n in enumerate(nlabels) if n in highlight])
 
     f, ax = plt.subplots(figsize=(20,3))
     boolList = np.array([n in highlight for n in nlabels])
@@ -637,7 +735,7 @@ def plot_position(nn, axis='AP-DV', highlight=[], booleanDictionary=booleanDicti
 
     if label:
         ta.allocate_text(f,ax,x[boolList], y[boolList],
-                    highlight,
+                    nlabels[boolList],
                     x_scatter=x[boolList], y_scatter=y[boolList],
                     textsize=11, linecolor='gray', avoid_label_lines_overlap=True)
 
