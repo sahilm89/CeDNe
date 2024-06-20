@@ -16,7 +16,6 @@ Classes:
 - Connection
 - Mapping
 """
-from copy import deepcopy
 import string
 import random
 import pickle
@@ -116,7 +115,7 @@ class NervousSystem(nx.MultiDiGraph):
         self.groups = {}
 
         self.neurons = NeuronGroup(self, group_name='all_neurons')  \
-            # dictionary of all neurons in the nervous system 
+            # dictionary of all neurons in the nervous system
         self.connections = ConnectionGroup(self, group_name='all_connections') \
               # dictionary of all connections in the nervous system
 
@@ -125,6 +124,9 @@ class NervousSystem(nx.MultiDiGraph):
 
     @property
     def num_groups(self):
+        """
+        Returns the current number of Neuron Groups for the Nervous System.
+        """
         return len(self.groups)
 
     def build_nervous_system(self, neuron_data, chem_synapses, elec_synapses, positions):
@@ -200,12 +202,12 @@ class NervousSystem(nx.MultiDiGraph):
         self.neurons.clear()
         for node in self.nodes:
             self.neurons.update({node.name:node})
-    
+
     def update_connections(self):
         """
         Update the dictionary of connections. Need more precaution here.
         """
-        for connection_id, connection in self.connections.items():
+        for connection_id in self.connections.keys():
             if connection_id not in self.edges:
                 self.connections.pop(connection_id)
 
@@ -588,9 +590,10 @@ class NervousSystem(nx.MultiDiGraph):
             object: 
                 a deep copy of the Nervous System object.
         """
-        return self.copy(as_view=as_view)
-        #return deepcopy(self)
-        #return deepcopy(self)
+        if as_view:
+            nx.graphviews.generic_graph_view(self, create_using=NervousSystem)
+        else:
+            return self.copy(as_view=as_view)
 
     def remove_unconnected_neurons(self):
         """
@@ -697,8 +700,8 @@ class NeuronGroup:
         self.members = members
         self.neurons = {m.name: m for m in members}
         self.network = network
-        assert self.group_name not in self.network.groups, "Group name {} already exists\
-             in the network".format(self.group_name)
+        assert self.group_name not in self.network.groups, f"Group name {self.group_name}\
+            already exists in the network"
         self.network.groups.update({self.group_name: self})
 
     def __iter__(self):
@@ -748,7 +751,7 @@ class NeuronGroup:
         """
         assert isinstance(neuron, Neuron), "Neuron group members must be of type Neuron"
         self.neurons[neuron_name] = neuron
-    
+
     def clear(self):
         """
         Removes all neurons from the group.
@@ -760,11 +763,11 @@ class NeuronGroup:
         """
         Updates the list of members in the group.
         """
-        assert all([isinstance(neuron, Neuron) for nname,neuron in member_dict.items()]), "Neuron group members must be\
-             of type Neuron"
+        assert all([isinstance(neuron, Neuron) for nname,neuron in member_dict.items()]),\
+          "Neuron group members must be of type Neuron"
         self.neurons.update(member_dict)
         self.members = self.neurons.values()
-        
+
     def pop(self, neuron_name):
         """
         Deletes the neuron with the specified name from the group.
@@ -777,7 +780,7 @@ class NeuronGroup:
         """
         for neuron in self.members:
             neuron.set_property(property_name, property_value)
-    
+
     def get_property(self, property_name):
         """
         Returns the value of the specified property for all neurons in the group.
@@ -814,8 +817,8 @@ class ConnectionGroup:
         self.members = members
         self.connections = {m._id:m for m in members}
         self.network = network
-        assert self.group_name not in self.network.groups, f"Group name {self.group_name} already exists\
-             in the network"
+        assert self.group_name not in self.network.groups, \
+        f"Group name {self.group_name} already exists in the network"
         self.network.groups.update({self.group_name: self})
 
     def __iter__(self):
@@ -1061,6 +1064,9 @@ class Connection:
 
     @property
     def by_name(self):
+        """
+        Returns the connecting neuron names (Pre,Post)
+        """
         return (self.pre_neuron.name, self.post_neuron.name)
     def update_weight(self, weight, delta=False):
         ''' Sets the connection weight '''
@@ -1074,7 +1080,7 @@ class Connection:
         ''' Sets an attribute for the class'''
         setattr(self, key, val)
         nx.set_edge_attributes(self.network.graph, {self._id:{key:val}})
-    
+
     def get_property(self, key):
         ''' Gets an attribute for the class'''
         return getattr(self, key)
