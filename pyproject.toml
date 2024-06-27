@@ -24,6 +24,7 @@ pytest = "^8.2.2"
 sphinx = "^7.3.7"
 sphinx-rtd-theme = "^2.0.0"
 pydata-sphinx-theme = "^0.15.3"
+xlrd = "^2.0.1"
 
 
 [build-system]

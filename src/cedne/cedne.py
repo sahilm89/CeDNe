@@ -19,7 +19,7 @@ Classes:
 import string
 import random
 import pickle
-
+import copy
 import numpy as np
 import networkx as nx
 #from warnings import warn
@@ -56,15 +56,20 @@ class Worm:
         self.genotype = genotype
         self.networks = {}
 
-    def save(self, file_path):
+    def save(self, file_path, file_format='pickle'):
         """
         Saves the Worm object to a pickle file at the specified file path.
 
         Args:
             file_path (str): The path to the pickle file.
         """
-        with open(file_path, 'wb') as pickle_file:
-            pickle.dump(self, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+        if file_format == 'pickle':
+            if not file_path.endswith('.pkl'):
+                file_path += '.pkl'
+            with open(file_path, 'wb') as pickle_file:
+                pickle.dump(self, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+        else:
+            raise NotImplementedError("Only pickle format is supported.")
 
 def load_worm(file_path):
     """
@@ -76,8 +81,11 @@ def load_worm(file_path):
     Returns:
         Worm: The loaded Worm object.
     """
-    with open(file_path, 'rb') as pickle_file:
-        return pickle.load(pickle_file)
+    try:
+        with open(file_path, 'rb') as pickle_file:
+            return pickle.load(pickle_file)
+    except:
+        raise Exception(f"Failed to load {file_path}.")
 
 class Behavior:
     ''' This is a behavior class for the organism'''
@@ -207,8 +215,9 @@ class NervousSystem(nx.MultiDiGraph):
         """
         Update the dictionary of connections. Need more precaution here.
         """
-        for connection_id in self.connections.keys():
-            if connection_id not in self.edges:
+        print({connection_id: self.connections[connection_id] for connection_id in self.connections})
+        for connection_id in self.connections:
+            if not connection_id in self.edges:
                 self.connections.pop(connection_id)
 
     def setup_connections(self, adjacency_matrix, edge_type):
@@ -370,7 +379,7 @@ class NervousSystem(nx.MultiDiGraph):
         ''' Standard formats to load data into the network'''
         #pass
 
-    def subnetwork(self, neuron_names=None, connections=None, as_view=True):
+    def subnetwork(self, neuron_names=None, connections=None, as_view=False):
         """
         Generates a subgraph of the network based on the given list of neuron names.
 
@@ -386,14 +395,21 @@ class NervousSystem(nx.MultiDiGraph):
 
         assert not (neuron_names and connections),\
             "Specify either neuron_names or connections, not both."
+        if not as_view:
+            graph_copy = self.copy(copy_type='deep')
+        else:
+            graph_copy = self.copy(copy_type='view')
+
         if neuron_names is not None:
-            subgraph_nodes = [self.neurons[name] for name in neuron_names]
-            subgraph = self.subgraph(subgraph_nodes)
+            subgraph_nodes = [graph_copy.neurons[name] for name in neuron_names]
+            subgraph = graph_copy.subgraph(subgraph_nodes)
+            subgraph.connections = {key: value for key, value in graph_copy.connections.items() if key[0] in subgraph_nodes and key[1] in subgraph_nodes}
         elif connections is not None:
-            subgraph = self.edge_subgraph(connections)
+            subgraph = graph_copy.edge_subgraph(connections)
         else:
             subgraph = self
         subgraph.update_neurons()
+        subgraph.update_connections()
         return subgraph #subgraph.copy(as_view)
 
     def fold_network(self, fold_by, exceptions=None):
@@ -577,7 +593,7 @@ class NervousSystem(nx.MultiDiGraph):
         return nx.subgraph_view(self, filter_node=self.__filter_node__,\
                                  filter_edge=self.__filter_edge__)
 
-    def copy(self, as_view=False):
+    def copy(self, copy_type='deep'):
         """
         Returns a deep copy of the Nervous System object.
 
@@ -590,10 +606,15 @@ class NervousSystem(nx.MultiDiGraph):
             object: 
                 a deep copy of the Nervous System object.
         """
-        if as_view:
-            nx.graphviews.generic_graph_view(self, create_using=NervousSystem)
+        if copy_type=='view':
+            return super().copy(as_view=True)
+            #nx.graphviews.generic_graph_view(self, create_using=NervousSystem)
+        elif copy_type=='shallow':
+            return super().copy(as_view=False)
+        elif copy_type=='deep':
+            return copy.deepcopy(self)
         else:
-            return self.copy(as_view=as_view)
+            raise ValueError("copy_type must be 'deep', 'shallow', or 'view'")
 
     def remove_unconnected_neurons(self):
         """
@@ -786,6 +807,12 @@ class NeuronGroup:
         Returns the value of the specified property for all neurons in the group.
         """
         return [neuron.get_property(property_name) for neuron in self.members]
+
+    def get_connections(self):
+        """
+        Returns a list of all connections in the group.
+        """
+        return [neuron.get_connections() for neuron in self.members]
 
 class ConnectionGroup:
     ''' This is a group of connections in the network'''
@@ -1029,6 +1056,10 @@ class Neuron:
     def get_property(self, key):
         ''' Gets an attribute for the class'''
         return getattr(self, key)
+
+    def connects_to(self, other):
+        ''' Checks if this neuron connects to another neuron '''
+        return other in self.connections
 
 class Connection:
     ''' This class represents a connection between two neurons. '''

@@ -1,7 +1,7 @@
 
 # CeDNe: C elegans Data Network
 
-CeDNe (pronounced Sydney) is a Python Library for multi-omic integration of neuroscience data from
+CeDNe (pronounced Sid-nee) is a Python Library for multi-omic integration of neuroscience data from
 C elegans. CeDNe has been built on top of networkx package in order to leverage its graph structure
 and Python's object oriented capabilities together to create graph-based data containers that are
 intuitive to keep neuroscience data for analysis. Due to this structure, CeDNe acts as a multi-omic
@@ -22,3 +22,8 @@ based analyses pipelines.
     1.1 Integrate behavioral components deeper.
 2. Clean up the neurotransmitter table.
 3. Add G-protein-Neuropeptide relations.
+4. Write down paths from one neuron to another at different levels of depth (direct, 1 path away, etc.)
+5. Easy Loading functions for loading custom data.
+
+
+Fenyves.

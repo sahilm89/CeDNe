@@ -105,7 +105,7 @@ def loadNeuropeptides(w, neuropeps:str= 'all'):
     nid = DOWNLOAD_DIR +  prefix_NP + '26012022_num_neuronID.txt'
     np_order = DOWNLOAD_DIR +  prefix_NP + '91-NPPGPCR networks'
 
-    model = pd.read_csv(lrm,encoding= 'unicode_escape')
+    model = pd.read_csv(lrm,encoding= 'unicode_escape', header=None)
     neuronID = pd.read_csv(nid,encoding= 'unicode_escape', sep='\t', index_col=0, names=['NID', "Neuron"]) 
     neuropep_rec = pd.read_csv(np_order, sep=',', index_col=0)
     nidList = np.array(neuronID['Neuron'].to_list())
@@ -115,14 +115,12 @@ def loadNeuropeptides(w, neuropeps:str= 'all'):
     models = {}
     for i,j in enumerate(range(0,len(model),len(neuronID))):
         models[i+1] = np.array(model[j:j+len(neuronID)], dtype=np.int8)
-
     for k, nprc in enumerate(neuropep_rec['pair_names_NPP']):
         npNum = k+1
         for i,n1 in enumerate(nidList):
             models_dict[nprc] [n1] = {}
             for j, n2 in enumerate(nidList):
                 models_dict[nprc][n1][n2] = {'weight':models[npNum][i][j]}
-
     npepreclist = neuropep_rec['pair_names_NPP'].tolist()
     if neuropeps != 'all':
         npepreclist_filter = neuropeps
@@ -311,11 +309,16 @@ def loadSynapticWeights(nn):
     """
     ## Load synaptic weights from Excel file
     weightMatrix = DOWNLOAD_DIR + prefix_synaptic_weights + "41586_2023_6683_MOESM13_ESM.xls"
-    wtMat = pd.read_excel(weightMatrix, index_col=0, engine='openpyxl').T
-    for sid in list(nn.edges):
+    wtMat = pd.read_excel(weightMatrix, index_col=0).T
+    for sid in list(nn.connections):
         if sid[0].name in wtMat:
             if sid[1].name in wtMat[sid[0].name]:
-                nn.connections[sid].updateWeight(wtMat[sid[0].name][sid[1].name])
+                nn.connections[sid].update_weight(wtMat[sid[0].name][sid[1].name])
+            else:
+                nn.connections[sid].update_weight(np.nan)
+        else:
+            nn.connections[sid].update_weight(np.nan)
+
 
 ### Plotting functions
 
@@ -411,7 +414,7 @@ def plot_spiral(neunet, save=False):
     plt.show()
     plt.close()
 
-def plot_shell(neunet, center=None, save=False, figsize=(8,8), fontsize=11):
+def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge_color_dict=None, node_color_dict=None, fontsize=11):
     """
     Generates a shell layout for the network.
 
@@ -421,17 +424,24 @@ def plot_shell(neunet, center=None, save=False, figsize=(8,8), fontsize=11):
     Returns:
     - pos (dict): A dictionary mapping node names to their positions in the graph.
     """
-    if isinstance(center, str):
-        assert center in neunet.neurons
-        shells = [[neunet.neurons[center]], [neu for nname,neu in neunet.neurons.items() if nname !=center]]
-    elif isinstance(center, list):
-        #print(center, neunet.neurons.keys(), [c in neunet.neurons.keys() for c in center])
-        assert all([c in neunet.neurons.keys() for c in center])
-        shells = [[neunet.neurons[c] for c in center], [neu for nname,neu in neunet.neurons.items() if nname not in center]]
+    if shells is None:
+        if isinstance(center, str):
+            assert center in neunet.neurons
+            shells = [[neunet.neurons[center]], [neu for nname,neu in neunet.neurons.items() if nname !=center]]
+        elif isinstance(center, list):
+            #print(center, neunet.neurons.keys(), [c in neunet.neurons.keys() for c in center])
+            assert all([c in neunet.neurons.keys() for c in center])
+            shells = [[neunet.neurons[c] for c in center], [neu for nname,neu in neunet.neurons.items() if nname not in center]]
+        else:
+            raise ValueError("center must be a neuron name or a list of neuron names")
+    if node_color_dict is None:
+        node_color = ['lightgray' if not hasattr(node, 'color') else node.color for node in neunet.nodes]
     else:
-        raise ValueError("center must be a neuron name or a list of neuron names")
-    node_color = ['lightgray' if not hasattr(node, 'color') else node.color for node in neunet.nodes]
-    edge_color = ['lightgray' if not hasattr(edge, 'color') else edge.color for edge in neunet.edges]
+        node_color = [node_color_dict[node] for node in neunet.nodes]
+    if edge_color_dict is None:
+        edge_color = ['lightgray' if not hasattr(edge, 'color') else edge.color for edge in neunet.edges]
+    else:
+        edge_color = [edge_color_dict[edge] for edge in neunet.edges]
     # edge_color = []
     # edge_weight = []
     # for (u,v,attrib_dict) in list(neunet.edges.data()):
@@ -461,7 +471,7 @@ def plot_shell(neunet, center=None, save=False, figsize=(8,8), fontsize=11):
     plt.close()
     
     
-def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, save=False, title='', extraNodes=[], extraEdges=[], pos=[], mark_anatomical=False):
+def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, save=False, title='', extraNodes=[], extraEdges=[], pos=[], mark_anatomical=False, colorbar=False):
     """
     Generates a graph visualization of a given neural network. Change this function to make more streamlined.
 
@@ -493,8 +503,9 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
             edge_color = [ec for ec in edgeColors]
         elif all (isinstance(ec, float) for ec in edgeColors):
             #cmap2 = sns.diverging_palette(220, 20, as_cmap=True)
-            cmap = plt.get_cmap('PuOr') 
-            norm = matplotlib.colors.Normalize(vmin=-1.,vmax=1.)
+            cmap = plt.get_cmap('PuOr')
+            max_color = max(np.abs(edgeColors))
+            norm = matplotlib.colors.Normalize(vmin=-max_color,vmax=max_color)
             m = cm.ScalarMappable(norm=norm, cmap=cmap)
             edge_color = [m.to_rgba(col) for col in edgeColors]
     else:
@@ -503,9 +514,10 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
     
     if nodeColors is None:
         node_color=[]
-    elif all (isinstance(nc, str) for nc in nodeColors):
-        node_color = [nc for nc in nodeColors]
-    else:
+    elif isinstance(nodeColors, list):
+        if all (isinstance(nc, str) for nc in nodeColors):
+            node_color = [nc for nc in nodeColors]
+    elif isinstance(nodeColors, dict):
         cmap2 = plt.get_cmap('RdYlGn')
         norm2 = matplotlib.colors.Normalize(vmin=-1.5,vmax=1.5)
         o = cm.ScalarMappable(norm=norm2, cmap=cmap2)
@@ -556,12 +568,21 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
     #     nodelist = extraNodes
     categories = {} 
     for n in G.nodes:
+        # print(n)
         if n in oriNodes:
             if n in nodeColors.keys():
                 #print("Y", n, nodeColors.keys())
-                # node_color[neunet.neurons[n].type].append(o.to_rgba(nodeColors[n]))
-                node_color[neunet.neurons[n].type].append(nodeColors[n])
-                node_alpha[neunet.neurons[n].type].append(0.8)
+                if nodeColors is not None:
+                    if isinstance(nodeColors[n], str):
+                        node_color[neunet.neurons[n].type].append(nodeColors[n])
+                    elif isinstance(nodeColors[n], float):
+                        node_color[neunet.neurons[n].type].append(o.to_rgba(nodeColors[n]))
+                    else:
+                        raise ValueError('node_colors must either be a string or a list of strings or floats \
+                            of the same length as nodelist')
+                else:
+                    node_color[neunet.neurons[n].type].append(nodeColors[n])
+                    node_alpha[neunet.neurons[n].type].append(0.8)
             else:
                 #print(n, nodeColors.keys())
                 node_color[neunet.neurons[n].type].append('lightgray') 
@@ -572,7 +593,7 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
         #     node_alpha[nn.neurons[n].type].append(None)
         categories[n] = (neunet.neurons[n].type, neunet.neurons[n].category)
         nx.set_node_attributes(G, {n:{"layer":neuronTypes.index(neunet.neurons[n].type)}})
-        
+        # print(n, neuronTypes.index(neunet.neurons[n].type))
         #G.nodes[n].layer = nn.neurons[n].type 
     
     cats = set(categories.values())
@@ -590,13 +611,13 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
     array_op = lambda x, sx: np.array([x[0]*sx, x[1]])
     sx=2
     #pos =  nx.spring_layout(G, k=1, iterations=70)# 
+    
     if not len(pos):
         pos =  nx.multipartite_layout(G,subset_key="layer", align='horizontal')
+        # print(pos)
         pos = {p:array_op(pos[p],sx) for p in pos}
         pos, boxes = groupPosition(pos, type_cat)
-        
-        print(boxes)
-    
+
     #print(edges_within, edges_across)
     fig, ax = plt.subplots(figsize=(40,4))
     #edge_color = 'k'
@@ -629,19 +650,20 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
     nx.draw_networkx_edges(G, edgelist = within_extra, ax=ax, edge_color='gray', pos=pos, alpha=0.2, width=1, arrows=True, connectionstyle='arc3, rad=0.3')
     nx.draw_networkx_edges(G, edgelist = across_extra, ax=ax, edge_color='gray', pos=pos, alpha=0.2, width=1)
     #nx.draw_networkx_edge_labels(G, pos, label_pos=0.5, edge_labels=edge_labels, ax=ax)
-    # divider = make_axes_locatable(ax)
-    
-    # cax = inset_axes(ax, loc='upper right', width="100%", height="100%",
-    #                bbox_to_anchor=(0.75,0.85,.05,.05), bbox_transform=ax.transAxes) #
-    # cax.set_xticks([-1,0,1])
-    # cax.set_title("$\\Delta$ correlation", fontsize=24)
-    # #cax = divider.append_axes("right", size="1%", pad=0.05)    
-    # cbar = plt.colorbar(m, cax= cax, orientation='horizontal')
-    # cbar.ax.tick_params(labelsize=24) 
+    if colorbar:
+        divider = make_axes_locatable(ax)
+        
+        # cax = inset_axes(ax, loc='upper right', width="100%", height="100%",
+        #                bbox_to_anchor=(0.75,0.85,.05,.05), bbox_transform=ax.transAxes) #
+        # cax.set_xticks([-1,0,1])
+        # cax.set_title("$\\Delta$ correlation", fontsize=24)
+        # #cax = divider.append_axes("right", size="1%", pad=0.05)    
+        # cbar = plt.colorbar(m, cax= cax, orientation='horizontal')
+        # cbar.ax.tick_params(labelsize=24) 
 
-    #cax2 = divider.append_axes("bottom", size="1%", pad=0.05)
-    # cbar2= plt.colorbar(o, cax=cax2, orientation='horizontal')
-    # cbar2.ax.tick_params(labelsize='xx-large') 
+        cax2 = divider.append_axes("bottom", size="2%", pad=0.1)
+        cbar2= plt.colorbar(o, cax=cax2, orientation='horizontal')
+        cbar2.ax.tick_params(labelsize='xx-large') 
 
     for types in boxes:
         for cat, pars in boxes[types].items():
@@ -665,7 +687,7 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
     #ax.set_title(title, y=0.01, fontsize=20)
     ax.set_xticks([])
     ax.set_yticks([])
-    #plt.colorbar(m)
+    # plt.colorbar(m)
     plt.tight_layout()
     plt.subplots_adjust(top=2)
     if not save==False:
