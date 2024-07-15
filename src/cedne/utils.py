@@ -14,6 +14,7 @@ import matplotlib
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import textalloc as ta
+from mpl_toolkits.mplot3d import Axes3D
 
 ## Directories
 
@@ -698,9 +699,10 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
     
     return pos
 
+
+
 active_color, passive_color = "#CC5500", "lightgrey"
 booleanDictionary = {True: active_color, False: passive_color}
-
 
 def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=booleanDictionary, title='', label=True, save=False):
     """
@@ -788,6 +790,114 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=booleanDic
     legend_ax.set_aspect('equal')
     simpleaxis(legend_ax)
     #ax.set_xlim((-0.9,-0.))
+    if save:
+        plt.savefig(save)
+    plt.show()
+
+def plot_position_3D(nn, highlight=None, booleanDictionary=booleanDictionary, title='', label=True, save=False):
+    """
+    A function to plot the positions of neurons based on their coordinates and attributes.
+
+    Parameters:
+        nn: NeuronNetwork object representing the neurons to be plotted.
+        axis: String, the orientation of the plot (default: 'AP-DV').
+        special: List of special neurons to highlight.
+        booleanDictionary: Dictionary mapping boolean values to colors.
+        title: String, the title of the plot.
+        save: Boolean, whether to save the plot as an image.
+
+    Returns:
+        None
+    """
+    coords = ['AP', 'DV', 'LR']
+    nlabels = np.array([n for n in nn.neurons])
+    pos = [[] for i in range(len(nlabels))]
+    if highlight is None:
+        highlight = []
+    else:
+        assert all([n in nn.neurons for n in highlight]), "Neuron(s) not found in the network."
+            
+    for i,n in enumerate(nlabels):
+        if n in ['CANL']:
+            pos[i] = [510, 20, -1]
+        elif n in ['CANR']:
+            pos[i] = [490, 20, 1]
+        else:
+            for x in coords:
+                if x in nn.neurons[n].position: 
+                    pos[i].append(nn.neurons[n].position[x])
+                else:
+                    raise ValueError(f"Neuron {n} has no position in axis {x}.")
+    pos = np.array(pos)
+    posDict = dict(zip(coords, pos.T))
+    posDict['LR'] = -posDict['LR'] # flipping LR for plotting in the correct direction
+    posDict['DV'] = -posDict['DV'] # flipping DV for plotting in the correct direction
+    facecolors = np.array([booleanDictionary[n in highlight] for n in nlabels])
+    alphas = np.array([1 if n in highlight else 0.25 for n in nlabels])
+    print([(n,facecolors[j]) for j,n in enumerate(nlabels) if n in highlight])
+
+    f = plt.figure()
+    ax = f.add_subplot(projection='3d')
+    # ax.get_proj = lambda: np.dot(Axes3D.get_proj(ax), np.diag([15, 1, 1, 1]))
+    #f, ax = plt.subplots(figsize=(20,3), projection='3D')
+    boolList = np.array([n in highlight for n in nlabels])
+
+    xax, yax, zax = coords
+    x = np.array(posDict[xax])
+    y = np.array(posDict[yax])
+    z = np.array(posDict[zax])
+    
+    xscale =np.max(x)-np.min(x)
+    yscale =np.max(y)-np.min(y)
+    zscale =np.max(z)-np.min(z)
+
+    yscale = yscale/xscale
+    zscale = zscale/xscale
+    xscale = 1
+
+    print(xscale, yscale, zscale)
+    
+
+    # xlim = (-np.max(np.abs(x)), np.max(np.abs(x)))
+    # ylim = (-np.max(np.abs(y)), np.max(np.abs(y)))
+    # zlim = (-np.max(np.abs(z)), np.max(np.abs(z)))
+
+    ax.get_proj = lambda: np.dot(Axes3D.get_proj(ax), np.diag([xscale, yscale, zscale, 0.2]))
+
+    ax.scatter(x[~boolList], y[~boolList], z[~boolList], s=20, facecolor=facecolors[~boolList], edgecolor=facecolors[~boolList], alpha=alphas[~boolList], zorder=1)
+    ax.scatter(x[boolList], y[boolList], z[boolList], s=20, facecolor=facecolors[boolList], edgecolor=facecolors[boolList], alpha=alphas[boolList], zorder=2)
+    plt.axis('off')
+
+
+    # ax.set_xlim(xlim)
+    # ax.set_ylim(ylim)
+    # ax.set_zlim(zlim)
+
+    ax.set_title(title, fontsize="xx-large")
+
+    # if label:
+    #     ta.allocate_text(f,ax,x[boolList], y[boolList],
+    #                 nlabels[boolList],
+    #                 x_scatter=x[boolList], y_scatter=y[boolList],
+    #                 textsize=11, linecolor='gray', avoid_label_lines_overlap=True)
+
+    # Add the legend to the plot
+    # legend_ax = f.add_axes([0.85, 0.1, 0.1, 0.1], projection='3d')
+    # legend_ax.set_xlim(0, 1)
+    # legend_ax.set_ylim(0, 1)
+    # legend_ax.set_zlim(0, 1)
+    # legend_ax.set_xlabel(xax, fontsize="x-large")
+    # legend_ax.set_ylabel(yax, fontsize="x-large")
+    # legend_ax.set_zlabel(zax, fontsize="x-large")
+
+    # legend_ax.set_xticks([])
+    # legend_ax.set_yticks([])
+    # legend_ax.set_zticks([])
+
+    # legend_ax.set_aspect('equal')
+    #simpleaxis(legend_ax)
+    #ax.set_xlim((-0.9,-0.))
+    
     if save:
         plt.savefig(save)
     plt.show()

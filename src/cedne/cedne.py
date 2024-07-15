@@ -215,7 +215,7 @@ class NervousSystem(nx.MultiDiGraph):
         """
         Update the dictionary of connections. Need more precaution here.
         """
-        print({connection_id: self.connections[connection_id] for connection_id in self.connections})
+        #print({connection_id: self.connections[connection_id] for connection_id in self.connections})
         for connection_id in self.connections:
             if not connection_id in self.edges:
                 self.connections.pop(connection_id)
@@ -1018,29 +1018,55 @@ class Neuron:
         self.trial[trial_num] = Trial(self, trial_num)
         return self.trial[trial_num]
 
-    def get_connections(self):
+    def get_connections(self, direction='both', paired_neuron=None):
         """
         Returns all connections that the neuron is involved in.
 
         :return: A list of connections where the neuron is present.
         :rtype: list
         """
-        return [edge for edge in self.network.edges if self in edge]
+        if paired_neuron is None:
+            if direction == 'both':
+                return self.in_connections | self.out_connections
+                #return [edge for edge in self.network.edges if self in edge]
+            if direction == 'in':
+                return self.in_connections
+            if direction == 'out':
+                return self.out_connections
+            raise ValueError('Direction must be either "both", "in", or "out"')
 
-    def outgoing(self):
+        if paired_neuron is not None:
+            if direction == 'both':
+                return self.outgoing(paired_neuron) + self.incoming(paired_neuron)
+            if direction == 'in':
+                return self.incoming(paired_neuron)
+            if direction == 'out':
+                return self.outgoing(paired_neuron)
+            raise ValueError('Direction must be either "both", "in", or "out"')
+
+    def outgoing(self, paired_neuron=None):
         """
         Returns a list of all outgoing connections from the current object.
 
         :return: A list of connections from the current object to other objects.
         :rtype: list
         """
-        return self.out_connections
+        if paired_neuron is None:
+            return self.out_connections
+        if isinstance(paired_neuron, Neuron):
+            return [edge for edge in self.network.edges if edge[0] == self and edge[1] == paired_neuron]
+        raise TypeError('paired_neuron must be a Neuron object')
 
-    def incoming(self):
+    def incoming(self, paired_neuron=None):
         """
         Returns a list of all incoming connections to the current object.
         """
-        return self.in_connections
+        if paired_neuron is None:
+            return self.in_connections
+        if isinstance(paired_neuron, Neuron):
+            return [edge for edge in self.network.edges if edge[1] == self and edge[0] == paired_neuron]
+        raise TypeError('paired_neuron must be a Neuron object')
+        
 
     def set_property(self, property_name, property_value):
         """

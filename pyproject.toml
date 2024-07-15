@@ -25,6 +25,7 @@ sphinx = "^7.3.7"
 sphinx-rtd-theme = "^2.0.0"
 pydata-sphinx-theme = "^0.15.3"
 xlrd = "^2.0.1"
+ipympl = "^0.9.4"
 
 
 [build-system]
