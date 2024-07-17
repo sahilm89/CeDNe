@@ -15,6 +15,12 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import textalloc as ta
 from mpl_toolkits.mplot3d import Axes3D
+import cmasher as cmr
+from matplotlib.gridspec import GridSpec
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from mpl_toolkits.mplot3d.proj3d import proj_transform
+from matplotlib.text import Annotation
+import svglib as svg
 
 ## Directories
 
@@ -425,6 +431,7 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge
     Returns:
     - pos (dict): A dictionary mapping node names to their positions in the graph.
     """
+    MAX_LENGTH_FOR_STRAIGHT_TEXT = 20
     if shells is None:
         if isinstance(center, str):
             assert center in neunet.neurons
@@ -457,7 +464,7 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge
 
     for node, (x, y) in pos.items():
         label = str(node.name)
-        if len(label)>3:
+        if len(label)>3 and len(pos)>MAX_LENGTH_FOR_STRAIGHT_TEXT:
             if (x>0 and y>0) or (x<0 and y<0):
                 plt.text(x, y, label, fontsize=fontsize, rotation=45, ha='center', va='center')
             elif (x>0 and y<0) or (x<0 and y>0):
@@ -701,10 +708,7 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
 
 
 
-active_color, passive_color = "#CC5500", "lightgrey"
-booleanDictionary = {True: active_color, False: passive_color}
-
-def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=booleanDictionary, title='', label=True, save=False):
+def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, title='', label=True, save=False):
     """
     A function to plot the positions of neurons based on their coordinates and attributes.
 
@@ -719,13 +723,23 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=booleanDic
     Returns:
         None
     """
+
+    if booleanDictionary is None:
+        active_color, passive_color = "#CC5500", "lightgrey"
+        booleanDictionary = {True: active_color, False: passive_color}
+
     coords = ['AP', 'DV', 'LR']
     nlabels = np.array([n for n in nn.neurons])
     pos = [[] for i in range(len(nlabels))]
     if highlight is None:
         highlight = []
-    else:
-        assert all([n in nn.neurons for n in highlight]), "Neuron(s) not found in the network."
+    elif isinstance(highlight, list):
+        if isinstance(highlight[0], str):
+            assert all([n in nn.neurons for n in highlight]), "Neuron(s) not found in the network."
+        elif isinstance(highlight[0], list):
+            assert all([n in nn.neurons for j in range(len(highlight)) for n in highlight[j]]), "Neuron(s) not found in the network."
+        else:
+            raise ValueError("Highlight must be a list of strings or a list of lists.")
             
     for i,n in enumerate(nlabels):
         if n in ['CANL']:
@@ -742,12 +756,6 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=booleanDic
     posDict = dict(zip(coords, pos.T))
     posDict['LR'] = -posDict['LR'] # flipping LR for plotting in the correct direction
     posDict['DV'] = -posDict['DV'] # flipping DV for plotting in the correct direction
-    facecolors = np.array([booleanDictionary[n in highlight] for n in nlabels])
-    alphas = np.array([1 if n in highlight else 0.25 for n in nlabels])
-    print([(n,facecolors[j]) for j,n in enumerate(nlabels) if n in highlight])
-
-    f, ax = plt.subplots(figsize=(20,3))
-    boolList = np.array([n in highlight for n in nlabels])
 
     xax, yax = axis.split('-')
     if xax in coords:
@@ -756,31 +764,75 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=booleanDic
         x = -posDict[xax[::-1]]
     else:
         raise ValueError(f"Invalid axis: {xax}, use some combination of {coords}")
- 
+
     if yax in coords:
         y = posDict[yax]
     elif yax[::-1] in coords:
         y = -posDict[yax[::-1]]
     else:
         raise ValueError(f"Invalid axis: {yax}, use some combination of {coords}")
-
     
     x = np.array(x)
     y = np.array(y)
 
-    ax.scatter(x[~boolList], y[~boolList], s=200, facecolor=facecolors[~boolList], edgecolor=facecolors[~boolList], alpha=alphas[~boolList], zorder=1)
-    ax.scatter(x[boolList], y[boolList], s=200, facecolor=facecolors[boolList], edgecolor=facecolors[boolList], alpha=alphas[boolList], zorder=2)
-    plt.axis('off')
-    ax.set_title(title, fontsize="xx-large")
+    if isinstance(highlight[0], str):
+        f,ax = plt.subplots(figsize=(20,3), dpi=300, layout='constrained')
+        plt.axis('off')
+        facecolors = np.array([booleanDictionary[n in highlight] for n in nlabels])
+        alphas = np.array([1 if n in highlight else 0.25 for n in nlabels])
+        boolList = np.array([n in highlight for n in nlabels])
+        #print([(n,facecolors[j]) for j,n in enumerate(nlabels) if n in highlight])
+        ax.scatter(x[~boolList], y[~boolList], s=200, facecolor=facecolors[~boolList], edgecolor=facecolors[~boolList], alpha=alphas[~boolList], zorder=1)
+        ax.scatter(x[boolList], y[boolList], s=200, facecolor=facecolors[boolList], edgecolor=facecolors[boolList], alpha=alphas[boolList], zorder=2)
+        if label:
+            ta.allocate_text(f,ax,x[boolList], y[boolList],
+                        nlabels[boolList],
+                        x_scatter=x[boolList], y_scatter=y[boolList],
+                        textsize='xx-large', linecolor='gray', avoid_label_lines_overlap=True)
 
-    if label:
-        ta.allocate_text(f,ax,x[boolList], y[boolList],
-                    nlabels[boolList],
-                    x_scatter=x[boolList], y_scatter=y[boolList],
-                    textsize=11, linecolor='gray', avoid_label_lines_overlap=True)
+    elif isinstance(highlight[0], list):
+        buffer = 1.1
+        f,ax = plt.subplots( dpi=300, layout='constrained',figsize=(20,3)) #figsize=(2,0.3), dpi=300, layout='constrained'
+        plt.axis('off') 
+        plt.xlim(min(x)*buffer,max(x)*buffer)
+        plt.ylim(min(y)*buffer,max(y)*buffer)
+        # ax.set_aspect('equal')
+        trans=ax.transData.transform
+        trans2=f.transFigure.inverted().transform
 
-    # Add the legend to the plot
-    legend_ax = f.add_axes([0.85, 0.1, 0.1, 0.1])
+        facecolors = cmr.take_cmap_colors('cmr.tropical', len(highlight), cmap_range=(0.15, 0.85), return_fmt='hex')
+        color_dict = {n:[] for n in nlabels}
+        alpha_dict = {n:0.25 for n in nlabels}
+        boolList = np.array([False]*len(nlabels))
+        for i,n in enumerate(nlabels):
+            for j,hlc in enumerate(highlight):
+                if n in hlc:
+                    color_dict[n].append(facecolors[j])
+                    alpha_dict[n] = 1
+                    boolList[i] = True
+            if len(color_dict[n]) == 0:
+                color_dict[n].append("lightgrey")
+        piesize=0.3
+        if label:
+            ta.allocate_text(f,ax,x[boolList], y[boolList],
+                        nlabels[boolList],
+                        x_scatter=x[boolList], y_scatter=y[boolList],
+                        textsize='xx-large', linecolor='gray', avoid_label_lines_overlap=True)
+        # print(boolList, ~boolList, x[boolList])
+        # ax.scatter(x[~boolList], y[~boolList], s=200)
+        # ax.scatter(x[boolList], y[boolList], s=200)
+        for i,n in enumerate(nlabels):
+            xx,yy=trans((x[i],y[i])) # figure coordinates
+            xa,ya=trans2((xx,yy)) # axes coordinates
+            #plot_pie(n, (x[i], y[i]), a, color_dict, alpha_dict, piesize)
+            a = plt.axes([xa-piesize/2,ya-piesize/2, piesize, piesize])
+            a.set_aspect('equal')
+            plot_pie(n, (0,0), a, color_dict, alpha_dict, piesize)
+        #     ax.pie([1/len(color_dict[n])]*len(color_dict[n]), center = (x[i], y[i]), colors=color_dict[n], radius = piesize, counterclock=False, wedgeprops={'alpha': alpha_dict[n], 'zorder': len(color_dict[n])})
+
+
+    #Add the legend to the plot
+    legend_ax = f.add_axes([0.95, 0.1, 0.1, 0.1])
     # legend_ax.set_xlim(0, 1)
     # legend_ax.set_ylim(0, 1)
     legend_ax.set_xlabel(xax, fontsize="x-large")
@@ -789,12 +841,37 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=booleanDic
     legend_ax.set_yticks([])
     legend_ax.set_aspect('equal')
     simpleaxis(legend_ax)
+    ax.set_title(title, fontsize="xx-large")
+    # f.draw_without_rendering()
     #ax.set_xlim((-0.9,-0.))
     if save:
         plt.savefig(save)
     plt.show()
 
-def plot_position_3D(nn, highlight=None, booleanDictionary=booleanDictionary, title='', label=True, save=False):
+def plot_pie(n, center, ax, color_dict, alpha_dict, piesize=1): 
+    # radius for pieplot size on a scatterplot
+    ax.pie([1/len(color_dict[n])]*len(color_dict[n]), center = center, colors=color_dict[n], radius = piesize, counterclock=False, wedgeprops={'alpha': alpha_dict[n], 'zorder': len(color_dict[n])})
+
+
+class Annotation3D(Annotation):
+    '''Annotate the point xyz with text s'''
+
+    def __init__(self, s, xyz, *args, **kwargs):
+        Annotation.__init__(self,s, xy=(0,0), *args, **kwargs)
+        self._verts3d = xyz        
+
+    def draw(self, renderer):
+        xs3d, ys3d, zs3d = self._verts3d
+        xs, ys, zs = proj_transform(xs3d, ys3d, zs3d, self.axes.M)
+        self.xy=(xs,ys)
+        Annotation.draw(self, renderer)
+
+def annotate3D(ax, s, *args, **kwargs):
+    '''add anotation text s to to Axes3d ax'''
+
+    tag = Annotation3D(s, *args, **kwargs)
+    ax.add_artist(tag)
+def plot_position_3D(nn, highlight=None, booleanDictionary=None, title='', label=True, save=False):
     """
     A function to plot the positions of neurons based on their coordinates and attributes.
 
@@ -810,6 +887,9 @@ def plot_position_3D(nn, highlight=None, booleanDictionary=booleanDictionary, ti
         None
     """
     coords = ['AP', 'DV', 'LR']
+    if booleanDictionary is None:
+        active_color, passive_color = "#CC5500", "lightgrey"
+        booleanDictionary = {True: active_color, False: passive_color}
     nlabels = np.array([n for n in nn.neurons])
     pos = [[] for i in range(len(nlabels))]
     if highlight is None:
@@ -834,12 +914,6 @@ def plot_position_3D(nn, highlight=None, booleanDictionary=booleanDictionary, ti
     posDict['DV'] = -posDict['DV'] # flipping DV for plotting in the correct direction
     facecolors = np.array([booleanDictionary[n in highlight] for n in nlabels])
     alphas = np.array([1 if n in highlight else 0.25 for n in nlabels])
-    print([(n,facecolors[j]) for j,n in enumerate(nlabels) if n in highlight])
-
-    f = plt.figure()
-    ax = f.add_subplot(projection='3d')
-    # ax.get_proj = lambda: np.dot(Axes3D.get_proj(ax), np.diag([15, 1, 1, 1]))
-    #f, ax = plt.subplots(figsize=(20,3), projection='3D')
     boolList = np.array([n in highlight for n in nlabels])
 
     xax, yax, zax = coords
@@ -849,54 +923,51 @@ def plot_position_3D(nn, highlight=None, booleanDictionary=booleanDictionary, ti
     
     xscale =np.max(x)-np.min(x)
     yscale =np.max(y)-np.min(y)
-    zscale =np.max(z)-np.min(z)
 
-    yscale = yscale/xscale
-    zscale = zscale/xscale
-    xscale = 1
+    # Create the figure and GridSpec
+    f = plt.figure(figsize=(xscale,yscale), layout='constrained')
+    gs = GridSpec(10, 10, figure=f)
 
-    print(xscale, yscale, zscale)
-    
+    # Create the 3D subplots using GridSpec
+    ax = f.add_subplot(gs[:8,:], projection='3d')
+    ax.set_box_aspect(aspect = (10,2,1))
+    plt.axis('off') 
+    ax_leg = f.add_subplot(gs[8,8], projection='3d')
+    ax_leg.grid(visible=False, which='both', axis='both')
+    ax_leg.set_xticks([])
+    ax_leg.set_yticks([])
+    ax_leg.set_zticks([])
 
-    # xlim = (-np.max(np.abs(x)), np.max(np.abs(x)))
-    # ylim = (-np.max(np.abs(y)), np.max(np.abs(y)))
-    # zlim = (-np.max(np.abs(z)), np.max(np.abs(z)))
+    ax_leg.set_aspect('equal')
+    ax.scatter(x[~boolList], y[~boolList], z[~boolList], s=25, facecolor=facecolors[~boolList], edgecolor=facecolors[~boolList], alpha=alphas[~boolList], zorder=1)
+    ax.scatter(x[boolList], y[boolList], z[boolList], s=25, facecolor=facecolors[boolList], edgecolor=facecolors[boolList], alpha=alphas[boolList], zorder=2)
 
-    ax.get_proj = lambda: np.dot(Axes3D.get_proj(ax), np.diag([xscale, yscale, zscale, 0.2]))
+    arrowprops = dict(
+    arrowstyle="-",
+    #connectionstyle="angle,angleA=0,angleB=90,rad=10"
+    )
+    for i,n in enumerate(nlabels):
+        if n in highlight:
+            #ax.text(x[i], y[i], z[i],  n, size='medium', zorder=3, color='k')
+            lr_sign = 1 if z[i]>0 else -1
+            annotate3D(ax, s=n, xyz=(x[i], y[i], z[i]), fontsize=10, xytext=(0,lr_sign*10),
+               textcoords='offset points', ha='right',va='bottom',arrowprops=arrowprops) 
 
-    ax.scatter(x[~boolList], y[~boolList], z[~boolList], s=20, facecolor=facecolors[~boolList], edgecolor=facecolors[~boolList], alpha=alphas[~boolList], zorder=1)
-    ax.scatter(x[boolList], y[boolList], z[boolList], s=20, facecolor=facecolors[boolList], edgecolor=facecolors[boolList], alpha=alphas[boolList], zorder=2)
-    plt.axis('off')
+    ax_leg.set_xlabel(coords[0])
+    ax_leg.set_ylabel(coords[1])
+    ax_leg.set_zlabel(coords[2])
 
-
-    # ax.set_xlim(xlim)
-    # ax.set_ylim(ylim)
-    # ax.set_zlim(zlim)
-
+    ax.set_xlim3d(np.min(x),np.max(x))
+    ax.set_ylim3d(np.min(y), np.max(y))
+    ax.set_zlim3d(np.min(z), np.max(z))
     ax.set_title(title, fontsize="xx-large")
 
+    ax.shareview(ax_leg)
     # if label:
     #     ta.allocate_text(f,ax,x[boolList], y[boolList],
     #                 nlabels[boolList],
     #                 x_scatter=x[boolList], y_scatter=y[boolList],
     #                 textsize=11, linecolor='gray', avoid_label_lines_overlap=True)
-
-    # Add the legend to the plot
-    # legend_ax = f.add_axes([0.85, 0.1, 0.1, 0.1], projection='3d')
-    # legend_ax.set_xlim(0, 1)
-    # legend_ax.set_ylim(0, 1)
-    # legend_ax.set_zlim(0, 1)
-    # legend_ax.set_xlabel(xax, fontsize="x-large")
-    # legend_ax.set_ylabel(yax, fontsize="x-large")
-    # legend_ax.set_zlabel(zax, fontsize="x-large")
-
-    # legend_ax.set_xticks([])
-    # legend_ax.set_yticks([])
-    # legend_ax.set_zticks([])
-
-    # legend_ax.set_aspect('equal')
-    #simpleaxis(legend_ax)
-    #ax.set_xlim((-0.9,-0.))
     
     if save:
         plt.savefig(save)
