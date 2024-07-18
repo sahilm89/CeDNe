@@ -858,7 +858,7 @@ class Annotation3D(Annotation):
 
     def __init__(self, s, xyz, *args, **kwargs):
         Annotation.__init__(self,s, xy=(0,0), *args, **kwargs)
-        self._verts3d = xyz        
+        self._verts3d = xyz
 
     def draw(self, renderer):
         xs3d, ys3d, zs3d = self._verts3d
@@ -871,6 +871,8 @@ def annotate3D(ax, s, *args, **kwargs):
 
     tag = Annotation3D(s, *args, **kwargs)
     ax.add_artist(tag)
+    return tag
+
 def plot_position_3D(nn, highlight=None, booleanDictionary=None, title='', label=True, save=False):
     """
     A function to plot the positions of neurons based on their coordinates and attributes.
@@ -939,19 +941,23 @@ def plot_position_3D(nn, highlight=None, booleanDictionary=None, title='', label
     ax_leg.set_zticks([])
 
     ax_leg.set_aspect('equal')
-    ax.scatter(x[~boolList], y[~boolList], z[~boolList], s=25, facecolor=facecolors[~boolList], edgecolor=facecolors[~boolList], alpha=alphas[~boolList], zorder=1)
-    ax.scatter(x[boolList], y[boolList], z[boolList], s=25, facecolor=facecolors[boolList], edgecolor=facecolors[boolList], alpha=alphas[boolList], zorder=2)
+    sc_bg = ax.scatter(x[~boolList], y[~boolList], z[~boolList], s=25, facecolor=facecolors[~boolList], edgecolor=facecolors[~boolList], alpha=alphas[~boolList], zorder=1)
+    sc_fg = ax.scatter(x[boolList], y[boolList], z[boolList], s=25, facecolor=facecolors[boolList], edgecolor=facecolors[boolList], alpha=alphas[boolList], zorder=2)
 
     arrowprops = dict(
     arrowstyle="-",
     #connectionstyle="angle,angleA=0,angleB=90,rad=10"
     )
+    annot_bg = {}
     for i,n in enumerate(nlabels):
+        lr_sign = 1 if z[i]>0 else -1
         if n in highlight:
-            #ax.text(x[i], y[i], z[i],  n, size='medium', zorder=3, color='k')
-            lr_sign = 1 if z[i]>0 else -1
-            annotate3D(ax, s=n, xyz=(x[i], y[i], z[i]), fontsize=10, xytext=(0,lr_sign*10),
+            annotate3D(ax, s=n, xyz=(x[i], y[i], z[i]), fontsize=10, xytext=(np.random.uniform(-30,30),lr_sign*30),
                textcoords='offset points', ha='right',va='bottom',arrowprops=arrowprops) 
+        else:
+            annot_bg[i] = annotate3D(ax, s=n, xyz=(x[i], y[i], z[i]), fontsize=10, xytext=(np.random.uniform(-30,30),lr_sign*30),
+               textcoords='offset points', ha='right',va='bottom',arrowprops=arrowprops)
+            annot_bg[i].set_visible(False)
 
     ax_leg.set_xlabel(coords[0])
     ax_leg.set_ylabel(coords[1])
@@ -963,12 +969,44 @@ def plot_position_3D(nn, highlight=None, booleanDictionary=None, title='', label
     ax.set_title(title, fontsize="xx-large")
 
     ax.shareview(ax_leg)
-    # if label:
-    #     ta.allocate_text(f,ax,x[boolList], y[boolList],
-    #                 nlabels[boolList],
-    #                 x_scatter=x[boolList], y_scatter=y[boolList],
-    #                 textsize=11, linecolor='gray', avoid_label_lines_overlap=True)
+
+    # def update_annot(ind):
+    #     #pos_xy = sc_bg.get_offsets()[ind["ind"][0]]
+    #     #print(pos_xy)
+    #     xs, ys, zs = sc_bg._offsets3d
+    #     vxs, vys, vzs = proj_transform(xs, ys, zs, ax.get_proj())
+    #     sorted_z_indices = np.argsort(vzs)[::-1]
+    #     for j in sorted_z_indices[ind["ind"]]:
+    #         annot_bg[j].set_visible(True)
+    #     #annot_bg.set_text(nlabels[sorted_z_indices[ind['ind'][0]]])
+
+    #     #annot_bg.xy = pos_xy
+    #     #print(ind["ind"])
+    #     #text = "{}, {}".format(" ".join(list(map(str,ind["ind"]))), 
+    #                         #" ".join([nlabels[n] for n in ind["ind"]]))
+    #     #text = ", ".join([nlabels[n] for n in ind["ind"]]) #nlabels[n]
+
+    #     #annot_bg.set_text(text)
+    #     #annot_bg.get_bbox_patch().set_facecolor('lightgrey')
+    #     #annot_bg.get_bbox_patch().set_alpha(0.4)
     
+
+    # def hover(event):
+    #     #vis = annot_bg.get_visible()
+    #     if event.inaxes == ax:
+    #         cont, ind = sc_bg.contains(event)
+    #         if cont:
+    #             update_annot(ind)
+    #             # for n in ind["ind"]:
+    #             #     annot_bg[n].set_visible(True)
+    #             f.canvas.draw_idle()
+    #         else:
+    #             #if vis:
+    #             for n in ind["ind"]:
+    #                 annot_bg[n].set_visible(False)
+    #             f.canvas.draw_idle()
+
+    # f.canvas.mpl_connect("motion_notify_event", hover)
     if save:
         plt.savefig(save)
     plt.show()
