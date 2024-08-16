@@ -21,6 +21,9 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from mpl_toolkits.mplot3d.proj3d import proj_transform
 from matplotlib.text import Annotation
 import svglib as svg
+import warnings
+
+warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
 
 ## Directories
 
@@ -89,18 +92,27 @@ def loadNeurotransmitters(nn):
 
     for n in nn.neurons:
         neuron = nn.neurons[n]
-        if not hasattr(neuron, 'preSynapse'):
-            nn.neurons[n].preSynapse = []
-        if not hasattr(neuron, 'postSynapse'):
-            nn.neurons[n].postSynapse = {}
+        if not hasattr(neuron, '_preSynapse'):
+            nn.neurons[n]._preSynapse = []
+        if not hasattr(neuron, '_postSynapse'):
+            nn.neurons[n]._postSynapse = {}
 
     for col in npr.columns:
         for suffix in suffixes:
             if col + suffix in nn.neurons:
-                nn.neurons[col + suffix].postSynapse.update(getLigandsAndReceptors(npr, ligmap, col))
+                nn.neurons[col + suffix]._postSynapse.update(getLigandsAndReceptors(npr, ligmap, col))
                 #present = True
     for n in nn.neurons:
-        nn.neurons[n].preSynapse += getLigands(n)
+        nn.neurons[n]._preSynapse += getLigands(n)
+    
+    for e,conn in nn.connections.items():
+        if e[0].name in nn.neurons and e[1].name in nn.neurons and conn.edge_type == 'chemical-synapse':
+            conn.set_property('ligands', nn.neurons[e[0].name]._preSynapse)
+            conn.set_property('receptors', nn.neurons[e[1].name]._postSynapse)
+            conn.set_property('putative_neurotrasmitter_receptors', []) 
+            for rec, lig in conn.receptors.items():
+                if lig in conn.ligands:
+                    conn.putative_neurotrasmitter_receptors.append((lig, rec))
 
 ## Neuropeptides tables
 
@@ -115,7 +127,7 @@ def loadNeuropeptides(w, neuropeps:str= 'all'):
     model = pd.read_csv(lrm,encoding= 'unicode_escape', header=None)
     neuronID = pd.read_csv(nid,encoding= 'unicode_escape', sep='\t', index_col=0, names=['NID', "Neuron"]) 
     neuropep_rec = pd.read_csv(np_order, sep=',', index_col=0)
-    nidList = np.array(neuronID['Neuron'].to_list())
+    nidList = neuronID['Neuron'].to_list()
 
     models_dict = {nprc: {} for nprc in neuropep_rec['pair_names_NPP']}
 
@@ -300,6 +312,35 @@ def get_enriched_neurons(network, target_neurons, excluded_neurons=None, thresho
         ]
 
     return enriched_neurons
+
+def loadGapJunctions(nn, threshold=4):
+    """
+    Use CENGEN data to load gap junction transcripts to known gap junctions in the given neural network.
+
+    Parameters:
+        nn (NeuralNetwork): The neural network object to update with gap junction transcripts.
+        threshold (int, optional): The threshold value to use. Defaults to 4.
+
+    Returns:
+        None
+    """
+    if not hasattr(list(nn.neurons.values())[0], 'transcript'):
+        loadTranscripts(nn, threshold)
+
+    gene_names = list(nn.neurons.values())[0].transcript.index.tolist()
+    gapjn_subunits = [g for g in gene_names if g.startswith('inx') or g in ['che-7', 'eat-5', 'unc-7', 'unc-9']]
+    for e,conn in nn.connections.items():
+        n1, n2 = [], []
+        if e[0].name in nn.neurons and e[1].name in nn.neurons and conn.edge_type == 'gap-junction':
+            n1 = set(e[0].transcript[e[0].transcript == True].index).intersection(gapjn_subunits)
+            n2 = set(e[1].transcript[e[1].transcript == True].index).intersection(gapjn_subunits)
+            # for g in gene_names:
+            #     if g.startswith('inx') or g in ['che-7', 'eat-5', 'unc-7', 'unc-9']:
+            #         if e[0].transcript[threshold][g]:
+            #             n1.append(g)
+            #         if e[1].transcript[threshold][g]:
+            #             n2.append(g)
+            conn.set_property('putative_gapjn_subunits', list(n1|n2))
 
 ## Synaptic weights
 def loadSynapticWeights(nn):
@@ -692,7 +733,7 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
             # Add the patch to the Axes
             ax.add_patch(rect)
     simpleaxis(ax, every=True)
-    #ax.set_title(title, y=0.01, fontsize=20)
+    ax.set_title(title, y=1.01, fontsize=40)
     ax.set_xticks([])
     ax.set_yticks([])
     # plt.colorbar(m)
@@ -705,8 +746,6 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
     plt.close()
     
     return pos
-
-
 
 def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, title='', label=True, save=False):
     """
@@ -1032,6 +1071,18 @@ def joinLRNodes(nn_old):
                 nn_new.contractNeurons(neuronPair)
     return nn_new
 
+# def foldByNeuronType(nn_old):
+#     """
+#     Folds neurons in the given neural network based on the neuron type.
+
+#     Args:
+#         nn_old (NeuralNetwork): The original neural network.
+
+#     Returns:
+#         NeuralNetwork: The folded neural network.
+    
+#     """
+        
 def foldByNeuronType(nn_old):
     """
     Folds neurons in the given neural network based on the neuron type.
@@ -1041,44 +1092,82 @@ def foldByNeuronType(nn_old):
 
     Returns:
         NeuralNetwork: The folded neural network.
-
-    The function iterates over each neuron in the neural network and checks if the neuron type matches a specific pattern. If the neuron type matches the pattern, the function groups the neurons together based on the neuron number. The function then contracts the grouped neurons and updates the neuron dictionary.
-
-    Note:
-        The function assumes that the neuron type is represented by a sequence of numbers at the end of the neuron name.
     """
     nn_new = nn_old.copy()
-    for m in nn_old.neurons:
-        stripNums = m.rstrip('0123456789')
-        if (len(m) - len(stripNums)==1 and m[-1]=='1') or (len(m) - len(stripNums)==2 and m[-1]=='1' and m[-2]=='0'):
-            j=1
-            moreInClass=True
-            classNeurons = []
-            while (moreInClass):
-                if len(m) - len(stripNums) == 1:
-                    if m[:len(stripNums)] + str(j+1) in nn_new.neurons:
-                        classNeurons.append(m[:len(stripNums)] + str(j+1))
-                        j+=1
-                        moreInClass=True
-                    else:
-                        moreInClass=False
-                else:
-                    if m[:len(stripNums)] + "{:02d}".format(j+1) in nn_new.neurons:
-                        classNeurons.append(m[:len(stripNums)] + "{:02d}".format(j+1))
-                        j+=1
-                        moreInClass=True
-                    else:
-                        moreInClass=False
-            print(m, classNeurons)
-            for n in classNeurons:
-                if not m[:len(stripNums)] in nn_new.neurons: 
-                    neuronPair = [m,n]
-                    nn_new.contractNeurons(neuronPair)
-                else:
-                    print(m)
-            nn_new.neurons[m].name = m[:len(stripNums)]
-            nn_new.update_neurons()
-    return nn_new 
+    neuron_class = {}
+    argmax = lambda lst: lst.index(max(lst))
+    for n in nn_new.neurons:
+        _suffs = []
+        _clsname = []
+        for s in suffixes:
+            if n.endswith(s):
+                n0 = n[:-len(s)]
+                if len(n0)>2:
+                    _suffs.append(s)
+                    _clsname.append(n0)
+                elif len(n0)>1:
+                    if (n0[-1] in '0123456789') or (s[0] in '0123456789') or n0 in ['MC']:
+                        _suffs.append(s)
+                        _clsname.append(n0)
+                
+        if len(_suffs) > 0:
+            _sufflen = [len(s0) for s0 in _suffs]
+            j = argmax(_sufflen)
+            if not _clsname[j] in neuron_class:
+                neuron_class[_clsname[j]] = []
+            neuron_class[_clsname[j]].append(n)
+        else:
+            neuron_class[n] = [n]
+    nn_new.fold_network(neuron_class)
+    return nn_new
+
+# def foldByNeuronType(nn_old):
+#     """
+#     Folds neurons in the given neural network based on the neuron type.
+
+#     Args:
+#         nn_old (NeuralNetwork): The original neural network.
+
+#     Returns:
+#         NeuralNetwork: The folded neural network.
+
+#     The function iterates over each neuron in the neural network and checks if the neuron type matches a specific pattern. If the neuron type matches the pattern, the function groups the neurons together based on the neuron number. The function then contracts the grouped neurons and updates the neuron dictionary.
+
+#     Note:
+#         The function assumes that the neuron type is represented by a sequence of numbers at the end of the neuron name.
+#     """
+#     nn_new = nn_old.copy()
+#     for m in nn_old.neurons:
+#         stripNums = m.rstrip('0123456789')
+#         if (len(m) - len(stripNums)==1 and m[-1]=='1') or (len(m) - len(stripNums)==2 and m[-1]=='1' and m[-2]=='0'):
+#             j=1
+#             moreInClass=True
+#             classNeurons = []
+#             while (moreInClass):
+#                 if len(m) - len(stripNums) == 1:
+#                     if m[:len(stripNums)] + str(j+1) in nn_new.neurons:
+#                         classNeurons.append(m[:len(stripNums)] + str(j+1))
+#                         j+=1
+#                         moreInClass=True
+#                     else:
+#                         moreInClass=False
+#                 else:
+#                     if m[:len(stripNums)] + "{:02d}".format(j+1) in nn_new.neurons:
+#                         classNeurons.append(m[:len(stripNums)] + "{:02d}".format(j+1))
+#                         j+=1
+#                         moreInClass=True
+#                     else:
+#                         moreInClass=False
+#             print(m, classNeurons)
+#             for n in classNeurons:
+#                 if not m[:len(stripNums)] in nn_new.neurons: 
+#                     neuronPair = [m,n]
+#                     nn_new.contractNeurons(neuronPair)
+#                 else:
+#                     print(m)
+#             nn_new.neurons[m].name = m[:len(stripNums)]
+#             nn_new.update_neurons()
+#     return nn_new 
 
 def foldDorsoVentral(nn_old):
     """

@@ -216,9 +216,15 @@ class NervousSystem(nx.MultiDiGraph):
         Update the dictionary of connections. Need more precaution here.
         """
         #print({connection_id: self.connections[connection_id] for connection_id in self.connections})
+        pop_conns = [] ## Mmmmmm..., smells sooo good!
         for connection_id in self.connections:
             if not connection_id in self.edges:
-                self.connections.pop(connection_id)
+                pop_conns.append(connection_id)
+        for pop_conn in pop_conns:
+            self.connections.pop(pop_conn)
+        
+        for n in self.neurons:
+            self.neurons[n].update_connections()
 
     def setup_connections(self, adjacency_matrix, edge_type):
         """
@@ -297,11 +303,6 @@ class NervousSystem(nx.MultiDiGraph):
         It uses the `add_edge` method to add the edge to the network and creates a `Connection`
         object to store the connection details. The created connection is added to the `connections`
         dictionary using a tuple of the source neuron, target neuron, and edge key as the key.
-
-        Note:
-            - The `add_edge` method is assumed to be defined in the class.
-            - The `Connection` class is assumed to be defined in the class.
-            - The `neurons` dictionary is assumed to be defined in the class.
         """
         edge_type='chemical-synapse'
         for source_neuron, target_neurons in chemical_adjacency.items():
@@ -412,7 +413,7 @@ class NervousSystem(nx.MultiDiGraph):
         subgraph.update_connections()
         return subgraph #subgraph.copy(as_view)
 
-    def fold_network(self, fold_by, exceptions=None):
+    def fold_network(self, fold_by, data='collect', exceptions=None):
         """
         Fold the network based on a filter.
 
@@ -421,6 +422,12 @@ class NervousSystem(nx.MultiDiGraph):
                 The first element is the neurons to fold, and the second element
                 is the neurons that are exempt from folding.
                 The tuple can contain any neuron name as a string.
+            data (str, optional): The data to use for folding. Defaults to 'collect'.
+                Available options are:
+                    - 'collect': Collect the data together from all neurons in the fold_by
+                        tuple, but keep them separate.
+                    - 'union' : Union the data from all neurons in the fold_by tuple.
+                    - 'intersect': Intersect the data from all neurons in the fold_by tuple.
 
         Returns:
             None
@@ -443,13 +450,37 @@ class NervousSystem(nx.MultiDiGraph):
                 for j in range(1,len(nodes_to_fold)):
                     npair = (merged_node, nodes_to_fold[j])
                     if not npair[0] in exceptions and not npair[1] in exceptions:
-                        self.contract_neurons(npair, merged_nodename)
+                        self.contract_neurons(npair, merged_nodename, data=data)
                         merged_node = merged_nodename
             else:
                 self.neurons[nodes_to_fold[0]].name = merged_nodename
-                self.update_neurons()
+        
+        self.update_neurons()
+        self.reassign_connections()
+        self.update_connections()
 
-    def contract_neurons(self, pair, contracted_name, copy_graph=False):
+            # if data == 'collect':
+            #     return self
+            # elif data == 'union':
+            #     pass
+            # elif data == 'intersect':
+            #     pass
+            # else:
+            #     raise ValueError("data condition must be 'collect', 'union' or 'intersect'.")
+
+    # def reassign_nodes(self):
+    #     self.update_neurons()
+            
+    def reassign_connections(self):
+        for e in self.edges(data=True, keys=True):
+            if '_id' in e[3]:
+                self.connections.update({(e[0], e[1], e[2]): self.connections[e[3]['_id']]})
+        # for e in self.in_edges(self.neurons[contracted_name], keys=True, data=True):
+        #     self.connections.update({(e[0], e[1], e[2]): self.connections[e[3]['_id']]})
+        # for e in self.out_edges(self.neurons[contracted_name], keys=True, data=True):
+        #     self.connections.update({(e[0], e[1], e[2]): self.connections[e[3]['_id']]})
+        
+    def contract_neurons(self, pair, contracted_name, data='collect', copy_graph=False):
         """
         Contract two neurons together.
 
@@ -473,12 +504,15 @@ class NervousSystem(nx.MultiDiGraph):
                                                    , copy_graph=False)
             return new_graph
         else:
+
+            for _cid, conn in self.neurons[source_neuron].get_connections().items():
+                conn.set_property('_id', conn._id)
+            for _cid, conn in self.neurons[target_neuron].get_connections().items():
+                conn.set_property('_id', conn._id)
             nx.contracted_nodes(self, self.neurons[source_neuron], self.neurons[target_neuron],\
                                  copy=copy_graph)
             self.neurons[source_neuron].name = contracted_name
             self.update_neurons()
-            return self
-
 
     def neurons_have(self, key):
         ''' Returns neuron attributes'''
@@ -1018,7 +1052,7 @@ class Neuron:
         self.trial[trial_num] = Trial(self, trial_num)
         return self.trial[trial_num]
 
-    def get_connections(self, direction='both', paired_neuron=None):
+    def get_connections(self, paired_neuron=None, direction='both'):
         """
         Returns all connections that the neuron is involved in.
 
@@ -1037,12 +1071,19 @@ class Neuron:
 
         if paired_neuron is not None:
             if direction == 'both':
-                return self.outgoing(paired_neuron) + self.incoming(paired_neuron)
+                return self.outgoing(paired_neuron) | self.incoming(paired_neuron)
             if direction == 'in':
                 return self.incoming(paired_neuron)
             if direction == 'out':
                 return self.outgoing(paired_neuron)
             raise ValueError('Direction must be either "both", "in", or "out"')
+
+    def update_connections(self):
+        """
+        Updates the `in_connections` and `out_connections` dictionaries of the current object.
+        """
+        self.in_connections = {_id: self.network.connections[_id] for _id in self.network.in_edges(self, keys=True)}
+        self.out_connections = {_id: self.network.connections[_id] for _id in self.network.out_edges(self, keys=True)}
 
     def outgoing(self, paired_neuron=None):
         """
@@ -1054,7 +1095,7 @@ class Neuron:
         if paired_neuron is None:
             return self.out_connections
         if isinstance(paired_neuron, Neuron):
-            return [edge for edge in self.network.edges if edge[0] == self and edge[1] == paired_neuron]
+            return {edge:conn for edge,conn in self.out_connections.items() if edge[0] == self and edge[1] == paired_neuron}
         raise TypeError('paired_neuron must be a Neuron object')
 
     def incoming(self, paired_neuron=None):
@@ -1064,7 +1105,7 @@ class Neuron:
         if paired_neuron is None:
             return self.in_connections
         if isinstance(paired_neuron, Neuron):
-            return [edge for edge in self.network.edges if edge[1] == self and edge[0] == paired_neuron]
+            return {edge:conn for edge,conn in self.in_connections.items() if edge[1] == self and edge[0] == paired_neuron}
         raise TypeError('paired_neuron must be a Neuron object')
         
 
@@ -1085,7 +1126,22 @@ class Neuron:
 
     def connects_to(self, other):
         ''' Checks if this neuron connects to another neuron '''
-        return other in self.connections
+        for o in self.out_connections:
+            if o[1] == other:
+                return True
+        for i in self.in_connections:
+            if i[0] == other:
+                return True
+        return False
+
+    def __str__(self):
+        ## For use in debugging and testing
+        return self.name
+
+    # def __repr__(self):
+    #     ## For use in debugging and testing
+    #     return self.name
+
 
 class Connection:
     ''' This class represents a connection between two neurons. '''
@@ -1136,7 +1192,7 @@ class Connection:
     def set_property(self, key, val):
         ''' Sets an attribute for the class'''
         setattr(self, key, val)
-        nx.set_edge_attributes(self.network.graph, {self._id:{key:val}})
+        nx.set_edge_attributes(self.network, {self._id:{key:val}})
 
     def get_property(self, key):
         ''' Gets an attribute for the class'''
