@@ -19,14 +19,3 @@ demonstrate its use. CeDNe can also easily integrate into existing Python based 
 3. examples/notebooks/03-neuron-combinations-to-intersecting-transcripts.ipynb
 4. examples/notebooks/04-load-transcripts-and-view-positions.ipynb
 5. examples/notebooks/05-load-neuropeptide.ipynb
-
-## TODO
-
-1. More inbuilt layers in the network.
-    1.1 Integrate behavioral components.
-2. Clean up the neurotransmitter table.
-3. Add G-protein-Neuropeptide relations.
-4. Write down paths from one neuron to another at different levels of depth (direct, 1 path away, etc.)
-5. Easy Loading functions for loading custom data.
-6. HDF5 storage of data.
-

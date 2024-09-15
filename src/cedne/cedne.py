@@ -24,6 +24,7 @@ import numpy as np
 import networkx as nx
 #from warnings import warn
 import scipy.stats as ss
+import json
 from scipy import signal
 
 # Superparameters
@@ -216,7 +217,7 @@ class NervousSystem(nx.MultiDiGraph):
         Update the dictionary of connections. Need more precaution here.
         """
         #print({connection_id: self.connections[connection_id] for connection_id in self.connections})
-        pop_conns = [] ## Mmmmmm..., smells sooo good!
+        pop_conns = [] ## Smells good ;)!
         for connection_id in self.connections:
             if not connection_id in self.edges:
                 pop_conns.append(connection_id)
@@ -417,6 +418,12 @@ class NervousSystem(nx.MultiDiGraph):
         """
         Fold the network based on a filter.
 
+        <TODO>
+        
+        !!! The fold_by can also take Neuron Group objects as input.
+
+        </TODO>
+
         Args:
             fold_by (tuple): A tuple of length 2 specifying the neurons to fold.
                 The first element is the neurons to fold, and the second element
@@ -503,16 +510,15 @@ class NervousSystem(nx.MultiDiGraph):
             new_graph = new_graph.contract_neurons((source_neuron, target_neuron, contracted_name)\
                                                    , copy_graph=False)
             return new_graph
-        else:
 
-            for _cid, conn in self.neurons[source_neuron].get_connections().items():
-                conn.set_property('_id', conn._id)
-            for _cid, conn in self.neurons[target_neuron].get_connections().items():
-                conn.set_property('_id', conn._id)
-            nx.contracted_nodes(self, self.neurons[source_neuron], self.neurons[target_neuron],\
-                                 copy=copy_graph)
-            self.neurons[source_neuron].name = contracted_name
-            self.update_neurons()
+        for _cid, conn in self.neurons[source_neuron].get_connections().items():
+            conn.set_property('_id', conn._id)
+        for _cid, conn in self.neurons[target_neuron].get_connections().items():
+            conn.set_property('_id', conn._id)
+        nx.contracted_nodes(self, self.neurons[source_neuron], self.neurons[target_neuron],\
+                                copy=copy_graph)
+        self.neurons[source_neuron].name = contracted_name
+        self.update_neurons()
 
     def neurons_have(self, key):
         ''' Returns neuron attributes'''
@@ -649,6 +655,34 @@ class NervousSystem(nx.MultiDiGraph):
             return copy.deepcopy(self)
         else:
             raise ValueError("copy_type must be 'deep', 'shallow', or 'view'")
+
+    def export_graph(self, path, fmt= 'dot'):
+        """
+        Exports the graph to the specified path.
+
+        Parameters:
+            path (str): 
+                The path to save the exported graph.
+
+        Returns:
+            None
+        """
+        if fmt == 'dot':
+            nx.drawing.nx_pydot.write_dot(self, path)
+        elif fmt == 'graphviz':
+            nx.drawing.nx_agraph.write_dot(self, path)
+        elif fmt == 'nx':
+            nx.write_graphml(self, path)
+        elif fmt == 'json':
+            with open(path, 'w', encoding='utf-8') as f:
+                jn = nx.cytoscape_data(self, path)
+                json.dump(jn, f, ensure_ascii=False, indent=4)
+        elif fmt == 'gml':
+            nx.write_gml(self, path)
+        elif fmt == 'graphml':
+            nx.write_graphml(self, path)
+        else:
+            raise ValueError("format must be 'dot', 'graphviz', 'nx', 'json', 'gml', or 'graphml'")
 
     def remove_unconnected_neurons(self):
         """
@@ -1133,6 +1167,13 @@ class Neuron:
             if i[0] == other:
                 return True
         return False
+
+    def paths_to(self, target, path_length=1):
+        ''' 
+        Returns all paths as a list of connections from this neuron to the target neuron
+        '''
+        paths = nx.all_simple_edge_paths(self.network, self, target, cutoff=path_length)
+        return [[self.network.connections[edge] for edge in path] for path in paths]
 
     def __str__(self):
         ## For use in debugging and testing

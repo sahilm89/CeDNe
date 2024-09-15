@@ -17,10 +17,8 @@ import textalloc as ta
 from mpl_toolkits.mplot3d import Axes3D
 import cmasher as cmr
 from matplotlib.gridspec import GridSpec
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from mpl_toolkits.mplot3d.proj3d import proj_transform
 from matplotlib.text import Annotation
-import svglib as svg
 import warnings
 
 warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
@@ -462,7 +460,7 @@ def plot_spiral(neunet, save=False):
     plt.show()
     plt.close()
 
-def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge_color_dict=None, node_color_dict=None, fontsize=11):
+def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge_color_dict=None, node_color_dict=None, edge_labels=False, fontsize=11):
     """
     Generates a shell layout for the network.
 
@@ -491,6 +489,11 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge
         edge_color = ['lightgray' if not hasattr(edge, 'color') else edge.color for edge in neunet.edges]
     else:
         edge_color = [edge_color_dict[edge] for edge in neunet.edges]
+    
+    if edge_labels:
+        edge_labels = {edge: edge.weight for edge in neunet.edges}
+    else:
+        edge_labels = None
     # edge_color = []
     # edge_weight = []
     # for (u,v,attrib_dict) in list(neunet.edges.data()):
