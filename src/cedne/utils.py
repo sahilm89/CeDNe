@@ -2,24 +2,25 @@
 
 ## Dependencies
 
+import warnings
 import numpy as np
 import pandas as pd
-import cedne as ced
-from cedne import cedne
-import matplotlib.pyplot as plt
+
 import networkx as nx
+import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-import matplotlib.colors as colors
 import matplotlib
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-import textalloc as ta
-from mpl_toolkits.mplot3d import Axes3D
-import cmasher as cmr
+from matplotlib.patches import Circle
+from matplotlib.text import Annotation
 from matplotlib.gridspec import GridSpec
 from mpl_toolkits.mplot3d.proj3d import proj_transform
-from matplotlib.text import Annotation
-import warnings
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+import textalloc as ta
+import cmasher as cmr
+
+import cedne as ced
+from cedne import cedne
 
 warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
 
@@ -366,6 +367,153 @@ def loadSynapticWeights(nn):
             nn.connections[sid].update_weight(np.nan)
 
 
+## Graph contraction functions
+def joinLRNodes(nn_old):
+    """
+    Joins left and right nodes together in the neural network based on specific conditions.
+    
+    Parameters:
+    - nn_old: The original neural network to be processed.
+    
+    Returns:
+    - nn_new: The updated neural network after joining left and right nodes.
+    """
+    nn_new = nn_old.copy()
+    for m in nn_new.neurons:
+        if m[-1]=='L' and not m in ['AVL']:
+            nn_new.neurons[m].name = m[:-1]
+            n=m[:-1]+'R'
+            if n in nn_new.neurons:
+                neuronPair = [m,n]
+                nn_new.contractNeurons(neuronPair)
+    return nn_new
+
+# def foldByNeuronType(nn_old):
+#     """
+#     Folds neurons in the given neural network based on the neuron type.
+
+#     Args:
+#         nn_old (NeuralNetwork): The original neural network.
+
+#     Returns:
+#         NeuralNetwork: The folded neural network.
+    
+#     """
+        
+def foldByNeuronType(nn_old):
+    """
+    Folds neurons in the given neural network based on the neuron type.
+
+    Args:
+        nn_old (NeuralNetwork): The original neural network.
+
+    Returns:
+        NeuralNetwork: The folded neural network.
+    """
+    nn_new = nn_old.copy()
+    neuron_class = {}
+    argmax = lambda lst: lst.index(max(lst))
+    for n in nn_new.neurons:
+        _suffs = []
+        _clsname = []
+        for s in suffixes:
+            if n.endswith(s):
+                n0 = n[:-len(s)]
+                if len(n0)>2:
+                    _suffs.append(s)
+                    _clsname.append(n0)
+                elif len(n0)>1:
+                    if (n0[-1] in '0123456789') or (s[0] in '0123456789') or n0 in ['MC']:
+                        _suffs.append(s)
+                        _clsname.append(n0)
+                
+        if len(_suffs) > 0:
+            _sufflen = [len(s0) for s0 in _suffs]
+            j = argmax(_sufflen)
+            if not _clsname[j] in neuron_class:
+                neuron_class[_clsname[j]] = []
+            neuron_class[_clsname[j]].append(n)
+        else:
+            neuron_class[n] = [n]
+    nn_new.fold_network(neuron_class)
+    return nn_new
+
+# def foldByNeuronType(nn_old):
+#     """
+#     Folds neurons in the given neural network based on the neuron type.
+
+#     Args:
+#         nn_old (NeuralNetwork): The original neural network.
+
+#     Returns:
+#         NeuralNetwork: The folded neural network.
+
+#     The function iterates over each neuron in the neural network and checks if the neuron type matches a specific pattern. If the neuron type matches the pattern, the function groups the neurons together based on the neuron number. The function then contracts the grouped neurons and updates the neuron dictionary.
+
+#     Note:
+#         The function assumes that the neuron type is represented by a sequence of numbers at the end of the neuron name.
+#     """
+#     nn_new = nn_old.copy()
+#     for m in nn_old.neurons:
+#         stripNums = m.rstrip('0123456789')
+#         if (len(m) - len(stripNums)==1 and m[-1]=='1') or (len(m) - len(stripNums)==2 and m[-1]=='1' and m[-2]=='0'):
+#             j=1
+#             moreInClass=True
+#             classNeurons = []
+#             while (moreInClass):
+#                 if len(m) - len(stripNums) == 1:
+#                     if m[:len(stripNums)] + str(j+1) in nn_new.neurons:
+#                         classNeurons.append(m[:len(stripNums)] + str(j+1))
+#                         j+=1
+#                         moreInClass=True
+#                     else:
+#                         moreInClass=False
+#                 else:
+#                     if m[:len(stripNums)] + "{:02d}".format(j+1) in nn_new.neurons:
+#                         classNeurons.append(m[:len(stripNums)] + "{:02d}".format(j+1))
+#                         j+=1
+#                         moreInClass=True
+#                     else:
+#                         moreInClass=False
+#             print(m, classNeurons)
+#             for n in classNeurons:
+#                 if not m[:len(stripNums)] in nn_new.neurons: 
+#                     neuronPair = [m,n]
+#                     nn_new.contractNeurons(neuronPair)
+#                 else:
+#                     print(m)
+#             nn_new.neurons[m].name = m[:len(stripNums)]
+#             nn_new.update_neurons()
+#     return nn_new 
+
+def foldDorsoVentral(nn_old):
+    """
+    This function performs a dorsoventral folding operation on a neural network.
+    It takes the old neural network as input and produces a new neural network after the folding operation.
+    Parameters:
+    - nn_old: The original neural network to be folded dorsoventrally.
+    Returns:
+    - nn_new: The new neural network after the dorsoventral folding operation.
+    """
+    nn_new = nn_old.copy()
+    for m in nn_new.neurons:
+        if m[-1] == 'D' and not m in ['RID']:
+            n = m[:-1] + 'V'
+            o = m[:-1] 
+            if n in nn_new.neurons:
+                if o in nn_new.neurons:
+                    neuronPair1 = [m,n] # to contract D and V
+                    neuronPair2 = [o,m] # to contract - and D
+                    nn_new.contractNeurons(neuronPair1)
+                    nn_new.contractNeurons(neuronPair2)
+                else:
+                    nn_new.neurons[m].name = m[:-1]
+                    neuronPair1 = [m,n] # to contract D and V 
+                    nn_new.contractNeurons(neuronPair1)
+    nn_new.update_neurons() 
+    return nn_new
+                
+
 ### Plotting functions
 
 def simpleaxis(axes, every=False, outward=False):
@@ -460,6 +608,69 @@ def plot_spiral(neunet, save=False):
     plt.show()
     plt.close()
 
+def add_gapjn_symbols(ax, pos, edges, line_length=0.05, color='k'):
+    for edge in edges:
+        start, end = edge[0], edge[1]
+        x1, y1 = pos[start]
+        x2, y2 = pos[end]
+         
+        # Calculate the midpoint of the edge
+        mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
+
+        # Calculate direction vector and normalize it
+        direction = np.array([x2 - x1, y2 - y1])
+        line_length = 0.02*np.linalg.norm(direction)
+        direction = direction / np.linalg.norm(direction)
+
+    
+        # Calculate the perpendicular direction
+        perp_direction = np.array([-direction[1], direction[0]])
+
+        # Calculate the positions of the capacitor lines
+        line_start1 = np.array([mid_x, mid_y]) - (line_length / 2) * perp_direction
+        line_end1 = np.array([mid_x, mid_y]) + (line_length / 2) * perp_direction
+
+        line_start2 = np.array([mid_x, mid_y]) - (line_length / 2) * perp_direction + direction * 0.02
+        line_end2 = np.array([mid_x, mid_y]) + (line_length / 2) * perp_direction + direction * 0.02
+
+        # Draw the capacitor lines
+        ax.plot([line_start1[0], line_end1[0]], [line_start1[1], line_end1[1]], color=color, lw=2)
+        ax.plot([line_start2[0], line_end2[0]], [line_start2[1], line_end2[1]], color=color, lw=2)
+
+def add_circular_arrowheads(ax, pos, edges, node_size, scale_factor=0.001, color='k'):
+    for edge in edges:
+        start, end = edge[0], edge[1]
+        x1, y1 = pos[start]
+        x2, y2 = pos[end]
+        
+        # # Calculate direction vector and normalize it
+        # direction = np.array([x2 - x1, y2 - y1])
+        # direction = direction / np.linalg.norm(direction)
+
+        # # Calculate the radius of the circle
+        # radius = np.sqrt(node_size) * scale_factor
+
+        # # Calculate the position of the circle's center (slightly outside the endpoint)
+        # circle_center = np.array([x2, y2]) - (radius + np.sqrt(node_size) * 0.05) * direction
+
+        # # Draw the circle at the end of the arrow
+        # circle = Circle(circle_center, radius, color=color, zorder=2)
+        # ax.add_patch(circle)
+
+        direction = np.array([x2 - x1, y2 - y1])
+        direction = direction / np.linalg.norm(direction)
+
+        # Calculate the radius of the circle
+        radius = np.sqrt(node_size) * scale_factor
+
+        # Adjust position to place the circle just outside the node
+        node_radius = np.sqrt(node_size) / 2 * 0.01
+        circle_center = np.array([x2, y2]) - (node_radius + radius) * direction
+
+        # Draw the circle at the end of the arrow
+        circle = Circle(circle_center, radius, color=color, zorder=2)
+        ax.add_patch(circle)
+            
 def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge_color_dict=None, node_color_dict=None, edge_labels=False, fontsize=11):
     """
     Generates a shell layout for the network.
@@ -471,14 +682,20 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge
     - pos (dict): A dictionary mapping node names to their positions in the graph.
     """
     MAX_LENGTH_FOR_STRAIGHT_TEXT = 20
+    arc_rad = 0.1
+    node_size = 800
+        
     if shells is None:
         if isinstance(center, str):
             assert center in neunet.neurons
             shells = [[neunet.neurons[center]], [neu for nname,neu in neunet.neurons.items() if nname !=center]]
         elif isinstance(center, list):
             #print(center, neunet.neurons.keys(), [c in neunet.neurons.keys() for c in center])
-            assert all([c in neunet.neurons.keys() for c in center])
-            shells = [[neunet.neurons[c] for c in center], [neu for nname,neu in neunet.neurons.items() if nname not in center]]
+            assert all([c in neunet.neurons.keys() or isinstance(c, cedne.Neuron) for c in center])
+            new_center = [c if c in neunet.neurons.keys() else c.name for c in center]
+            shells = [[neunet.neurons[c] for c in new_center], [neu for nname,neu in neunet.neurons.items() if nname not in new_center]]
+        elif isinstance(center, cedne.Neuron):
+            shells = [[neunet.neurons[center.name]], [neu for nname,neu in neunet.neurons.items() if nname != center.name]]
         else:
             raise ValueError("center must be a neuron name or a list of neuron names")
     if node_color_dict is None:
@@ -500,15 +717,32 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge
     #     edge_color.append(attrib_dict['color'])
     #     edge_weight.append(attrib_dict['weight'])
 
-    pos = nx.shell_layout(neunet, nlist=shells)
-    fig, ax = plt.subplots(figsize=figsize)
+    pos = nx.shell_layout(neunet, nlist=shells, scale=2)
+    fig, ax = plt.subplots(figsize=figsize, layout='constrained')
+    ax.set_aspect('equal', 'datalim', anchor='C')
     # print(len(pos))
     # print([(n, pos[neu]) for (n,neu) in neunet.neurons.items()])
-    nx.draw(neunet, node_size = 800, ax=ax, pos=pos, with_labels=False, node_color = node_color, edge_color=edge_color)
+    # nx.draw(neunet, node_size = 800, ax=ax, pos=pos, with_labels=False, node_color = node_color, edge_color=edge_color)
+    nx.draw_networkx_nodes(neunet, pos=pos, node_size = node_size, ax=ax, node_color = node_color)
 
+    for edge, connection in neunet.connections.items():
+        if connection.edge_type == 'chemical-synapse':
+            if (edge[1], edge[0]) in neunet.edges():
+                rad = arc_rad
+            else:
+                rad = 0.0
+            nx.draw_networkx_edges(neunet, pos=pos, edgelist=[edge], node_size=node_size, connectionstyle=f'arc3,rad={rad}', arrows=True, arrowstyle='-|>', arrowsize=20, edge_color=edge_color, ax=ax)
+            # add_circular_arrowheads(ax, pos, edges=[edge], node_size=node_size, color='k')
+            # add_half_circle_arrowheads(ax, pos, edges=[edge], node_size=node_size, color='k')
+        elif connection.edge_type == 'gap-junction':
+            nx.draw_networkx_edges(neunet, pos=pos, edgelist=[edge], node_size=node_size, connectionstyle='arc3,rad=0.0', arrowstyle='-', arrowsize=20, edge_color='k', ax=ax)
+            add_gapjn_symbols(ax, pos, edges=[edge], color='k')
+        
+        if edge_labels:
+            nx.draw_networkx_edge_labels(neunet, pos=pos, edge_labels=edge_labels, ax=ax)
     for node, (x, y) in pos.items():
         label = str(node.name)
-        if len(label)>3 and len(pos)>MAX_LENGTH_FOR_STRAIGHT_TEXT:
+        if len(label)>4 and len(pos)>MAX_LENGTH_FOR_STRAIGHT_TEXT:
             if (x>0 and y>0) or (x<0 and y<0):
                 plt.text(x, y, label, fontsize=fontsize, rotation=45, ha='center', va='center')
             elif (x>0 and y<0) or (x<0 and y>0):
@@ -519,6 +753,7 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge
             plt.text(x, y, label, fontsize=fontsize, ha='center', va='center')
     if save:
         plt.savefig(save)
+    plt.axis('off')
     plt.show()
     plt.close()
     
@@ -890,9 +1125,9 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
         plt.savefig(save)
     plt.show()
 
-def plot_pie(n, center, ax, color_dict, alpha_dict, piesize=1): 
-    # radius for pieplot size on a scatterplot
-    ax.pie([1/len(color_dict[n])]*len(color_dict[n]), center = center, colors=color_dict[n], radius = piesize, counterclock=False, wedgeprops={'alpha': alpha_dict[n], 'zorder': len(color_dict[n])})
+# def plot_pie(n, center, ax, color_dict, alpha_dict, piesize=1): 
+#     # radius for pieplot size on a scatterplot
+#     ax.pie([1/len(color_dict[n])]*len(color_dict[n]), center = center, colors=color_dict[n], radius = piesize, counterclock=False, wedgeprops={'alpha': alpha_dict[n], 'zorder': len(color_dict[n])})
 
 
 class Annotation3D(Annotation):
@@ -1052,149 +1287,3 @@ def plot_position_3D(nn, highlight=None, booleanDictionary=None, title='', label
     if save:
         plt.savefig(save)
     plt.show()
-
-## Graph contraction functions
-def joinLRNodes(nn_old):
-    """
-    Joins left and right nodes together in the neural network based on specific conditions.
-    
-    Parameters:
-    - nn_old: The original neural network to be processed.
-    
-    Returns:
-    - nn_new: The updated neural network after joining left and right nodes.
-    """
-    nn_new = nn_old.copy()
-    for m in nn_new.neurons:
-        if m[-1]=='L' and not m in ['AVL']:
-            nn_new.neurons[m].name = m[:-1]
-            n=m[:-1]+'R'
-            if n in nn_new.neurons:
-                neuronPair = [m,n]
-                nn_new.contractNeurons(neuronPair)
-    return nn_new
-
-# def foldByNeuronType(nn_old):
-#     """
-#     Folds neurons in the given neural network based on the neuron type.
-
-#     Args:
-#         nn_old (NeuralNetwork): The original neural network.
-
-#     Returns:
-#         NeuralNetwork: The folded neural network.
-    
-#     """
-        
-def foldByNeuronType(nn_old):
-    """
-    Folds neurons in the given neural network based on the neuron type.
-
-    Args:
-        nn_old (NeuralNetwork): The original neural network.
-
-    Returns:
-        NeuralNetwork: The folded neural network.
-    """
-    nn_new = nn_old.copy()
-    neuron_class = {}
-    argmax = lambda lst: lst.index(max(lst))
-    for n in nn_new.neurons:
-        _suffs = []
-        _clsname = []
-        for s in suffixes:
-            if n.endswith(s):
-                n0 = n[:-len(s)]
-                if len(n0)>2:
-                    _suffs.append(s)
-                    _clsname.append(n0)
-                elif len(n0)>1:
-                    if (n0[-1] in '0123456789') or (s[0] in '0123456789') or n0 in ['MC']:
-                        _suffs.append(s)
-                        _clsname.append(n0)
-                
-        if len(_suffs) > 0:
-            _sufflen = [len(s0) for s0 in _suffs]
-            j = argmax(_sufflen)
-            if not _clsname[j] in neuron_class:
-                neuron_class[_clsname[j]] = []
-            neuron_class[_clsname[j]].append(n)
-        else:
-            neuron_class[n] = [n]
-    nn_new.fold_network(neuron_class)
-    return nn_new
-
-# def foldByNeuronType(nn_old):
-#     """
-#     Folds neurons in the given neural network based on the neuron type.
-
-#     Args:
-#         nn_old (NeuralNetwork): The original neural network.
-
-#     Returns:
-#         NeuralNetwork: The folded neural network.
-
-#     The function iterates over each neuron in the neural network and checks if the neuron type matches a specific pattern. If the neuron type matches the pattern, the function groups the neurons together based on the neuron number. The function then contracts the grouped neurons and updates the neuron dictionary.
-
-#     Note:
-#         The function assumes that the neuron type is represented by a sequence of numbers at the end of the neuron name.
-#     """
-#     nn_new = nn_old.copy()
-#     for m in nn_old.neurons:
-#         stripNums = m.rstrip('0123456789')
-#         if (len(m) - len(stripNums)==1 and m[-1]=='1') or (len(m) - len(stripNums)==2 and m[-1]=='1' and m[-2]=='0'):
-#             j=1
-#             moreInClass=True
-#             classNeurons = []
-#             while (moreInClass):
-#                 if len(m) - len(stripNums) == 1:
-#                     if m[:len(stripNums)] + str(j+1) in nn_new.neurons:
-#                         classNeurons.append(m[:len(stripNums)] + str(j+1))
-#                         j+=1
-#                         moreInClass=True
-#                     else:
-#                         moreInClass=False
-#                 else:
-#                     if m[:len(stripNums)] + "{:02d}".format(j+1) in nn_new.neurons:
-#                         classNeurons.append(m[:len(stripNums)] + "{:02d}".format(j+1))
-#                         j+=1
-#                         moreInClass=True
-#                     else:
-#                         moreInClass=False
-#             print(m, classNeurons)
-#             for n in classNeurons:
-#                 if not m[:len(stripNums)] in nn_new.neurons: 
-#                     neuronPair = [m,n]
-#                     nn_new.contractNeurons(neuronPair)
-#                 else:
-#                     print(m)
-#             nn_new.neurons[m].name = m[:len(stripNums)]
-#             nn_new.update_neurons()
-#     return nn_new 
-
-def foldDorsoVentral(nn_old):
-    """
-    This function performs a dorsoventral folding operation on a neural network.
-    It takes the old neural network as input and produces a new neural network after the folding operation.
-    Parameters:
-    - nn_old: The original neural network to be folded dorsoventrally.
-    Returns:
-    - nn_new: The new neural network after the dorsoventral folding operation.
-    """
-    nn_new = nn_old.copy()
-    for m in nn_new.neurons:
-        if m[-1] == 'D' and not m in ['RID']:
-            n = m[:-1] + 'V'
-            o = m[:-1] 
-            if n in nn_new.neurons:
-                if o in nn_new.neurons:
-                    neuronPair1 = [m,n] # to contract D and V
-                    neuronPair2 = [o,m] # to contract - and D
-                    nn_new.contractNeurons(neuronPair1)
-                    nn_new.contractNeurons(neuronPair2)
-                else:
-                    nn_new.neurons[m].name = m[:-1]
-                    neuronPair1 = [m,n] # to contract D and V 
-                    nn_new.contractNeurons(neuronPair1)
-    nn_new.update_neurons() 
-    return nn_new

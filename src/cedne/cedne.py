@@ -30,8 +30,33 @@ from scipy import signal
 # Superparameters
 RANDOM_SEED = 42
 F_SAMPLE = 5 # Hz
-class Worm:
+
+class Organism:
     ''' This is a full organism class'''
+    def __init__(self, species = '', name='', stage='', sex='', genotype=''):
+        ''' Initializes an Organism class'''
+        self.species = species
+        self.name = name
+        self.stage = stage
+        self.sex = sex
+        self.genotype = genotype
+        self.networks = {}
+
+    def save(self, file_path, file_format='pickle'):
+        """
+        Saves the Organism object to a pickle file at the specified file path.
+
+        Args:
+            file_path (str): The path to the pickle file.
+        """
+        if file_format == 'pickle':
+            if not file_path.endswith('.pkl'):
+                file_path += '.pkl'
+            with open(file_path, 'wb') as pickle_file:
+                pickle.dump(self, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+        else:
+            raise NotImplementedError("Only pickle format is supported.")
+class Worm(Organism):
     def __init__(self, name='', stage='Day-1 Adult', sex='Hermaphrodite', genotype='N2') -> None:
         """
         Initializes a Worm object.
@@ -51,26 +76,8 @@ class Worm:
         """
         if not name:
             name = 'Worm-' + generate_random_string()
-        self.name = name
-        self.stage = stage
-        self.sex = sex
-        self.genotype = genotype
-        self.networks = {}
+        super().__init__(species='Worm', name=name, stage=stage, sex=sex, genotype=genotype)
 
-    def save(self, file_path, file_format='pickle'):
-        """
-        Saves the Worm object to a pickle file at the specified file path.
-
-        Args:
-            file_path (str): The path to the pickle file.
-        """
-        if file_format == 'pickle':
-            if not file_path.endswith('.pkl'):
-                file_path += '.pkl'
-            with open(file_path, 'wb') as pickle_file:
-                pickle.dump(self, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
-        else:
-            raise NotImplementedError("Only pickle format is supported.")
 
 def load_worm(file_path):
     """
@@ -407,7 +414,11 @@ class NervousSystem(nx.MultiDiGraph):
             subgraph = graph_copy.subgraph(subgraph_nodes)
             subgraph.connections = {key: value for key, value in graph_copy.connections.items() if key[0] in subgraph_nodes and key[1] in subgraph_nodes}
         elif connections is not None:
-            subgraph = graph_copy.edge_subgraph(connections)
+            new_connections = [(graph_copy.neurons[conn[0].name], graph_copy.neurons[conn[1].name], conn[2]) for conn in connections]
+            new_connections = [graph_copy.connections[key]._id for key in new_connections]
+            subgraph = graph_copy.edge_subgraph(new_connections)
+            subgraph.connections = {key: value for key, value in graph_copy.connections.items() if key in new_connections}
+
         else:
             subgraph = self
         subgraph.update_neurons()

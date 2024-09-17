@@ -1,15 +1,14 @@
 
-# CeDNe: C elegans Data Network
+# CEDNE: Connectome Embedded Data Network Environment
 
-CeDNe (pronounced Sid-nee) is a Python Library for multi-omic integration of neuroscience data from
-***C elegans***. CeDNe is built on top of **networkx** in order to leverage its graph structure
+CEDNE (pronounced Sid-nee) is a Python Library for multi-omic integration of neuroscience data. CEDNE is built on top of **networkx** in order to leverage its graph structure
 and Python's object oriented capabilities together to create graph-based data containers that are
 intuitive to store and manage neuroscience data for analysis and modeling. Due to this structure, 
-CeDNe acts as a multi-omic tool to integrate different sources of information together and facilitates contextualizing new data using existing information about C elegans. In order to facilitate usage, CeDNe
+CEDNE acts as a multi-omic tool to integrate different sources of information together and facilitates contextualizing new data using existing information about C elegans. In order to facilitate usage, CEDNE
 also comes with several utility functions that make common tasks very easy to execute. For advanced usage,
-users can access CeDNe objects directly.
+users can access CEDNE objects directly.
 
-CeDNe is easy to use with only a bit of programming experience and several examples have been provided to 
+CEDNE is easy to use with only a bit of programming experience and several examples have been provided to 
 demonstrate its use. CeDNe can also easily integrate into existing Python based analyses pipelines.
 
 ## Examples
