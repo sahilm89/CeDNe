@@ -92,5 +92,8 @@ ENV/
 env.bak/
 venv.bak/
 
+# Conda files
+.conda/
+
 # mkdocs documentation
 /site

@@ -329,11 +329,11 @@ class TestStimResponse:
 ## Connection
 class TestConnection:
     def test_init(self):
-        pre_neuron = Neuron(None, 0, 'regular')
-        post_neuron = Neuron(None, 1, 'regular')
+        pre_neuron = Neuron(None, 0, neuron_type='regular')
+        post_neuron = Neuron(None, 1, neuron_type='regular')
         c = Connection(pre_neuron, post_neuron)
-        assert c.pre_neuron == pre_neuron
-        assert c.post_neuron == post_neuron
+        assert c.pre == pre_neuron
+        assert c.post == post_neuron
         assert c.uid == 0
         assert c.edge_type == 'chemical-synapse'
         assert c.weight == 1

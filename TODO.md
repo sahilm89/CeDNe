@@ -1,4 +1,3 @@
-
 # TODO
 
 ## Cleanups
@@ -7,7 +6,10 @@
 
 ## Data integration
 
-- [ ] !!! Add the L1-L4 stage data for connectivity.
+- [ ] !!! Add reading and writing to and from NWB format. Add that to the paper also.
+- [ ] !!! Write about csv/json integration.
+
+- [ ] !!! Add publication from where data is taken in a note section.
 
 ## New Classes
 
@@ -22,7 +24,6 @@
 
 ## Utility functions
 
-- [ ] !! 2-node graphs to show all connections between 2 types.
 - [ ] !! Easy Loading functions for loading custom data.
 - [ ] !! Make movies for time series data.
 - [ ] !! Export graph for plotting elsewhere.
@@ -43,3 +44,11 @@
 
 - [ ] !! Pickle warning
 - [ ] ! Add some tests for sanitizing the pickle files
+
+## Issue tracking and support
+
+## Community involvement
+
+- [ ] !! Plugin development
+- [ ] !! Dataset uploads
+- [ ] !! Contribution guidelines

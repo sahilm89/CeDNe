@@ -1,10 +1,13 @@
 ## File containing utility functions for CeDNe
 
 ## Dependencies
-
+import os
+from re import T
 import warnings
 import numpy as np
 import pandas as pd
+import datetime
+import copy
 
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -16,11 +19,15 @@ from matplotlib.gridspec import GridSpec
 from mpl_toolkits.mplot3d.proj3d import proj_transform
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.animation import FuncAnimation, PillowWriter
+
 import textalloc as ta
 import cmasher as cmr
 
 import cedne as ced
 from cedne import cedne
+from cedne import simulator
 
 warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
 
@@ -35,6 +42,7 @@ root_path = get_root_path()
 TOPDIR = root_path + '/' ## Change this to cedne and write a function to download data from an online server for heavy data.
 DATADIR = TOPDIR + 'data_sources/'
 DOWNLOAD_DIR = TOPDIR + 'data_sources/downloads/'
+OUTPUT_DIR = TOPDIR + f'Output/{str(datetime.datetime.now()).split(" ")[0]}/'
 
 prefix_NT = 'Wang_2019/'
 prefix_CENGEN = 'CENGEN/'
@@ -46,25 +54,190 @@ cell_list = DATADIR + "Cell_list.pkl"
 chemsyns = DATADIR + "chem_adj.pkl"
 elecsyns = DATADIR + "gapjn_symm_adj.pkl"
 neuronPositions = DATADIR + "neuronPosition.pkl"
-def makeWorm(name=''):
-    w = cedne.Worm(name)
-    nn = cedne.NervousSystem(w)
-    nn.build_nervous_system(neuron_data=cell_list, chem_synapses=chemsyns, elec_synapses=elecsyns, positions=neuronPositions)
+
+cook_connectome = DOWNLOAD_DIR + 'cook_2019/'
+witvliet_connectome = DOWNLOAD_DIR + 'witvliet_2020/'
+
+## FlyWire
+fly_wire = DOWNLOAD_DIR + 'FlyWire/'
+
+def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False):
+    ''' Utility function to make a Worm based on import parameters.'''
+    if import_parameters is None or (import_parameters['style'] == 'cook' and import_parameters['sex'] == 'hermaphrodite'):
+        w = cedne.Worm(name)
+        nn = cedne.NervousSystem(w)
+        nn.build_nervous_system(neuron_data=cell_list, \
+                            chem_synapses=chemsyns, \
+                            elec_synapses=elecsyns, \
+                            positions=neuronPositions, \
+                            chem_only=chem_only, \
+                            gapjn_only=gapjn_only)
+    elif (import_parameters['style'] == 'cook' and import_parameters['sex'] == 'male'):
+        w = cedne.Worm(name)
+        nn = cedne.NervousSystem(w)
+        input_file = 'SI 5 Connectome adjacency matrices, corrected July 2020.xlsx'
+
+        ## Chemical synapses
+        cook_chem = pd.read_excel(cook_connectome + input_file, sheet_name='male chemical', engine='openpyxl')
+        colnames = cook_chem.iloc[1][3:-1]
+        labels = cook_chem.loc[2:383]['Unnamed: 2'].tolist()
+
+        ccl = cook_chem.iloc[2:,:2].ffill()
+
+        list_1 = ccl.iloc[:,0].to_list() #.to_csv('temp_filled.csv', index=False)
+        list_2 = ccl.iloc[:,1].to_list()
+
+
+        ## Correcting SEX_SPECIFIC NEURONS
+        ntype = {}
+        l1 = {}
+        for j, n in enumerate(labels):
+            if list_1[j] == 'SEX SPECIFIC':
+                if not list_2[j] == 'HEAD':
+                    ntype[n] = list_2[j]
+                else:
+                    if n.startswith('CEM'):
+                        ntype[n] = 'SENSORY NEURON'
+                    elif n.startswith('MCM'):
+                        ntype[n] = 'INTERNEURON'
+                l1[n] = 'SEX SPECIFIC'
+            else:
+                ntype[n] = list_1[j]
+                l1[n] = list_2[j]
+
+        # cook_chem.ffill().to_csv('temp_filled.csv', index=False)
+        
+        cook_chem = cook_chem.drop(columns=cook_chem.columns[:3],index=cook_chem.index[:2])
+        #cols = ['/'.join(list(a)) for a in zip(l1_list, l2_list, colnames)]
+        cook_chem = cook_chem.drop(columns=cook_chem.columns[-1],index=cook_chem.index[-1])
+        cook_chem.columns = colnames
+        cols = cook_chem.columns.to_list()
+        chem_adj = cook_chem.to_numpy()
+        adj_chem = {}
+        for i, row in enumerate(labels):
+            # idx = cook_chem.columns.get_loc()
+            adj_chem[row] = {col1: {"weight": chem_adj[i,j]} for j,col1 in enumerate(cols) if col1 in labels}
+
+        ## Gap junctions
+        cook_gapjn = pd.read_excel(cook_connectome + input_file, sheet_name='male gap jn symmetric', engine='openpyxl')
+        colnames = cook_gapjn.iloc[1][3:-1]
+
+        row_labels = cook_gapjn.loc[2:383]['Unnamed: 2'].tolist()
+
+        cook_gapjn = cook_gapjn.drop(columns=cook_gapjn.columns[:3],index=cook_gapjn.index[:2])
+        #cols = ['/'.join(list(a)) for a in zip(l1_list, l2_list, colnames)]
+        cook_gapjn = cook_gapjn.drop(columns=cook_gapjn.columns[-1],index=cook_gapjn.index[-1])
+        cook_gapjn.columns = colnames
+        cols = cook_gapjn.columns.to_list()
+        gapjn_adj = cook_gapjn.to_numpy()
+        adj_gapjn = {}
+        
+        for i,row in enumerate(row_labels):
+            # idx = cook_gapjn.columns.get_loc(col)
+            if row in labels:
+                adj_gapjn[row] = {col1: {"weight":gapjn_adj[i,j]} for j,col1 in enumerate(cols) if col1 in labels}
+
+        nn.create_neurons(labels=labels, type=ntype, category=l1)
+        if not gapjn_only:
+            nn.setup_chemical_connections(adj_chem)
+        if not chem_only:
+            nn.setup_gap_junctions(adj_gapjn)
+
+        # nn.build_nervous_system(neuron_data=cell_list, \
+        #                     chem_synapses=adj_chem, \
+        #                     elec_synapses=adj_gapjn, \
+        #                     #positions=neuronPositions, \
+        #                     chem_only=chem_only, \
+        #                     gapjn_only=gapjn_only)
+
+
+    else:
+        if import_parameters['style'] == 'witvliet':
+            ind_dict = {'L1': [1,2,3,4], 'L2':[5] , 'L3':[6], 'adult':[7,8]}
+            assert import_parameters['stage'] in ['L1', 'L2', 'L3', 'adult'], "stage should be one of 'L1', 'L2', 'L3', 'adult'"
+            assert int(import_parameters['dataset_ind']) in range(1,len(ind_dict[import_parameters['stage']])+1) , f"Dataset id {int(import_parameters['dataset_ind'])} for stage {import_parameters['stage']} should be in {list(range(1,len(ind_dict[import_parameters['stage']])+1))}"
+
+            input_file = 'witvliet_2020_' + str(ind_dict[import_parameters['stage']][int(import_parameters['dataset_ind'])-1]) + ' ' + import_parameters['stage'] + '.xlsx'
+            witvliet_input = pd.read_excel(witvliet_connectome + input_file, engine='openpyxl')
+            all_labels = set(witvliet_input['pre'])|set(witvliet_input['post'])
+            labels = [lab for lab in all_labels if not any(lab.startswith(k) for k in ['BWM-', 'CEPsh', 'GLR'])]
+
+            w = cedne.Worm(name=name, stage=import_parameters['stage'])
+            nn = cedne.NervousSystem(w, network= '_'.join([import_parameters['style'],import_parameters['stage'], import_parameters['dataset_ind']]))
+            nn.create_neurons(labels=labels)
+            witvliet_input.rename(columns={'synapses': 'weight'}, inplace=True)
+            fin_input = witvliet_input[witvliet_input['pre'].isin(labels)]
+            fin_input = fin_input[fin_input['post'].isin(labels)]
+            for iter, conn in fin_input.iterrows():
+                nn.setup_connections(conn, conn['type'], input_type='edge')
+                
+
     return w
+
+def makeFly(name = ''):
+    f = cedne.Fly(name)
+    nn = cedne.NervousSystem(f)
+
+    ## Neurons
+
+    ### Names
+    names = pd.read_csv(fly_wire + 'names.csv')
+    labs, neuron_types, lab_root_id = names['name'], names['group'], names['root_id']
+    neuron_dict = {r:lab for r,lab in zip(lab_root_id, labs)}
+    type_dict = {r:ntype for r,ntype in zip(lab_root_id, neuron_types)} 
+    
+    root_ids = sorted(lab_root_id)
+    labels = [neuron_dict[rid] for rid in root_ids]
+    neuron_types = {neuron_dict[rid]:type_dict[rid] for rid in root_ids}
+    
+    ### Positions
+    coordinates = pd.read_csv(fly_wire + 'coordinates.csv')
+    pos_root_id, position = coordinates['root_id'], coordinates['position']
+    position_dict = {neuron_dict[rid]:np.array(list(filter(None, pos.split('[')[-1].split(']')[0].split(' '))), dtype=int) for rid,pos in zip(pos_root_id, position)}
+    
+    ### Stats
+    stats = pd.read_csv(fly_wire + 'cell_stats.csv')
+    stats_root_id, nlength, narea, nvolume = stats['root_id'], np.array(stats['length_nm'], dtype=int), np.array(stats['area_nm'], dtype=int), np.array(stats['size_nm'], dtype=int)
+
+    length_dict = {neuron_dict[rid]:nlen for (rid,nlen) in zip(stats_root_id, nlength)}
+    area_dict = {neuron_dict[rid]:nare for (rid,nare) in zip(stats_root_id, narea)}
+    vol_dict = {neuron_dict[rid]:nvol for (rid,nvol) in zip(stats_root_id, nvolume)}
+
+    nn.create_neurons(labels, type=neuron_types, position=position_dict, length=length_dict, area=area_dict, volume=vol_dict)
+
+    ## Connections
+    conns = pd.read_csv(fly_wire + 'connections_no_threshold.csv')
+    pre_rid, post_rid, weights, nts = conns['pre_root_id'], conns['post_root_id'], conns['syn_count'], conns['nt_type']
+
+    for pre, post, weight, nt in zip(pre_rid, post_rid, weights, nts ):
+        adjacency = {'pre':neuron_dict[pre], 'post':neuron_dict[post], 'weight':weight}
+        neurotransmitter = {'neurotransmitter':nt}
+        nn.setup_connections(adjacency, edge_type='chemical-synapse', input_type='edge', neurotransmitter=neurotransmitter)
+    return f
 
 ## Neurotransmitter tables
 suffixes = ['', 'D', 'V', 'L', 'R', 'DL', 'DR', 'VL', 'VR', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13']
 present = False
 
-def getLigands(neuron):
+def getLigands(neuron, sex='Hermaphrodite'):
     ''' Returns ligand for each neuron'''
     lig_file = DOWNLOAD_DIR + prefix_NT +'ligand-table.xlsx'
-    ligtable = pd.read_excel(lig_file, sheet_name='Hermaphrodite, sorted by neuron', skiprows=7, engine='openpyxl')
-    a,b = ligtable['Neurotransmitter 1'][ligtable['Neuron']==neuron].to_list(), ligtable['Neurotransmitter 2'][ligtable['Neuron']==neuron].to_list()
-    if len(b) and type(b[0])==str:
-        return [a[0],b[0]]
+    if sex in ['Hermaphrodite', 'hermaphrodite']:
+        ligtable = pd.read_excel(lig_file, sheet_name='Hermaphrodite, sorted by neuron', skiprows=7, engine='openpyxl')
+    elif sex in ['Male', 'male']:
+        ligtable = pd.read_excel(lig_file, sheet_name='Male neurons, sorted by neuron', skiprows=7, engine='openpyxl')
     else:
-        return [a[0]]
+        raise ValueError("Sex must be 'Hermaphrodite' or 'Male'")
+
+    a,b = ligtable['Neurotransmitter 1'][ligtable['Neuron']==neuron].to_list(), ligtable['Neurotransmitter 2'][ligtable['Neuron']==neuron].to_list()
+    
+    if len(a):
+        if len(b) and type(b[0])==str:
+            return [a[0],b[0]]
+        else:
+            return [a[0]]
+    else:
+        return []
 
 def getLigandsAndReceptors(npr, ligmap, col):
     ''' Returns ligand and receptor for each neuron'''
@@ -82,7 +255,7 @@ def getLigandsAndReceptors(npr, ligmap, col):
     return receptor_ligand
 
 
-def loadNeurotransmitters(nn):
+def loadNeurotransmitters(nn, sex='Hermaphrodite'):
     ''' Loads Neurotransmitters into neurons using Wang et al 2024'''
     
     npr_file = DOWNLOAD_DIR + prefix_NT + 'GenesExpressing-BATCH-thrs4_use.xlsx'
@@ -102,7 +275,7 @@ def loadNeurotransmitters(nn):
                 nn.neurons[col + suffix]._postSynapse.update(getLigandsAndReceptors(npr, ligmap, col))
                 #present = True
     for n in nn.neurons:
-        nn.neurons[n]._preSynapse += getLigands(n)
+        nn.neurons[n]._preSynapse += getLigands(n, sex=sex)
     
     for e,conn in nn.connections.items():
         if e[0].name in nn.neurons and e[1].name in nn.neurons and conn.edge_type == 'chemical-synapse':
@@ -133,6 +306,7 @@ def loadNeuropeptides(w, neuropeps:str= 'all'):
     models = {}
     for i,j in enumerate(range(0,len(model),len(neuronID))):
         models[i+1] = np.array(model[j:j+len(neuronID)], dtype=np.int8)
+
     for k, nprc in enumerate(neuropep_rec['pair_names_NPP']):
         npNum = k+1
         for i,n1 in enumerate(nidList):
@@ -144,14 +318,15 @@ def loadNeuropeptides(w, neuropeps:str= 'all'):
         npepreclist_filter = neuropeps
     else:
         npepreclist_filter = npepreclist
+
     for nprc, model in zip(npepreclist, models ):
         if nprc in npepreclist_filter:
             if type(w)==cedne.Worm:
                 print(nprc, model, models_dict[nprc])
                 nn_np = cedne.NervousSystem(w, network="{}".format(nprc))
-                nn_np.build_network(neurons=cell_list, adj=models_dict[nprc], label=nprc)
+                nn_np.build_network(neuron_data=cell_list, adj=models_dict[nprc], label=nprc)
             elif type(w)==cedne.NervousSystem:
-                w.setup_connections(adjacency_matrix=models_dict[nprc], edge_type=nprc)
+                w.setup_connections(adjacency=models_dict[nprc], edge_type=nprc)
 
 
 ## Load CENGEN tables
@@ -329,7 +504,6 @@ def loadGapJunctions(nn, threshold=4):
     gene_names = list(nn.neurons.values())[0].transcript.index.tolist()
     gapjn_subunits = [g for g in gene_names if g.startswith('inx') or g in ['che-7', 'eat-5', 'unc-7', 'unc-9']]
     for e,conn in nn.connections.items():
-        n1, n2 = [], []
         if e[0].name in nn.neurons and e[1].name in nn.neurons and conn.edge_type == 'gap-junction':
             n1 = set(e[0].transcript[e[0].transcript == True].index).intersection(gapjn_subunits)
             n2 = set(e[1].transcript[e[1].transcript == True].index).intersection(gapjn_subunits)
@@ -339,7 +513,7 @@ def loadGapJunctions(nn, threshold=4):
             #             n1.append(g)
             #         if e[1].transcript[threshold][g]:
             #             n2.append(g)
-            conn.set_property('putative_gapjn_subunits', list(n1|n2))
+            conn.set_property('putative_gapjn_subunits', set([(e1,e2) for e1 in n1 for e2 in n2]))
 
 ## Synaptic weights
 def loadSynapticWeights(nn):
@@ -357,7 +531,7 @@ def loadSynapticWeights(nn):
     ## Load synaptic weights from Excel file
     weightMatrix = DOWNLOAD_DIR + prefix_synaptic_weights + "41586_2023_6683_MOESM13_ESM.xls"
     wtMat = pd.read_excel(weightMatrix, index_col=0).T
-    for sid in list(nn.connections):
+    for sid in nn.connections.keys():
         if sid[0].name in wtMat:
             if sid[1].name in wtMat[sid[0].name]:
                 nn.connections[sid].update_weight(wtMat[sid[0].name][sid[1].name])
@@ -365,6 +539,7 @@ def loadSynapticWeights(nn):
                 nn.connections[sid].update_weight(np.nan)
         else:
             nn.connections[sid].update_weight(np.nan)
+    return wtMat
 
 
 ## Graph contraction functions
@@ -400,7 +575,7 @@ def joinLRNodes(nn_old):
     
 #     """
         
-def foldByNeuronType(nn_old):
+def foldByNeuronType(nn_old, exceptions=[], self_loops=True):
     """
     Folds neurons in the given neural network based on the neuron type.
 
@@ -410,10 +585,10 @@ def foldByNeuronType(nn_old):
     Returns:
         NeuralNetwork: The folded neural network.
     """
-    nn_new = nn_old.copy()
+    # nn_new = nn_old.copy()
     neuron_class = {}
     argmax = lambda lst: lst.index(max(lst))
-    for n in nn_new.neurons:
+    for n in nn_old.neurons:
         _suffs = []
         _clsname = []
         for s in suffixes:
@@ -435,7 +610,8 @@ def foldByNeuronType(nn_old):
             neuron_class[_clsname[j]].append(n)
         else:
             neuron_class[n] = [n]
-    nn_new.fold_network(neuron_class)
+    print(neuron_class)
+    nn_new = nn_old.fold_network(neuron_class, exceptions=exceptions, self_loops=self_loops)
     return nn_new
 
 # def foldByNeuronType(nn_old):
@@ -495,22 +671,37 @@ def foldDorsoVentral(nn_old):
     Returns:
     - nn_new: The new neural network after the dorsoventral folding operation.
     """
-    nn_new = nn_old.copy()
-    for m in nn_new.neurons:
+    foldingDict = {}
+    for m in nn_old.neurons:
         if m[-1] == 'D' and not m in ['RID']:
             n = m[:-1] + 'V'
-            o = m[:-1] 
-            if n in nn_new.neurons:
-                if o in nn_new.neurons:
-                    neuronPair1 = [m,n] # to contract D and V
-                    neuronPair2 = [o,m] # to contract - and D
-                    nn_new.contractNeurons(neuronPair1)
-                    nn_new.contractNeurons(neuronPair2)
-                else:
-                    nn_new.neurons[m].name = m[:-1]
-                    neuronPair1 = [m,n] # to contract D and V 
-                    nn_new.contractNeurons(neuronPair1)
-    nn_new.update_neurons() 
+            o = m[:-1]
+            if n in nn_old.neurons:
+                if o not in foldingDict:
+                    foldingDict[o] = [m,n]
+        elif m[-2] == 'D' and m[-1] in ['L', 'R']:
+            n = m[:-2] + 'V' + m[-1]
+            o = m[:-2] + m[-1] 
+            if n in nn_old.neurons:
+                if o not in foldingDict:
+                    foldingDict[o] = [m,n]
+    nn_new = nn_old.fold_network(foldingDict)
+    # nn_new = nn_old.copy()
+    # for m in nn_new.neurons:
+    #     if m[-1] == 'D' and not m in ['RID']:
+    #         n = m[:-1] + 'V'
+    #         o = m[:-1] 
+    #         if n in nn_new.neurons:
+    #             if o in nn_new.neurons:
+    #                 neuronPair1 = [m,n] # to contract D and V
+    #                 neuronPair2 = [o,m] # to contract - and D
+    #                 nn_new.contract_neurons(neuronPair1)
+    #                 nn_new.contract_neurons(neuronPair2)
+    #             else:
+    #                 nn_new.neurons[m].name = m[:-1]
+    #                 neuronPair1 = [m,n] # to contract D and V 
+    #                 nn_new.contract_neurons(neuronPair1)
+    # nn_new.update_neurons() 
     return nn_new
                 
 
@@ -583,7 +774,7 @@ def groupPosition(pos, type_cat):
 
     return pos2, boxes
 
-def plot_spiral(neunet, save=False):
+def plot_spiral(neunet, save=False, figsize=(8,8), font_size=11):
     """
     Generates a spiral layout for the network.
 
@@ -593,22 +784,31 @@ def plot_spiral(neunet, save=False):
     Returns:
     - pos (dict): A dictionary mapping node names to their positions in the graph.
     """
+    node_size = 800
     node_color = ['lightgray' for node in neunet.nodes]
     edge_color = []
     edge_weight = []
     for (u,v,attrib_dict) in list(neunet.edges.data()):
-        edge_color.append(attrib_dict['color'])
-        edge_weight.append(attrib_dict['weight'])
+        if 'color' in attrib_dict:
+            edge_color.append(attrib_dict['color'])
+        else:
+            edge_color.append('gray') 
+        
+        if 'weight' in attrib_dict:
+            edge_weight.append(attrib_dict['weight'])
+        else:
+            edge_weight.append(1)
 
-    pos = nx.spiral_layout(neunet, equidistant=True, resolution=0.5) 
-    fig, ax = plt.subplots(figsize=(8,8))
-    nx.draw(neunet, node_size = 1200, ax=ax, pos=pos, labels = {node: node.name for node in neunet.nodes}, with_labels=True, node_color = node_color, edge_color=edge_color, font_size=12)
+    pos = nx.spiral_layout(neunet, equidistant=True, resolution=0.5)
+
+    fig, ax = plt.subplots(figsize=figsize)
+    nx.draw(neunet, node_size = node_size, ax=ax, pos=pos, labels = {node: node.name for node in neunet.nodes}, with_labels=True, node_color = node_color, edge_color=edge_color, font_size=font_size)
     if save:
         plt.savefig(save)
     plt.show()
     plt.close()
 
-def add_gapjn_symbols(ax, pos, edges, line_length=0.05, color='k'):
+def add_gapjn_symbols(ax, pos, edges, line_length=0.05, alpha=1, color='k'):
     for edge in edges:
         start, end = edge[0], edge[1]
         x1, y1 = pos[start]
@@ -634,8 +834,36 @@ def add_gapjn_symbols(ax, pos, edges, line_length=0.05, color='k'):
         line_end2 = np.array([mid_x, mid_y]) + (line_length / 2) * perp_direction + direction * 0.02
 
         # Draw the capacitor lines
-        ax.plot([line_start1[0], line_end1[0]], [line_start1[1], line_end1[1]], color=color, lw=2)
-        ax.plot([line_start2[0], line_end2[0]], [line_start2[1], line_end2[1]], color=color, lw=2)
+        ax.plot([line_start1[0], line_end1[0]], [line_start1[1], line_end1[1]], color=color, alpha=alpha, lw=2)
+        ax.plot([line_start2[0], line_end2[0]], [line_start2[1], line_end2[1]], color=color, alpha=alpha, lw=2)
+
+def add_neuropep_symbols(ax, pos, edges, node_size, color='k', crescent_radius=0.04, offset_factor=1.0):
+    # Get node positions
+    node_radius = np.sqrt(node_size) / 220
+    for edge in edges:
+        source, target = edge[0], edge[1]
+        source_pos = np.array(pos[source])
+        target_pos = np.array(pos[target])
+        
+        # Calculate direction vector
+        direction = target_pos - source_pos
+        norm = np.linalg.norm(direction)
+        direction /= norm  # Normalize
+        
+        # Calculate the position for the overlapping circles
+        outer_center = target_pos - (crescent_radius* 2 + node_radius)  * direction
+        inner_center = outer_center - offset_factor * crescent_radius * direction
+        
+        # Draw the line
+        #ax.plot([source_pos[0], target_pos[0]], [source_pos[1], target_pos[1]], color=color, zorder=1)
+        
+        # Draw the inner circle (white) to create crescent effect
+        inner_circle = Circle(inner_center, crescent_radius, color=color, zorder=2)
+        ax.add_patch(inner_circle)
+        
+        # Draw the outer circle (colored) to create crescent effect
+        outer_circle = Circle(outer_center, crescent_radius, color='white', zorder=3)
+        ax.add_patch(outer_circle)
 
 def add_circular_arrowheads(ax, pos, edges, node_size, scale_factor=0.001, color='k'):
     for edge in edges:
@@ -671,7 +899,8 @@ def add_circular_arrowheads(ax, pos, edges, node_size, scale_factor=0.001, color
         circle = Circle(circle_center, radius, color=color, zorder=2)
         ax.add_patch(circle)
             
-def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge_color_dict=None, node_color_dict=None, edge_labels=False, fontsize=11):
+def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge_color_dict=None, edge_alpha_dict=None,\
+                node_color_dict=None, edge_labels=False, handles=None, fontsize=11, width_logbase=2, title=None):
     """
     Generates a shell layout for the network.
 
@@ -684,6 +913,8 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge
     MAX_LENGTH_FOR_STRAIGHT_TEXT = 20
     arc_rad = 0.1
     node_size = 800
+    arrow_size=20
+    rotation = 0 #45
         
     if shells is None:
         if isinstance(center, str):
@@ -702,15 +933,16 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge
         node_color = ['lightgray' if not hasattr(node, 'color') else node.color for node in neunet.nodes]
     else:
         node_color = [node_color_dict[node] for node in neunet.nodes]
+
     if edge_color_dict is None:
-        edge_color = ['lightgray' if not hasattr(edge, 'color') else edge.color for edge in neunet.edges]
-    else:
-        edge_color = [edge_color_dict[edge] for edge in neunet.edges]
-    
+        edge_color_dict = {edge:'gray' if not hasattr(edge, 'color') else edge.color for edge in neunet.edges}
+    if edge_alpha_dict is None:
+        edge_alpha_dict = {edge:1 if not hasattr(edge, 'alpha') else edge.alpha for edge in neunet.edges}
+
     if edge_labels:
         edge_labels = {edge: edge.weight for edge in neunet.edges}
     else:
-        edge_labels = None
+        edge_labels = {edge: '' for edge in neunet.edges}
     # edge_color = []
     # edge_weight = []
     # for (u,v,attrib_dict) in list(neunet.edges.data()):
@@ -724,38 +956,60 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge
     # print([(n, pos[neu]) for (n,neu) in neunet.neurons.items()])
     # nx.draw(neunet, node_size = 800, ax=ax, pos=pos, with_labels=False, node_color = node_color, edge_color=edge_color)
     nx.draw_networkx_nodes(neunet, pos=pos, node_size = node_size, ax=ax, node_color = node_color)
-
-    for edge, connection in neunet.connections.items():
-        if connection.edge_type == 'chemical-synapse':
-            if (edge[1], edge[0]) in neunet.edges():
-                rad = arc_rad
+    
+    if len(neunet.connections.keys()):
+        for edge,connection in neunet.connections.items():
+            edge_color = edge_color_dict[edge]
+            edge_alpha = edge_alpha_dict[edge]
+            if connection.edge_type == 'chemical-synapse':
+                if (edge[1], edge[0]) in neunet.edges():
+                    rad = arc_rad
+                else:
+                    rad = 0.0
+                width = 1 + np.log2(connection.weight)/np.log2(width_logbase)
+                nx.draw_networkx_edges(neunet, pos=pos, edgelist=[edge], node_size=node_size, connectionstyle=f'arc3,rad={rad}', arrows=True, arrowstyle='-|>', arrowsize=arrow_size, edge_color=edge_color, alpha=edge_alpha, width=width, ax=ax)
+                # add_circular_arrowheads(ax, pos, edges=[edge], node_size=node_size, color='k')
+                # add_half_circle_arrowheads(ax, pos, edges=[edge], node_size=node_size, color='k')
+            elif connection.edge_type == 'gap-junction':
+                width = 1 + np.log2(connection.weight)/np.log2(width_logbase)
+                nx.draw_networkx_edges(neunet, pos=pos, edgelist=[edge], node_size=node_size, connectionstyle='arc3,rad=0.0', arrowstyle='-', arrowsize=arrow_size, edge_color='k', alpha=edge_alpha, width=width, ax=ax)
+                add_gapjn_symbols(ax, pos, edges=[edge], alpha=edge_alpha, color='k')
             else:
-                rad = 0.0
-            nx.draw_networkx_edges(neunet, pos=pos, edgelist=[edge], node_size=node_size, connectionstyle=f'arc3,rad={rad}', arrows=True, arrowstyle='-|>', arrowsize=20, edge_color=edge_color, ax=ax)
-            # add_circular_arrowheads(ax, pos, edges=[edge], node_size=node_size, color='k')
-            # add_half_circle_arrowheads(ax, pos, edges=[edge], node_size=node_size, color='k')
-        elif connection.edge_type == 'gap-junction':
-            nx.draw_networkx_edges(neunet, pos=pos, edgelist=[edge], node_size=node_size, connectionstyle='arc3,rad=0.0', arrowstyle='-', arrowsize=20, edge_color='k', ax=ax)
-            add_gapjn_symbols(ax, pos, edges=[edge], color='k')
-        
-        if edge_labels:
-            nx.draw_networkx_edge_labels(neunet, pos=pos, edge_labels=edge_labels, ax=ax)
+                width = 1 + np.log2(connection.weight)/np.log2(width_logbase)
+                nx.draw_networkx_edges(neunet, pos=pos, edgelist=[edge], node_size=node_size, connectionstyle='arc3,rad=0.0', arrowstyle='-', arrowsize=arrow_size, edge_color='k', alpha=edge_alpha, width=width, ax=ax)
+                add_neuropep_symbols(ax, pos, edges=[edge], node_size=node_size)
+                #add_neuropep_symbols(ax, pos, edges=[edge], alpha=edge_alpha, color='k')
+            if edge_labels:
+                nx.draw_networkx_edge_labels(neunet, pos=pos, edge_labels=edge_labels, ax=ax)
+    else:
+        nx.draw_networkx_edges(neunet, pos=pos, node_size=node_size, arrows=True, arrowstyle='-|>', arrowsize=20, ax=ax)
+
     for node, (x, y) in pos.items():
         label = str(node.name)
         if len(label)>4 and len(pos)>MAX_LENGTH_FOR_STRAIGHT_TEXT:
             if (x>0 and y>0) or (x<0 and y<0):
-                plt.text(x, y, label, fontsize=fontsize, rotation=45, ha='center', va='center')
+                plt.text(x, y, label, fontsize=fontsize, rotation=rotation, ha='center', va='center')
             elif (x>0 and y<0) or (x<0 and y>0):
-                plt.text(x, y, label, fontsize=fontsize, rotation=-45, ha='center', va='center')
+                plt.text(x, y, label, fontsize=fontsize, rotation=-rotation, ha='center', va='center')
             else:
                 plt.text(x, y, label, fontsize=fontsize, ha='center', va='center')
         else:
             plt.text(x, y, label, fontsize=fontsize, ha='center', va='center')
-    if save:
-        plt.savefig(save)
+    
     plt.axis('off')
-    plt.show()
-    plt.close()
+    if handles:
+        fig.legend(handles=handles,loc='outside center right')
+    if save:
+        if isinstance(save, str):
+            plt.savefig(save)
+        elif isinstance(save, bool):
+            if not os.path.exists(OUTPUT_DIR):
+                os.makedirs(OUTPUT_DIR)
+            plt.savefig(OUTPUT_DIR + '_'.join([n.name for n in shells[0]]) + '.svg')
+    #plt.show()
+    if title:
+        fig.suptitle(title)
+    return fig
     
     
 def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, save=False, title='', extraNodes=[], extraEdges=[], pos=[], mark_anatomical=False, colorbar=False):
@@ -882,7 +1136,7 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
         nx.set_node_attributes(G, {n:{"layer":neuronTypes.index(neunet.neurons[n].type)}})
         # print(n, neuronTypes.index(neunet.neurons[n].type))
         #G.nodes[n].layer = nn.neurons[n].type 
-    
+    print(G.nodes())
     cats = set(categories.values())
     type_cat = {}
     for n,cat in categories.items():
@@ -903,6 +1157,7 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
         pos =  nx.multipartite_layout(G,subset_key="layer", align='horizontal')
         # print(pos)
         pos = {p:array_op(pos[p],sx) for p in pos}
+        print(pos)
         pos, boxes = groupPosition(pos, type_cat)
 
     #print(edges_within, edges_across)
@@ -1062,6 +1317,7 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
         ax.scatter(x[~boolList], y[~boolList], s=200, facecolor=facecolors[~boolList], edgecolor=facecolors[~boolList], alpha=alphas[~boolList], zorder=1)
         ax.scatter(x[boolList], y[boolList], s=200, facecolor=facecolors[boolList], edgecolor=facecolors[boolList], alpha=alphas[boolList], zorder=2)
         if label:
+
             ta.allocate_text(f,ax,x[boolList], y[boolList],
                         nlabels[boolList],
                         x_scatter=x[boolList], y_scatter=y[boolList],
@@ -1091,6 +1347,9 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
                 color_dict[n].append("lightgrey")
         piesize=0.3
         if label:
+            if isinstance(label, int):
+                randnum = np.random.default_rng()
+                boolList = randnum.choice(boolList, size=label, replace=False)
             ta.allocate_text(f,ax,x[boolList], y[boolList],
                         nlabels[boolList],
                         x_scatter=x[boolList], y_scatter=y[boolList],
@@ -1104,7 +1363,7 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
             #plot_pie(n, (x[i], y[i]), a, color_dict, alpha_dict, piesize)
             a = plt.axes([xa-piesize/2,ya-piesize/2, piesize, piesize])
             a.set_aspect('equal')
-            plot_pie(n, (0,0), a, color_dict, alpha_dict, piesize)
+            plot_pie(n, (0,0), a, color_dict, alpha_dict, piesize=piesize)
         #     ax.pie([1/len(color_dict[n])]*len(color_dict[n]), center = (x[i], y[i]), colors=color_dict[n], radius = piesize, counterclock=False, wedgeprops={'alpha': alpha_dict[n], 'zorder': len(color_dict[n])})
 
 
@@ -1125,10 +1384,11 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
         plt.savefig(save)
     plt.show()
 
-# def plot_pie(n, center, ax, color_dict, alpha_dict, piesize=1): 
-#     # radius for pieplot size on a scatterplot
-#     ax.pie([1/len(color_dict[n])]*len(color_dict[n]), center = center, colors=color_dict[n], radius = piesize, counterclock=False, wedgeprops={'alpha': alpha_dict[n], 'zorder': len(color_dict[n])})
-
+def plot_pie(n, center, ax, color_dict, alpha_dict, pie_division = None, piesize=1): 
+    # radius for pieplot size on a scatterplot
+    if not pie_division:
+        pie_division = [1/len(color_dict[n])]*len(color_dict[n])
+    ax.pie(pie_division, center = center, colors=color_dict[n], radius = piesize, counterclock=False, wedgeprops={'alpha': alpha_dict[n], 'zorder': len(color_dict[n])})
 
 class Annotation3D(Annotation):
     '''Annotate the point xyz with text s'''
@@ -1284,6 +1544,146 @@ def plot_position_3D(nn, highlight=None, booleanDictionary=None, title='', label
     #             f.canvas.draw_idle()
 
     # f.canvas.mpl_connect("motion_notify_event", hover)
+
     if save:
         plt.savefig(save)
     plt.show()
+
+def make_hypermotifs(motif, length, join_at):
+    ''' 
+    Makes hypermotifs from given set of 3-node graph motifs
+     
+    Motifs must have integers as node names starting from 1.
+    '''
+
+    assert all([isinstance(n, int) for n in motif.nodes]), "All nodes must have integer node names"
+    assert sorted(motif.nodes) == [*range(1,len(motif.nodes)+1)], "Nodes must be numbered 1 through number of nodes in the motif."
+    assert isinstance(motif, nx.classes.digraph.DiGraph)
+
+    motif_set = [motif.copy() for _ in range(length)]
+    hypermotif = nx.union_all(motif_set, rename=(f'{j+1}.' for j in range(length)))
+
+    join_indices = [(f'{l}.{j[0]}', f'{l+1}.{j[1]}') for j in join_at for l in range(1,length)]
+    join_indices_copy = join_indices[:]
+    copy_join = []
+    if len(join_indices):
+        _, right_ori = list(zip(*join_indices_copy))
+        assert len(set(right_ori)) == len(right_ori), "Trying to contract one node to two different nodes"
+        
+        while len(copy_join)<len(join_indices): 
+            left, right = list(zip(*join_indices_copy))
+            ind_copy = [j for j,r in enumerate(right) if r not in left]
+            ind = [right_ori.index(right[i]) for i in ind_copy]
+            copy_join +=ind
+            for j in ind_copy[::-1]:
+                join_indices_copy.pop(j)
+        
+        mapping = {}
+        for j in copy_join:
+            ja = join_indices[j]
+            nx.contracted_nodes(hypermotif, ja[0], ja[1], copy=False)
+            mapping.update({f'{ja[0]}': f'{ja[0]}-{ja[1]}'})
+        nx.relabel_nodes(hypermotif, mapping, copy=False)
+    return hypermotif
+
+def return_triads():
+    triads = (
+    "003",
+    "012",
+    "102",
+    "021D",
+    "021U",
+    "021C",
+    "111D",
+    "111U",
+    "030T",
+    "030C",
+    "201",
+    "120D",
+    "120U",
+    "120C",
+    "210",
+    "300",
+    )
+
+    triad_graphs = {t:nx.triad_graph(t) for t in triads}
+    for t in triad_graphs:
+        triad_graphs[t] = nx.relabel_nodes(triad_graphs[t], mapping={'a':1, 'b':2, 'c':3}, copy=True)
+    return triad_graphs
+        
+def randomize_graph(G, seed=None, mode='edge-swap', multiplier='auto'):
+    g_copy = copy.deepcopy(G)
+    if multiplier == 'auto':
+        multiplier = int(np.log(len(G.edges)))
+    else:
+        if not isinstance(multiplier, int):
+            raise ValueError("Multiplier must be an integer")
+    if mode == 'edge-swap':
+        nx.directed_edge_swap(g_copy, nswap=multiplier*len(G.edges), max_tries=len(G.edges)*100, seed=seed)
+    elif mode == 'configuration-model':
+        nodes = g_copy.nodes()
+        in_degree = [g_copy.in_degree(n) for n in nodes]
+        out_degree = [g_copy.out_degree(n) for n in nodes]
+        g_copy = nx.directed_configuration_model(in_degree, out_degree, seed=seed)
+    elif mode == 'num-nodes-edges':
+        g_copy = nx.gnm_random_graph(len(g_copy.nodes()), len(g_copy.edges()), seed=seed, directed=True)
+    return g_copy
+
+def addBranch():
+    ''' Add parallel and serial branches to a graph.'''
+
+
+def plot_simulation_results(results, twinx=True):
+    rate_model, inputs, rates = results
+    f, ax = plt.subplots(figsize=(2.5, 2.5), layout='constrained')
+    for node in rates:
+        ax.plot(rate_model.time_points, rates[node], label=node.label, lw=2)
+    # ax.set_ylim((-15,15))
+
+    if twinx:
+        ax2 = ax.twinx()
+    else:
+        ax2=ax
+    for inp in inputs:
+        ax2.plot(rate_model.time_points, [inp.process_input(t) for t in rate_model.time_points], ls='--', color='k')
+    ax2.axhline(y=0, ls='--', alpha=0.25, color='gray')
+    # ax2.set_ylim((-4,4))
+    for inp in inputs:
+        if isinstance(inp, simulator.StepInput):
+            ax2.axvline(x=inp.tstart, ls='--', color='gray', alpha=0.25)
+            ax2.axvline(x=inp.tend, ls='--', color='gray', alpha=0.25)
+    # ax.set_ylim((-1,1))
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel('Rate')
+    # ax.set_xticks([0,30,60,90])
+    simpleaxis(ax)
+    f.legend(loc='outside upper center', ncol=len(rates), frameon=False)
+    return f
+
+def compare_simulation_results(results1, results2, twinx=True):
+    rate_model, inputs, rates1 = results1
+    _, _, rates2 = results2
+    f, ax = plt.subplots(figsize=(2.5, 2.5), layout='constrained')
+    colors = {node: plt.cm.viridis(i/len(rates1)) for i, node in enumerate(rates1)}
+    for node in rates1:
+        ax.plot(rate_model.time_points, rates1[node], label=node.label, lw=2, color=colors[node])
+        ax.plot(rate_model.time_points, rates2[node], label=node.label, lw=2, color=colors[node], ls='--')
+    if twinx:
+        ax2 = ax.twinx()
+    else:
+        ax2=ax
+    for inp in inputs:
+        ax2.plot(rate_model.time_points, [inp.process_input(t) for t in rate_model.time_points], ls='--', color='k')
+    ax2.axhline(y=0, ls='--', alpha=0.25, color='gray')
+    # ax2.set_ylim((-4,4))
+    for inp in inputs:
+        if isinstance(inp, simulator.StepInput):
+            ax2.axvline(x=inp.tstart, ls='--', color='gray', alpha=0.25)
+            ax2.axvline(x=inp.tend, ls='--', color='gray', alpha=0.25)
+    # ax.set_ylim((-1,1))
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel('Rate')
+    # ax.set_xticks([0,30,60,90])
+    simpleaxis(ax)
+    f.legend(loc='outside upper center', ncol=len(rates1), frameon=False)
+    return f
