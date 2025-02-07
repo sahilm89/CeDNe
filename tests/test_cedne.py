@@ -335,7 +335,7 @@ class TestConnection:
         assert c.pre == pre_neuron
         assert c.post == post_neuron
         assert c.uid == 0
-        assert c.edge_type == 'chemical-synapse'
+        assert c.connection_type == 'chemical-synapse'
         assert c.weight == 1
 
     def test_update_weight(self):

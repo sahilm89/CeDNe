@@ -27,6 +27,8 @@ share/python-wheels/
 *.egg
 
 # Outputs from 
+Output/
+temp/
 *.pkl
 *.png
 *.svg

@@ -44,7 +44,7 @@ DATADIR = TOPDIR + 'data_sources/'
 DOWNLOAD_DIR = TOPDIR + 'data_sources/downloads/'
 OUTPUT_DIR = TOPDIR + f'Output/{str(datetime.datetime.now()).split(" ")[0]}/'
 
-prefix_NT = 'Wang_2019/'
+prefix_NT = 'Wang_2024/'
 prefix_CENGEN = 'CENGEN/'
 prefix_NP = 'Ripoll-Sanchez_2023/'
 prefix_synaptic_weights = 'Randi_2023/'
@@ -212,7 +212,7 @@ def makeFly(name = ''):
     for pre, post, weight, nt in zip(pre_rid, post_rid, weights, nts ):
         adjacency = {'pre':neuron_dict[pre], 'post':neuron_dict[post], 'weight':weight}
         neurotransmitter = {'neurotransmitter':nt}
-        nn.setup_connections(adjacency, edge_type='chemical-synapse', input_type='edge', neurotransmitter=neurotransmitter)
+        nn.setup_connections(adjacency, connection_type='chemical-synapse', input_type='edge', neurotransmitter=neurotransmitter)
     return f
 
 ## Neurotransmitter tables
@@ -278,7 +278,7 @@ def loadNeurotransmitters(nn, sex='Hermaphrodite'):
         nn.neurons[n]._preSynapse += getLigands(n, sex=sex)
     
     for e,conn in nn.connections.items():
-        if e[0].name in nn.neurons and e[1].name in nn.neurons and conn.edge_type == 'chemical-synapse':
+        if e[0].name in nn.neurons and e[1].name in nn.neurons and conn.connection_type == 'chemical-synapse':
             conn.set_property('ligands', nn.neurons[e[0].name]._preSynapse)
             conn.set_property('receptors', nn.neurons[e[1].name]._postSynapse)
             conn.set_property('putative_neurotrasmitter_receptors', []) 
@@ -326,7 +326,7 @@ def loadNeuropeptides(w, neuropeps:str= 'all'):
                 nn_np = cedne.NervousSystem(w, network="{}".format(nprc))
                 nn_np.build_network(neuron_data=cell_list, adj=models_dict[nprc], label=nprc)
             elif type(w)==cedne.NervousSystem:
-                w.setup_connections(adjacency=models_dict[nprc], edge_type=nprc)
+                w.setup_connections(adjacency=models_dict[nprc], connection_type=nprc)
 
 
 ## Load CENGEN tables
@@ -504,7 +504,7 @@ def loadGapJunctions(nn, threshold=4):
     gene_names = list(nn.neurons.values())[0].transcript.index.tolist()
     gapjn_subunits = [g for g in gene_names if g.startswith('inx') or g in ['che-7', 'eat-5', 'unc-7', 'unc-9']]
     for e,conn in nn.connections.items():
-        if e[0].name in nn.neurons and e[1].name in nn.neurons and conn.edge_type == 'gap-junction':
+        if e[0].name in nn.neurons and e[1].name in nn.neurons and conn.connection_type == 'gap-junction':
             n1 = set(e[0].transcript[e[0].transcript == True].index).intersection(gapjn_subunits)
             n2 = set(e[1].transcript[e[1].transcript == True].index).intersection(gapjn_subunits)
             # for g in gene_names:
@@ -961,7 +961,7 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge
         for edge,connection in neunet.connections.items():
             edge_color = edge_color_dict[edge]
             edge_alpha = edge_alpha_dict[edge]
-            if connection.edge_type == 'chemical-synapse':
+            if connection.connection_type == 'chemical-synapse':
                 if (edge[1], edge[0]) in neunet.edges():
                     rad = arc_rad
                 else:
@@ -970,7 +970,7 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge
                 nx.draw_networkx_edges(neunet, pos=pos, edgelist=[edge], node_size=node_size, connectionstyle=f'arc3,rad={rad}', arrows=True, arrowstyle='-|>', arrowsize=arrow_size, edge_color=edge_color, alpha=edge_alpha, width=width, ax=ax)
                 # add_circular_arrowheads(ax, pos, edges=[edge], node_size=node_size, color='k')
                 # add_half_circle_arrowheads(ax, pos, edges=[edge], node_size=node_size, color='k')
-            elif connection.edge_type == 'gap-junction':
+            elif connection.connection_type == 'gap-junction':
                 width = 1 + np.log2(connection.weight)/np.log2(width_logbase)
                 nx.draw_networkx_edges(neunet, pos=pos, edgelist=[edge], node_size=node_size, connectionstyle='arc3,rad=0.0', arrowstyle='-', arrowsize=arrow_size, edge_color='k', alpha=edge_alpha, width=width, ax=ax)
                 add_gapjn_symbols(ax, pos, edges=[edge], alpha=edge_alpha, color='k')
@@ -1347,9 +1347,9 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
                 color_dict[n].append("lightgrey")
         piesize=0.3
         if label:
-            if isinstance(label, int):
-                randnum = np.random.default_rng()
-                boolList = randnum.choice(boolList, size=label, replace=False)
+            # if isinstance(label, int):
+            #     randnum = np.random.default_rng()
+            #     boolList = randnum.choice(boolList, size=label, replace=False)
             ta.allocate_text(f,ax,x[boolList], y[boolList],
                         nlabels[boolList],
                         x_scatter=x[boolList], y_scatter=y[boolList],
@@ -1619,7 +1619,8 @@ def randomize_graph(G, seed=None, mode='edge-swap', multiplier='auto'):
         if not isinstance(multiplier, int):
             raise ValueError("Multiplier must be an integer")
     if mode == 'edge-swap':
-        nx.directed_edge_swap(g_copy, nswap=multiplier*len(G.edges), max_tries=len(G.edges)*100, seed=seed)
+        nswap = int(multiplier*len(G.edges))
+        nx.directed_edge_swap(g_copy, nswap=nswap, max_tries=nswap*100, seed=seed)
     elif mode == 'configuration-model':
         nodes = g_copy.nodes()
         in_degree = [g_copy.in_degree(n) for n in nodes]
@@ -1687,3 +1688,18 @@ def compare_simulation_results(results1, results2, twinx=True):
     simpleaxis(ax)
     f.legend(loc='outside upper center', ncol=len(rates1), frameon=False)
     return f
+
+def hierarchical_alignment(conns):
+    ntype = ['sensory', 'interneuron', 'motorneuron']
+    ntype_pairs = [(n1, n2) for n1 in ntype for n2 in ntype]
+    conn_types = {n:0 for n in ntype_pairs}
+    for edge in conns:
+        if (edge[0].type in ntype) and (edge[1].type in ntype):
+            conn = (edge[0].type, edge[1].type)
+            conn_types[conn] +=1
+    feedforward =  conn_types[('sensory', 'interneuron')] + conn_types[('sensory', 'motorneuron')] + conn_types[('interneuron', 'motorneuron')] 
+    feedback = conn_types[('interneuron', 'sensory')] + conn_types[('motorneuron', 'interneuron')] + conn_types[('motorneuron', 'sensory')]
+    lateral = 0#conn_types[('sensory', 'sensory')] + conn_types[('interneuron', 'interneuron')] + conn_types[('motorneuron', 'motorneuron')]
+    print(feedforward, feedback)
+    #return (feedforward+lateral)/(feedforward+lateral+feedback) if (feedforward+lateral+feedback) else 0
+    return (feedforward-feedback)/(feedforward+feedback+lateral) if (feedforward+feedback+lateral) else 0

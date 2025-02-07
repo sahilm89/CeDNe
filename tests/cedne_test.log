@@ -114,9 +114,9 @@ test_cedne.py:121:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
 self = <cedne.cedne.NervousSystem object at 0x1341e4440>
-adjacency_matrix = {0: {1: {'weight': 1}}}, edge_type = 'test'
+adjacency_matrix = {0: {1: {'weight': 1}}}, connection_type = 'test'
 
-    def setup_connections(self, adjacency_matrix, edge_type):
+    def setup_connections(self, adjacency_matrix, connection_type):
         """
         Set up connections between neurons based on the adjacency matrix and edge type.
         """
@@ -168,7 +168,7 @@ chemical_adjacency = {0: {1: {'weight': 1}}}
             - The `Connection` class is assumed to be defined in the class.
             - The `neurons` dictionary is assumed to be defined in the class.
         """
-        edge_type='chemical-synapse'
+        connection_type='chemical-synapse'
         for source_neuron, target_neurons in chemical_adjacency.items():
             for target_neuron, connection_data in target_neurons.items():
                 if connection_data['weight'] > 0:
@@ -177,7 +177,7 @@ chemical_adjacency = {0: {1: {'weight': 1}}}
                         self.neurons[target_neuron],
                         weight=connection_data['weight'],
                         color='orange',
-                        edgeType=edge_type
+                        edgeType=connection_type
                     )
 E                   KeyError: 0
 
@@ -223,7 +223,7 @@ gap_junction_adjacency = {0: {1: {'weight': 1}}}
             - The `Connection` class is assumed to be defined in the class.
             - The `neurons` dictionary is assumed to be defined in the class.
         """
-        edge_type = 'gap-junction'
+        connection_type = 'gap-junction'
         for source_neuron, target_neurons in gap_junction_adjacency.items():
             for target_neuron, connection_data in target_neurons.items():
                 if connection_data['weight'] > 0:
@@ -232,7 +232,7 @@ gap_junction_adjacency = {0: {1: {'weight': 1}}}
                         self.neurons[target_neuron],
                         weight=connection_data['weight'],
                         color='gray',
-                        edge_type=edge_type
+                        connection_type=connection_type
                     )
 E                   KeyError: 0
 

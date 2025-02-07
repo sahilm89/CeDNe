@@ -8,7 +8,6 @@
 
 - [ ] !!! Add reading and writing to and from NWB format. Add that to the paper also.
 - [ ] !!! Write about csv/json integration.
-
 - [ ] !!! Add publication from where data is taken in a note section.
 
 ## New Classes
@@ -21,6 +20,10 @@
 
 - [ ] !! Write down paths from one neuron to another at different levels of depth (direct, 1 path away, etc.)
 - [ ] !!! Formalizing connecting the StimResponse and Trial classes.
+
+## ML stuff
+- [ ] !!! Jax based optimization.
+- [ ] !!! Latin hypercube sampling for hyperparameter optimization.
 
 ## Utility functions
 
@@ -52,3 +55,4 @@
 - [ ] !! Plugin development
 - [ ] !! Dataset uploads
 - [ ] !! Contribution guidelines
+- [ ] !! Evolving models framework (as a network): Setup for root models and submodels, etc.

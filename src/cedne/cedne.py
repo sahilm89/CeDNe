@@ -398,8 +398,18 @@ class NervousSystem(nx.MultiDiGraph):
                 self.connections.pop(pop_conn)
         for n in self.neurons:
             self.neurons[n].update_connections()
+    
+    def update_network(self):
+        """
+        Update the network by setting the network attribute of all connections to self.
+        """
+        for node in self.nodes:
+            node.network = self
+        for _, c in self.connections.items():
+            c.network = self
 
-    def setup_connections(self, adjacency, edge_type, input_type = 'adjacency', **kwargs):
+
+    def setup_connections(self, adjacency, connection_type, input_type = 'adjacency', **kwargs):
         """
         Set up connections between neurons based on the adjacency matrix and edge type.
         """
@@ -420,11 +430,11 @@ class NervousSystem(nx.MultiDiGraph):
                     
                     # edge_id = self.add_edge(
                     #         source_neuron, target_neuron,
-                    #         weight=edge_weight, color='k', edge_type=edge_type
+                    #         weight=edge_weight, color='k', connection_type=connection_type
                     #     )
                     connection = Connection(
-                        #source_neuron, target_neuron, edge_id, edge_type, weight=edge_weight
-                        source_neuron, target_neuron, edge_type=edge_type, weight=edge_weight
+                        #source_neuron, target_neuron, edge_id, connection_type, weight=edge_weight
+                        source_neuron, target_neuron, connection_type=connection_type, weight=edge_weight
                     )
                     self.connections[(source_neuron, target_neuron, connection.uid)] = connection
         
@@ -436,12 +446,12 @@ class NervousSystem(nx.MultiDiGraph):
 
             # edge_id = self.add_edge(
             #                 source_neuron, target_neuron,
-            #                 weight=edge_weight, color='k', edge_type=edge_type
+            #                 weight=edge_weight, color='k', connection_type=connection_type
             # )
 
-            # connection = Connection(source_neuron, target_neuron, edge_id, edge_type,\
+            # connection = Connection(source_neuron, target_neuron, edge_id, connection_type,\
             #                          weight=edge_weight, **kwargs)
-            connection = Connection(source_neuron, target_neuron, edge_type=edge_type,\
+            connection = Connection(source_neuron, target_neuron, connection_type=connection_type,\
                                      weight=edge_weight, **kwargs)
             self.connections[(source_neuron, target_neuron, connection.uid)] = connection
         
@@ -466,7 +476,7 @@ class NervousSystem(nx.MultiDiGraph):
         object to store the connection details. The created connection is added to the `connections`
         dictionary using a tuple of the source neuron, target neuron, and edge key as the key.
         """
-        edge_type='chemical-synapse'
+        connection_type='chemical-synapse'
         for source_neuron, target_neurons in chemical_adjacency.items():
             for target_neuron, connection_data in target_neurons.items():
                 if connection_data['weight'] > 0:
@@ -475,13 +485,13 @@ class NervousSystem(nx.MultiDiGraph):
                     #     self.neurons[target_neuron],
                     #     weight=connection_data['weight'],
                     #     color='orange',
-                    #     edgeType=edge_type
+                    #     edgeType=connection_type
                     # )
                     connection = ChemicalSynapse(
                         self.neurons[source_neuron],
                         self.neurons[target_neuron],
                         #edge_key,
-                        edge_type=edge_type,
+                        connection_type=connection_type,
                         weight=connection_data['weight'],
                         color='orange',
                         **kwargs
@@ -513,7 +523,7 @@ class NervousSystem(nx.MultiDiGraph):
             - The `Connection` class is assumed to be defined in the class.
             - The `neurons` dictionary is assumed to be defined in the class.
         """
-        edge_type = 'gap-junction'
+        connection_type = 'gap-junction'
         for source_neuron, target_neurons in gap_junction_adjacency.items():
             for target_neuron, connection_data in target_neurons.items():
                 if connection_data['weight'] > 0:
@@ -522,13 +532,13 @@ class NervousSystem(nx.MultiDiGraph):
                     #     self.neurons[target_neuron],
                     #     weight=connection_data['weight'],
                     #     color='gray',
-                    #     edge_type=edge_type
+                    #     connection_type=connection_type
                     # )
                     connection = GapJunction(
                         self.neurons[source_neuron],
                         self.neurons[target_neuron],
                         #edge_key,
-                        edge_type=edge_type,
+                        connection_type=connection_type,
                         color='gray',
                         weight=connection_data['weight']
                     )
@@ -574,7 +584,7 @@ class NervousSystem(nx.MultiDiGraph):
             else:
                 subgraph = self
 
-            if neuron_names is not None:    
+            if neuron_names is not None:
                 subgraph = graph_copy.subgraph(subgraph_nodes)
                 subgraph.connections = {key: value for key, value in graph_copy.connections.items()\
                                          if key[0] in subgraph_nodes and key[1] in subgraph_nodes}
@@ -583,8 +593,10 @@ class NervousSystem(nx.MultiDiGraph):
                 subgraph.connections = {key: value for key, value in graph_copy.connections.items()\
                                          if key in new_connections}
             
+            subgraph.update_network()
             subgraph.update_neurons()
             subgraph.update_connections()
+            
 
         else:
             if neuron_names is not None:
@@ -621,20 +633,20 @@ class NervousSystem(nx.MultiDiGraph):
             combined_network.create_neurons(joined_neurs)
             
             for edge in joined_conns:
-                source_neuron, target_neuron, edge_type = edge
+                source_neuron, target_neuron, connection_type = edge
                 weights = [connections.connections[(connections.network.neurons[edge[0]], connections.network.neurons[edge[1]], edge[2])].weight for _netname, connections in all_connections.items()]
                 
-                #edge_weight = np.mean([all_connections[netname].connections[ (all_connections[netname].neurons[source_neuron], all_connections[netname].neurons[target_neuron], edge_type) ].weight for netname in all_connections.keys()])
+                #edge_weight = np.mean([all_connections[netname].connections[ (all_connections[netname].neurons[source_neuron], all_connections[netname].neurons[target_neuron], connection_type) ].weight for netname in all_connections.keys()])
                 edge_weight = np.mean(weights)
                 # edge_id = combined_network.add_edge(
                 #                 combined_network.neurons[source_neuron], combined_network.neurons[target_neuron],
-                #                 weight=edge_weight, color='k', edge_type=edge_type
+                #                 weight=edge_weight, color='k', connection_type=connection_type
                             # )
                 # connection = Connection(
-                #             combined_network.neurons[source_neuron], combined_network.neurons[target_neuron], edge_id, edge_type, weight=edge_weight
+                #             combined_network.neurons[source_neuron], combined_network.neurons[target_neuron], edge_id, connection_type, weight=edge_weight
                 #         )
                 connection = Connection(
-                            combined_network.neurons[source_neuron], combined_network.neurons[target_neuron], edge_type=edge_type, weight=edge_weight)
+                            combined_network.neurons[source_neuron], combined_network.neurons[target_neuron], connection_type=connection_type, weight=edge_weight)
                 connection.set_property('joined_networks', joined_networks)
                 combined_network.connections[(combined_network.neurons[source_neuron], combined_network.neurons[target_neuron], connection.uid)] = connection
         return combined_network
@@ -690,17 +702,19 @@ class NervousSystem(nx.MultiDiGraph):
             else:
                 graph_copy.neurons[nodes_to_fold[0]].name = merged_nodename
         
+        graph_copy.update_network()
         graph_copy.update_neurons()
         graph_copy.reassign_connections()
+        
 
         if data == 'collect':
             return graph_copy
         if data == 'clean':
             parsed_conns = {}
             for e,conn in graph_copy.connections.items():
-                if (e[0],e[1], conn.edge_type) not in parsed_conns:
-                    parsed_conns[(e[0],e[1], conn.edge_type)] = []
-                parsed_conns[(e[0],e[1], conn.edge_type)].append(conn)
+                if (e[0],e[1], conn.connection_type) not in parsed_conns:
+                    parsed_conns[(e[0],e[1], conn.connection_type)] = []
+                parsed_conns[(e[0],e[1], conn.connection_type)].append(conn)
             contracted_graph = graph_copy.contract_connections(parsed_conns)
             return contracted_graph
 
@@ -789,16 +803,17 @@ class NervousSystem(nx.MultiDiGraph):
                 weight+=conn.weight
                 contraction_data[conn._id] = conn
                 
-            #uid = empty_graph_copy.add_edge(contraction[0], contraction[1], weight=weight, edge_type=contraction[2])
-            #new_conn = Connection(contraction[0], contraction[1], uid=uid, edge_type=contraction[2], weight=weight)
+            #uid = empty_graph_copy.add_edge(contraction[0], contraction[1], weight=weight, connection_type=contraction[2])
+            #new_conn = Connection(contraction[0], contraction[1], uid=uid, connection_type=contraction[2], weight=weight)
             n1 = empty_graph_copy.neurons[contraction[0].name]
             n2 = empty_graph_copy.neurons[contraction[1].name]
-            new_conn = Connection(n1, n2, edge_type=contraction[2], weight=weight)
+            new_conn = Connection(n1, n2, connection_type=contraction[2], weight=weight)
             new_conn.set_property('contraction_data', copy.copy(contraction_data))
             #_connections[(contraction[0], contraction[1], new_conn.uid)] = new_conn
             _connections[(n1,n2, new_conn.uid)] = new_conn
         empty_graph_copy.connections = _connections
 
+        empty_graph_copy.update_network()
         empty_graph_copy.update_connections()
         empty_graph_copy.update_neurons()
         
@@ -1494,49 +1509,87 @@ class Neuron(Cell):
         self.trial[trial_num] = Trial(self, trial_num)
         return self.trial[trial_num]
 
-    def get_connections(self, paired_neuron=None, direction='both'):
+    def get_connections(self, paired_neuron=None, direction='both', connection_type='all'):
         """
         Returns all connections that the neuron is involved in.
 
         :return: A list of connections where the neuron is present.
         :rtype: list
         """
-        if paired_neuron is None:
-            if direction == 'both':
-                return self.in_connections | self.out_connections
-                #return [edge for edge in self.network.edges if self in edge]
-            if direction == 'in':
-                return self.in_connections
-            if direction == 'out':
-                return self.out_connections
-            raise ValueError('Direction must be either "both", "in", or "out"')
+        if connection_type == 'all':
+            if paired_neuron is None:
+                if direction == 'both':
+                    return self.in_connections | self.out_connections
+                    #return [edge for edge in self.network.edges if self in edge]
+                if direction == 'in':
+                    return self.in_connections
+                if direction == 'out':
+                    return self.out_connections
+                raise ValueError('Direction must be either "both", "in", or "out"')
 
-        if paired_neuron is not None:
-            if direction == 'both':
-                return self.outgoing(paired_neuron) | self.incoming(paired_neuron)
-            if direction == 'in':
-                return self.incoming(paired_neuron)
-            if direction == 'out':
-                return self.outgoing(paired_neuron)
-            raise ValueError('Direction must be either "both", "in", or "out"')
-
-    def get_connected_neurons(self, direction='both', weight_filter = 1):
-        """ Returns all connected neurons for this neuron. """
-        if direction == 'both':
-            conns = self.in_connections | self.out_connections
-        elif direction == 'in':
-            conns = self.in_connections
-        elif direction == 'out':
-            conns =  self.out_connections
+            if paired_neuron is not None:
+                if direction == 'both':
+                    return self.outgoing(paired_neuron) | self.incoming(paired_neuron)
+                if direction == 'in':
+                    return self.incoming(paired_neuron)
+                if direction == 'out':
+                    return self.outgoing(paired_neuron)
+                raise ValueError('Direction must be either "both", "in", or "out"')
         else:
-            raise ValueError('Direction must be either "both", "in", or "out"')
-        all_conns = []
-        for c, conn in conns.items():
-            if conn.weight>weight_filter:
-                all_conns+= [c[0]]
-                all_conns+= [c[1]]
-        all_conns = set(all_conns)
-        return all_conns
+            if paired_neuron is None:
+                if direction == 'both':
+                    return {key:value for key, value in self.in_connections.items() if value.connection_type == connection_type} | {key:value for key, value in self.out_connections.items() if value.connection_type == connection_type}
+                    #return [edge for edge in self.network.edges if self in edge]
+                if direction == 'in':
+                    return {key:value for key, value in self.in_connections.items() if value.connection_type == connection_type}
+                if direction == 'out':
+                    return {key:value for key, value in self.out_connections.items() if value.connection_type == connection_type}
+                raise ValueError('Direction must be either "both", "in", or "out"')
+
+            if paired_neuron is not None:
+                if direction == 'both':
+                    return {key:value for key, value in self.outgoing(paired_neuron) if value.connection_type == connection_type} | {key:value for key, value in self.incoming(paired_neuron) if value.connection_type == connection_type}
+                if direction == 'in':
+                    return {key:value for key, value in self.incoming(paired_neuron) if value.connection_type == connection_type}
+                if direction == 'out':
+                    return {key:value for key, value in self.outgoing(paired_neuron) if value.connection_type == connection_type}
+                raise ValueError('Direction must be either "both", "in", or "out"')
+
+
+    def get_connected_neurons(self, direction='both', weight_filter = 1, connection_type='all'):
+        """ Returns all connected neurons for this neuron. """
+        if connection_type == 'all':
+            if direction == 'both':
+                conns = self.in_connections | self.out_connections
+            elif direction == 'in':
+                conns = self.in_connections
+            elif direction == 'out':
+                conns =  self.out_connections
+            else:
+                raise ValueError('Direction must be either "both", "in", or "out"')
+            all_conns = []
+            for c, conn in conns.items():
+                if conn.weight>weight_filter:
+                    all_conns+= [c[0]]
+                    all_conns+= [c[1]]
+            all_conns = set(all_conns)
+            return all_conns
+        else:
+            if direction == 'both':
+                conns = self.in_connections | self.out_connections
+            elif direction == 'in':
+                conns = self.in_connections
+            elif direction == 'out':
+                conns =  self.out_connections
+            else:
+                raise ValueError('Direction must be either "both", "in", or "out"')
+            all_conns = []
+            for c, conn in conns.items():
+                if conn.weight>weight_filter and conn.connection_type == connection_type:
+                    all_conns+= [c[0]]
+                    all_conns+= [c[1]]
+            all_conns = set(all_conns)
+            return all_conns
 
     def update_connections(self):
         """
@@ -1615,7 +1668,7 @@ class Neuron(Cell):
 
 class Connection:
     ''' This class represents a connection between two cells. '''
-    def __init__(self, pre, post, uid=None, edge_type='chemical-synapse', **kwargs):
+    def __init__(self, pre, post, uid=None, connection_type='chemical-synapse', **kwargs):
         """
         Initializes a new instance of the Connection class.
 
@@ -1626,7 +1679,7 @@ class Connection:
                 The neuron receiving the connection.
             uid (int, optional): 
                 The unique identifier for the connection.
-            edge_type (str, optional): 
+            connection_type (str, optional): 
                 The type of the connection.
             weight (float, optional): 
                 The weight of the connection.
@@ -1640,13 +1693,13 @@ class Connection:
             raise AssertionError("The Nervous Systems of the pre and post neurons must be the same.")
         
         if not uid:
-            self.uid = self.network.add_edge(pre, post, weight=self.weight, edge_type=edge_type, **kwargs)
+            self.uid = self.network.add_edge(pre, post, weight=self.weight, connection_type=connection_type, **kwargs)
         else:
             self.uid = uid
-            self.network.add_edge(pre, post, key=uid, weight=self.weight, edge_type=edge_type, **kwargs)
+            self.network.add_edge(pre, post, key=uid, weight=self.weight, connection_type=connection_type, **kwargs)
 
         self._id = (pre, post, self.uid)
-        self.edge_type = edge_type
+        self.connection_type = connection_type
         
 
         self.pre.out_connections[self._id] = self
@@ -1680,20 +1733,20 @@ class Connection:
 
 class ChemicalSynapse(Connection):
     ''' This is a convenience class that represents connections of type chemical synapses.'''
-    def __init__(self, pre, post, uid=0, edge_type='chemical-synapse', weight=1, **kwargs):
-        super().__init__(pre, post, uid=uid, edge_type=edge_type, weight=weight, **kwargs)
+    def __init__(self, pre, post, uid=0, connection_type='chemical-synapse', weight=1, **kwargs):
+        super().__init__(pre, post, uid=uid, connection_type=connection_type, weight=weight, **kwargs)
         self.position= kwargs.pop('position', {'AP': 0, 'LR': 0, 'DV': 0})
 
 class GapJunction(Connection):
     ''' This is a convenience class that represents connections of type gap junctions.'''
-    def __init__(self, pre, post, uid=1, edge_type='gap-junction', weight=1, **kwargs):
-        super().__init__(pre, post, uid=uid, edge_type=edge_type, weight=weight, **kwargs)
+    def __init__(self, pre, post, uid=1, connection_type='gap-junction', weight=1, **kwargs):
+        super().__init__(pre, post, uid=uid, connection_type=connection_type, weight=weight, **kwargs)
         self.position= kwargs.pop('position', {'AP': 0, 'LR': 0, 'DV': 0})
 
 class BulkConnection(Connection):
     ''' This is a convenience class that represents connections of type neuropeptide-receptors.'''
-    def __init__(self, pre, post, uid, edge_type, weight=1, **kwargs):
-        super().__init__(pre, post, uid=uid, edge_type=edge_type, weight=weight, **kwargs)
+    def __init__(self, pre, post, uid, connection_type, weight=1, **kwargs):
+        super().__init__(pre, post, uid=uid, connection_type=connection_type, weight=weight, **kwargs)
 
 class Trial:
     """ This is the trial class for different trials on the same wo Write a utir, neuron, etc"""
@@ -2052,6 +2105,7 @@ def join_networks(networks, copy_graph=False):
             network_composed = nx.contracted_nodes(network_composed, node1, node2,\
                                  copy=copy_graph)
 
+    network_composed.update_network()
     network_composed.update_neurons()
     network_composed.update_connections()
     return network_composed
