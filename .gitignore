@@ -13,7 +13,6 @@ build/
 develop-eggs/
 dist/
 data_sources/downloads/
-!data_sources/*.pkl
 eggs/
 .eggs/
 lib/
@@ -100,3 +99,7 @@ venv.bak/
 
 # mkdocs documentation
 /site
+
+
+## Exceptions
+!data_sources/*.pkl
