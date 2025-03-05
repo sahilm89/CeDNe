@@ -575,7 +575,7 @@ def joinLRNodes(nn_old):
     
 #     """
         
-def foldByNeuronType(nn_old, exceptions=[], self_loops=True):
+def foldByNeuronType(nn_old, exceptions=[], self_loops=True, data='clean'):
     """
     Folds neurons in the given neural network based on the neuron type.
 
@@ -611,7 +611,7 @@ def foldByNeuronType(nn_old, exceptions=[], self_loops=True):
         else:
             neuron_class[n] = [n]
     print(neuron_class)
-    nn_new = nn_old.fold_network(neuron_class, exceptions=exceptions, self_loops=self_loops)
+    nn_new = nn_old.fold_network(neuron_class, exceptions=exceptions, self_loops=self_loops, data=data)
     return nn_new
 
 # def foldByNeuronType(nn_old):

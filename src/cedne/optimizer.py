@@ -6,11 +6,39 @@ import jax
 import jax.numpy as jnp
 import diffrax as dfx
 import equinox as eqx
-
+import os
+import cedne
+import getpass
+user = getpass.getuser()
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
+CEDNE_ROOT = os.path.dirname(os.path.abspath(cedne.__file__))
+PACKAGE_ROOT = CEDNE_ROOT.split('src')[0]
+
+LARGE_LOSS = 1e6
+
+# Postgresql connection
+if 'PGUSER' in os.environ:
+    PGUSER = os.environ['PGUSER']
+else:
+    PGUSER = user
+
+if 'PGHOST' in os.environ:
+    PGHOST = os.environ['PGHOST']
+else:
+    PGHOST = 'localhost'
+
+if 'PGPORT' in os.environ:
+    PGPORT = os.environ['PGPORT']
+else:
+    PGPORT = 5432
+
+if 'PGDATABASE' in os.environ:
+    PGDATABASE = os.environ['PGDATABASE']
+else:
+    PGDATABASE = 'cedne_optimization_optuna'
 class Optimizer:
-    def __init__(self, simulation_model, real_data, loss_function, node_parameter_bounds, edge_parameter_bounds, vars_to_fit, num_trials=100, **kwargs):
+    def __init__(self, simulation_model, real_data, loss_function, neuron_parameter_bounds, edge_parameter_bounds, vars_to_fit, num_trials=100, **kwargs):
         """
         Initialize the optimizer.
         
@@ -24,7 +52,7 @@ class Optimizer:
         """
         self.simulation_model = simulation_model
         self.loss_function = loss_function
-        self.node_parameter_bounds = node_parameter_bounds
+        self.neuron_parameter_bounds = neuron_parameter_bounds
         self.edge_parameter_bounds = edge_parameter_bounds
         self.real_data = np.array([real_data[node] for node in vars_to_fit ])
         self.sim_data = np.zeros(self.real_data.shape)
@@ -46,8 +74,8 @@ class Optimizer:
         pass
 
 class GradientDescentOptimizer(Optimizer):
-    def __init__(self, simulation_model, real_data, loss_function, node_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs):
-        super().__init__(simulation_model, real_data, loss_function, node_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs)
+    def __init__(self, simulation_model, real_data, loss_function, neuron_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs):
+        super().__init__(simulation_model, real_data, loss_function, neuron_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs)
         self.optimization_method = 'gradient_descent'
 
     def optimize(self, max_iterations=100):
@@ -56,8 +84,8 @@ class GradientDescentOptimizer(Optimizer):
         pass
 
 class GradientFreeOptimizer(Optimizer):
-    def __init__(self, simulation_model, real_data, loss_function, node_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs):
-        super().__init__(simulation_model, real_data, loss_function, node_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs)
+    def __init__(self, simulation_model, real_data, loss_function, neuron_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs):
+        super().__init__(simulation_model, real_data, loss_function, neuron_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs)
         self.optimization_method = 'gradient_free'
 
     def optimize(self, max_iterations=100):
@@ -65,8 +93,8 @@ class GradientFreeOptimizer(Optimizer):
         pass
 
 class ScipyOptimizer(Optimizer):
-    def __init__(self, simulation_model, real_data, loss_function, node_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs):
-        super().__init__(simulation_model, real_data, loss_function, node_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs)
+    def __init__(self, simulation_model, real_data, loss_function, neuron_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs):
+        super().__init__(simulation_model, real_data, loss_function, neuron_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs)
         self.optimization_method = 'scipy'
 
     def objective(self, params):
@@ -80,17 +108,17 @@ class ScipyOptimizer(Optimizer):
             float: Loss value for the given parameter set.
         """
         # Set parameters
-        node_pars = {}
+        neuron_pars = {}
         edge_pars = {}
         param_index = 0
 
         if any (np.isnan(params)):
             print("Nan found", params)
 
-        for key, bounds_dict in self.node_parameter_bounds.items():
-            node_pars[key] = {}
+        for key, bounds_dict in self.neuron_parameter_bounds.items():
+            neuron_pars[key] = {}
             for node in bounds_dict.keys():
-                node_pars[key][node] = params[param_index]
+                neuron_pars[key][node] = params[param_index]
                 param_index += 1
 
         for key, bounds_dict in self.edge_parameter_bounds.items():
@@ -100,7 +128,7 @@ class ScipyOptimizer(Optimizer):
                 param_index += 1
 
         
-        self.simulation_model.set_node_parameters(node_pars)
+        self.simulation_model.set_neuron_parameters(neuron_pars)
         self.simulation_model.set_edge_parameters(edge_pars)
 
         # Run simulation and calculate loss
@@ -109,7 +137,7 @@ class ScipyOptimizer(Optimizer):
         for j, node in enumerate(self.vars_to_fit):
             self.sim_data[j] = simulated_data[node]
             if any(np.isnan(simulated_data[node])):
-                print("Nan found", node.label, simulated_data[node])
+                print("Nan found", node.name, simulated_data[node])
 
         loss = self.loss_function(self.sim_data, self.real_data)
         return loss
@@ -126,7 +154,7 @@ class ScipyOptimizer(Optimizer):
         """
         # Flatten parameter bounds
         bounds = []
-        for bounds_dict in self.node_parameter_bounds.values():
+        for bounds_dict in self.neuron_parameter_bounds.values():
             bounds.extend(bounds_dict.values())
         for bounds_dict in self.edge_parameter_bounds.values():
             bounds.extend(bounds_dict.values())
@@ -141,13 +169,13 @@ class ScipyOptimizer(Optimizer):
         print(result)
         # Extract best parameters
         best_params = result.x
-        node_pars = {key: {} for key in self.node_parameter_bounds.keys()}
+        neuron_pars = {key: {} for key in self.neuron_parameter_bounds.keys()}
         edge_pars = {key: {} for key in self.edge_parameter_bounds.keys()}
         param_index = 0
 
-        for key, bounds_dict in self.node_parameter_bounds.items():
+        for key, bounds_dict in self.neuron_parameter_bounds.items():
             for node in bounds_dict.keys():
-                node_pars[key][node] = best_params[param_index]
+                neuron_pars[key][node] = best_params[param_index]
                 param_index += 1
 
         for key, bounds_dict in self.edge_parameter_bounds.items():
@@ -155,13 +183,13 @@ class ScipyOptimizer(Optimizer):
                 edge_pars[key][edge] = best_params[param_index]
                 param_index += 1
 
-        self.simulation_model.set_node_parameters(node_pars)
+        self.simulation_model.set_neuron_parameters(neuron_pars)
         self.simulation_model.set_edge_parameters(edge_pars)
 
         return result, self.simulation_model
     
 class OptunaOptimizer(Optimizer):
-    def __init__(self, simulation_model, real_data, loss_function, node_parameter_bounds, edge_parameter_bounds, vars_to_fit, num_trials=100, num_workers=None, **kwargs):
+    def __init__(self, simulation_model, real_data, loss_function, neuron_parameter_bounds, edge_parameter_bounds, vars_to_fit, num_trials=100, study_name=None, njobs=None, storage=None, dbtype = 'sqlite', gamma=0.25, **kwargs):
         """
         Initialize the parameter optimizer.
         
@@ -173,11 +201,59 @@ class OptunaOptimizer(Optimizer):
             vars_to_fit (list): List of variable names to optimize.
             **kwargs: Additional keyword arguments for the optimizer.
         """
-        super().__init__(simulation_model, real_data, loss_function, node_parameter_bounds, edge_parameter_bounds, vars_to_fit, num_trials, **kwargs)
+        super().__init__(simulation_model, real_data, loss_function, neuron_parameter_bounds, edge_parameter_bounds, vars_to_fit, num_trials,  **kwargs)
         self.optimization_method = 'optuna'
-        self.study = None
-        self.node_dict = {}
-        self.num_workers = num_workers
+        sampler = optuna.samplers.TPESampler(multivariate=True, n_startup_trials=num_trials//3, gamma=gamma)
+        self.njobs = njobs
+        self.neurons = {}
+        self.current_loss = None
+        if not study_name:
+            self.study_name = 'cedne_optimization_optuna'
+        else:
+            self.study_name = study_name
+        
+        if not storage:
+            if dbtype == 'sqlite':
+                self.storage = f'sqlite:///{PACKAGE_ROOT}/tmp/{self.study_name}/cedne_optimization_optuna.db?timeout=30'
+                if not os.path.exists(f'{PACKAGE_ROOT}/tmp/{self.study_name}'):
+                    os.makedirs(f'{PACKAGE_ROOT}/tmp/{self.study_name}')
+            elif dbtype == 'postgresql':
+                storage_link = f"postgresql://{PGUSER}@/{PGDATABASE}?host={PGHOST}&port={PGPORT}"
+                # Configure engine options
+                engine_kwargs = {
+                    "pool_size": self.njobs,       # Match number of parallel jobs
+                    "max_overflow": self.njobs,    # Allow extra connections
+                    "pool_timeout": 60,        # Wait longer before timeout
+                }
+                self.storage = optuna.storages.RDBStorage(
+                url=storage_link,
+                engine_kwargs=engine_kwargs
+                )
+
+                #self.storage = f"postgresql://{PGUSER}@{PGHOST}:{PGPORT}/{PGDATABASE}"
+        else:
+            if dbtype == 'sqlite':
+                self.storage = storage
+                dbpath = self.storage.split('sqlite:///')[1]
+                dbdir = os.path.dirname(dbpath)
+                if not os.path.exists(dbdir):
+                    os.makedirs(dbdir)
+            elif dbtype == 'postgresql':
+                self.storage = storage
+        print(f"Connecting to Optuna database: {self.storage}")
+        try:
+            self.study = optuna.create_study(
+            study_name= self.study_name,
+            storage=self.storage,  # Local file,
+            sampler=sampler,
+            pruner = optuna.pruners.MedianPruner(),
+            direction="minimize",
+            load_if_exists=True
+            )
+            print(f"Created study name: {self.study_name} with storage: {self.storage}.")
+        except Exception as e:
+            print(f"Optuna failed to connect: {e}")
+
 
     def objective(self, trial):
         """
@@ -196,32 +272,33 @@ class OptunaOptimizer(Optimizer):
         # }
 
         # Set parameters
-        
-        node_pars = {}
-        for key, bounds_dict in self.node_parameter_bounds.items():
-            node_pars[key] = {}
-            for node, bounds in bounds_dict.items():
-                node_pars[key][node] = trial.suggest_float(f'{key}:{str(node.label)}', *bounds)
-                self.node_dict[str(node.label)] = node
+        self.sim_data = np.zeros((len(self.vars_to_fit), len(self.simulation_model.time_points)))
 
-        # print(self.node_dict)
+        neuron_pars = {}
+        for key, bounds_dict in self.neuron_parameter_bounds.items():
+            neuron_pars[key] = {}
+            for neuron, bounds in bounds_dict.items():
+                neuron_pars[key][neuron] = trial.suggest_float(f'{key}:{str(neuron.name)}', *bounds)
+                self.neurons[str(neuron.name)] = neuron
+
+        # print(self.neurons)
         edge_pars = {}
         for key, bounds_dict in self.edge_parameter_bounds.items():
             edge_pars[key] = {}
             for edge, bounds in bounds_dict.items():
                 # if key == 'time_constant':
-                #     tc = trial.suggest_float(f'{key}:{str(edge[0].label)}:{str(edge[1].label)}', *bounds)
+                #     tc = trial.suggest_float(f'{key}:{str(edge[0].name)}:{str(edge[1].name)}', *bounds)
                 #     edge_pars[key][edge] = 10**(tc)
                 # else:
-                edge_pars[key][edge] = trial.suggest_float(f'{key}:{str(edge[0].label)}:{str(edge[1].label)}:{edge[2]}', *bounds)
-                self.node_dict[str(edge[0].label)] = edge[0]
-                self.node_dict[str(edge[1].label)] = edge[1]
+                edge_pars[key][edge] = trial.suggest_float(f'{key}:{str(edge[0].name)}:{str(edge[1].name)}:{edge[2]}', *bounds)
+                self.neurons[str(edge[0].name)] = edge[0]
+                self.neurons[str(edge[1].name)] = edge[1]
 
-        self.simulation_model.set_node_parameters(node_pars)
+        self.simulation_model.set_neuron_parameters(neuron_pars)
         self.simulation_model.set_edge_parameters(edge_pars)
         
         # for n, node in self.simulation_model.nodes.items():
-        #     print(n, node, node.node_parameters)
+        #     print(n, node, node.neuron_parameters)
 
         # for edge_data in self.simulation_model.edges(data=True):
         #     print(edge_data)        
@@ -230,14 +307,35 @@ class OptunaOptimizer(Optimizer):
         # Run simulation and calculate loss
         simulated_data = self.simulation_model.simulate()
 
+        if simulated_data is None:
+            print(f"Trial {trial.number}: Simulation returned None. Assigning large loss.")
+            return LARGE_LOSS
+            # trial.report(float("inf"), step=0)
+            # raise optuna.TrialPruned()
+        
+        real_data = np.zeros((len(self.vars_to_fit), len(self.simulation_model.time_points)))
         for j, node in enumerate(self.vars_to_fit):
             self.sim_data[j] = simulated_data[node]
-            if any(np.isnan(simulated_data[node])):
-                print("Nan found", node.label, simulated_data[node])
-        
-        # print(self.sim_data, self.real_data)
+            if np.any(np.isnan(self.sim_data[j])):
+                print(f"Trial {trial.number}: NaN found in simulated data for {node.name}. Assigning large loss.")
+                return LARGE_LOSS
+            # if any(np.isnan(simulated_data[node])):
+            #     print("Nan found", node.name, simulated_data[node])
+            real_data[j] = self.real_data[j, self.simulation_model.time_points]
 
-        loss = self.loss_function(self.sim_data, self.real_data)
+        loss = self.loss_function(self.sim_data, real_data)
+
+        trial.report(loss, step=0)
+        if np.isnan(loss) or np.isinf(loss):
+            print(f"Trial {trial.number}: NaN detected in loss. Assigning large loss.")
+            return LARGE_LOSS
+            # print("NaN detected in trial. Stopping ")
+            # raise optuna.TrialPruned()
+        
+        self.current_loss = loss
+        if trial.should_prune():
+            raise optuna.exceptions.TrialPruned()
+
         # print(self.sim_data, self.real_data)
         return loss
 
@@ -251,29 +349,39 @@ class OptunaOptimizer(Optimizer):
         Returns:
             dict: Best parameter values.
         """
-        self.study = optuna.create_study(study_name="optuna", direction="minimize", storage="sqlite:///optuna.db", sampler=optuna.samplers.TPESampler(self.num_workers))
-        self.study.optimize(self.objective, n_trials=self.num_trials)
-        if self.num_workers is not None:
-            self.study = self.study.to_parallel(self.num_trials, self.num_workers)
+        if self.njobs is None:
+            # self.study = optuna.create_study(direction="minimize", storage="sqlite:///optuna.db")
+            self.study.optimize(self.objective, n_trials=self.num_trials)
+        else:
+            self.study = optuna.load_study(study_name=self.study_name, storage=self.storage)
+            self.study.optimize(self.objective, n_trials=self.num_trials, n_jobs=self.njobs)
         # Return the best parameter values
 
-        node_pars = {key: {} for key in self.node_parameter_bounds.keys()}
+        neuron_pars = {key: {} for key in self.neuron_parameter_bounds.keys()}
         edge_pars = {key: {} for key in self.edge_parameter_bounds.keys()}
-        for key, value in self.study.best_params.items():
+
+        if len(self.study.trials) == 0:
+            print("No valid trials found. Optimization failed.")
+            best_params = None  # Handle empty case
+            for trial in self.study.trials:
+                print(f"Trial {trial.number} - State: {trial.state}, Value: {trial.value}")
+        else:
+             best_params = self.study.best_params
+        for key, value in best_params.items():
             graph_id_pars = key.split(':')
             if len(graph_id_pars) == 2:
-                graph_id_pars[1] = self.node_dict[graph_id_pars[1]] # changing for integer nodes
-                node_pars[graph_id_pars[0]].update({graph_id_pars[1]: value})
+                graph_id_pars[1] = self.neurons[graph_id_pars[1]] # changing for integer nodes
+                neuron_pars[graph_id_pars[0]].update({graph_id_pars[1]: value})
 
             elif len(graph_id_pars) == 4:
-                graph_id_pars[1] = self.node_dict[graph_id_pars[1]] # changing for integer nodes
-                graph_id_pars[2] = self.node_dict[graph_id_pars[2]] # changing for integer nodes
+                graph_id_pars[1] = self.neurons[graph_id_pars[1]] # changing for integer nodes
+                graph_id_pars[2] = self.neurons[graph_id_pars[2]] # changing for integer nodes
                 edge_pars[graph_id_pars[0]].update({(graph_id_pars[1], graph_id_pars[2], int(graph_id_pars[3])): value})
-        
-        self.simulation_model.set_node_parameters(node_pars)
+
+        self.simulation_model.set_neuron_parameters(neuron_pars)
         self.simulation_model.set_edge_parameters(edge_pars)
             
-        return self.study.best_params, self.simulation_model
+        return best_params, self.simulation_model
 
 class BayesianOptimizer(Optimizer):
     def __init__(self, simulation_model, real_data, loss_function, parameter_bounds, vars_to_fit, num_trials=100, **kwargs):
@@ -285,20 +393,20 @@ class BayesianOptimizer(Optimizer):
         pass
 
 class JaxOptimizer(Optimizer):
-    def __init__(self, simulation_model, real_data, loss_function, node_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs):
-        super().__init__(simulation_model, real_data, loss_function, node_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs)
+    def __init__(self, simulation_model, real_data, loss_function, neuron_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs):
+        super().__init__(simulation_model, real_data, loss_function, neuron_parameter_bounds, edge_parameter_bounds, vars_to_fit, **kwargs)
         self.optimization_method = 'jax'
 
     @eqx.filter_jit
     def objective(self, params):
-        node_pars = {}
+        neuron_pars = {}
         edge_pars = {}
         param_index = 0
 
-        for key, bounds_dict in self.node_parameter_bounds.items():
-            node_pars[key] = {}
+        for key, bounds_dict in self.neuron_parameter_bounds.items():
+            neuron_pars[key] = {}
             for node in bounds_dict.keys():
-                node_pars[key][node] = params[param_index]
+                neuron_pars[key][node] = params[param_index]
                 param_index += 1
 
         for key, bounds_dict in self.edge_parameter_bounds.items():
@@ -307,7 +415,7 @@ class JaxOptimizer(Optimizer):
                 edge_pars[key][edge] = params[param_index]
                 param_index += 1
 
-        self.simulation_model.set_node_parameters(node_pars)
+        self.simulation_model.set_neuron_parameters(neuron_pars)
         self.simulation_model.set_edge_parameters(edge_pars)
 
         simulated_data = self.simulation_model.simulate()
@@ -316,7 +424,7 @@ class JaxOptimizer(Optimizer):
 
     def optimize(self, max_iterations=100):
         bounds = []
-        for bounds_dict in self.node_parameter_bounds.values():
+        for bounds_dict in self.neuron_parameter_bounds.values():
             bounds.extend(bounds_dict.values())
         for bounds_dict in self.edge_parameter_bounds.values():
             bounds.extend(bounds_dict.values())
@@ -333,13 +441,13 @@ class JaxOptimizer(Optimizer):
             params = params - 0.01 * grads
 
         best_params = params
-        node_pars = {key: {} for key in self.node_parameter_bounds.keys()}
+        neuron_pars = {key: {} for key in self.neuron_parameter_bounds.keys()}
         edge_pars = {key: {} for key in self.edge_parameter_bounds.keys()}
         param_index = 0
 
-        for key, bounds_dict in self.node_parameter_bounds.items():
+        for key, bounds_dict in self.neuron_parameter_bounds.items():
             for node in bounds_dict.keys():
-                node_pars[key][node] = best_params[param_index]
+                neuron_pars[key][node] = best_params[param_index]
                 param_index += 1
 
         for key, bounds_dict in self.edge_parameter_bounds.items():
@@ -347,7 +455,7 @@ class JaxOptimizer(Optimizer):
                 edge_pars[key][edge] = best_params[param_index]
                 param_index += 1
 
-        self.simulation_model.set_node_parameters(node_pars)
+        self.simulation_model.set_neuron_parameters(neuron_pars)
         self.simulation_model.set_edge_parameters(edge_pars)
 
         return best_params, self.simulation_model

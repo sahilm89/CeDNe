@@ -23,6 +23,7 @@ import json
 import logging
 import copy
 import sys
+# import py2neo
 
 import numpy as np
 import networkx as nx
@@ -83,6 +84,8 @@ class Organism:
                 file_path += '.pkl'
             with open(file_path, 'wb') as pickle_file:
                 pickle.dump(self, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
+        elif file_format == 'full':
+            pass
         else:
             raise NotImplementedError("Only pickle format is supported.")
 
@@ -1657,7 +1660,26 @@ class Neuron(Cell):
             return path_list
         else:
             return [Path(self.network, path, f'Path_{self.name}_{target.name}_length_{path_length}_{j}') for j,path in enumerate(connection_paths)] 
-
+    
+    def all_paths(self, path_length=1, direction='both'):
+        '''
+        Returns all paths as a list of connections from this neuron to all other neurons in the network
+        '''
+        if direction == 'out':
+            out_paths = [nx.all_simple_edge_paths(self.network, self, self.network.neurons[n], cutoff=path_length) for n in self.network.neurons]
+            connection_paths = [[[self.network.connections[edge] for edge in path] for path in paths] for paths in out_paths]
+            return [Path(self.network, path, f'Path_{self.name}_out_length_{path_length}_{j}_{k}')  for k, paths in enumerate(connection_paths) for j,path in enumerate(paths)]
+        elif direction == 'in':
+            in_paths = [nx.all_simple_edge_paths(self.network, self.network.neurons[n], self, cutoff=path_length) for n in self.network.neurons]
+            connection_paths = [[[self.network.connections[edge] for edge in path] for path in paths] for paths in in_paths]
+            return [Path(self.network, path, f'Path_{self.name}_in_length_{path_length}_{j}_{k}') for k, paths in enumerate(connection_paths) for j,path in enumerate(paths)]
+        elif direction=='both':
+            in_paths = [nx.all_simple_edge_paths(self.network, self.network.neurons[n], self, cutoff=path_length) for n in self.network.neurons]
+            out_paths = [nx.all_simple_edge_paths(self.network, self, self.network.neurons[n], cutoff=path_length) for n in self.network.neurons]
+            connection_paths_out = [[[self.network.connections[edge] for edge in path] for path in paths] for paths in out_paths] 
+            connection_paths_in = [[[self.network.connections[edge] for edge in path] for path in paths] for paths in in_paths]
+            return [Path(self.network, path, f'Path_{self.name}_out_length_{path_length}_{j}_{k}')  for k, paths in enumerate(connection_paths_out) for j,path in enumerate(paths)] + [Path(self.network, path, f'Path_{self.name}_in_length_{path_length}_{j}_{k}') for k, paths in enumerate(connection_paths_in) for j,path in enumerate(paths)]
+    
     def __str__(self):
         ## For use in debugging and testing
         return self.name
@@ -2054,7 +2076,7 @@ class GraphMap(Map):
                         raise ValueError(f"Edge {item_2} not found in graph_2")
                 else:
                     raise ValueError("Edges must be of type tuple or Connection")
-        self.mapping = (len(self.mapping_dict.keys()), len(self.mapping_dict.values()))
+        self.mapping_cardinality = (len(self.mapping_dict.keys()), len(self.mapping_dict.values()))
         if map_type == 'node':
             for node in mapping_dict.keys():
                 graph_1.nodes[node]['map'] = mapping_dict[node]
@@ -2063,6 +2085,53 @@ class GraphMap(Map):
                 graph_1.edges[edge]['map'] = mapping_dict[edge]
                 for j,node in enumerate(edge):
                     graph_1.nodes[node]['map'] = mapping_dict[edge][j]
+
+class NetworkWriter:
+    ''' Writes the network for saving.'''
+    def __init__(self):
+        NEO4J_URI = "bolt://localhost:7687"
+        NEO4J_USER = "neo4j"
+        NEO4J_PASS = "password"
+        OUTPUT_JSON = "generated_metadata.json"
+
+        ### 🔹 CONNECT TO NEO4J
+        graph_db = py2neo.Graph(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
+    
+    def write(self, w):
+        json_data = self.generate_json(w)
+        output_filename = 'model/' + w.name + '.json'
+        with open(output_filename, "w", encoding='utf-8') as f:
+            json.dump(json_data, f, indent=4)
+
+    def generate_json(self, w):
+        json_data = {
+            "model_name": w.name,
+            "version": w.version,
+            "created_by": w.author,
+            "date_created": "2025-02-10",
+            "networks": {},
+            "neurons": {},
+            "connections": [],
+            "neo4j_query": "MATCH (n:Neuron)-[r:SYNAPSE]->(m:Neuron) WHERE n.type = 'Sensory' RETURN n, r, m"
+        }
+
+        # Store neurons and their properties
+        for nn in w.networks:
+            for n in nn.neurons:
+                json_data["neurons"][n] = {
+                    #"data":  
+                    }
+
+            # Store edges (synapses)
+            for u, v, data in nn.edges(data=True):
+                json_data["connections"].append({
+                    "source": u.name,
+                    "target": v.name,
+                    "weight": data.get("weight", 1.0),
+                    #"neurotransmitters": data.get("neurotransmitters", [])
+                })
+
+        return json_data
 
 ## Functions
 def generate_random_string(length: int = 8) -> str:

@@ -42,6 +42,7 @@
 ## Storage
 
 - [ ] ! HDF5 storage of data.
+- [ ] !! neo4j+json+hdf5 for data persistance instead of pickles. neo4j for storing relationships, json for metadata and hdf5 for large matrices.
 
 ## Security
 

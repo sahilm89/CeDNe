@@ -8,11 +8,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import json
+import sys
 
 # %%
 if not os.path.isdir(utils.OUTPUT_DIR):
     os.makedirs(utils.OUTPUT_DIR)
 
+njobs = int(sys.argv[1])
 # %%
 ntype = ['sensory', 'interneuron', 'motorneuron']
 facecolors = ['#FF6F61', '#FFD700', '#4682B4']
@@ -78,8 +80,8 @@ nn_chem_sub = nn_chem.subnetwork(connections=edgelist)
 
 # %%
 jsons = {}
-for js in os.listdir('/Users/sahilmoza/Documents/Postdoc/Yun Zhang/data/SteveFlavell-NeuroPAL-Cell/Control/'):
-    with open ("/Users/sahilmoza/Documents/Postdoc/Yun Zhang/data/SteveFlavell-NeuroPAL-Cell/Control/{}".format(js), 'r') as f:
+for js in os.listdir('../..//data_sources/downloads/Atanas_2023/Control/'):
+    with open ("../..//data_sources/downloads/Atanas_2023/Control/{}".format(js), 'r') as f:
         jsons['Atanas et al (2023) ' +  js] = json.load(f)
 
 # %%
@@ -92,9 +94,16 @@ for js, p in jsons.items():
     neuron_labels+=measuredNeurons[js].keys()
 neuron_labels = sorted(set(neuron_labels))
 
+
 # %%
-num_trials = 1000
+num_trials = 2000
 best_models = {}
+
+gain_range = (1,10)
+tconstant_range = (1,10)
+baseline_range = (-2, 2)
+weight_range = (-2, 2)
+
 for database in jsons.keys():
     ## Subnetwork and optimize
     nn_chem_sub = nn_chem.subnetwork(connections=edgelist)
@@ -124,16 +133,16 @@ for database in jsons.keys():
     rate_model = simulator.RateModel(nn_chem_sub, input_nodes, weights, gains, time_constants, baselines, static_nodes=input_nodes, \
                                         time_points=time_points, inputs=inputs)
     
-    node_parameter_bounds =  {'gain': {rn:(-1, 1) for n,rn in rate_model.node_dict.items() if not n in input_nodes}, \
-                                'time_constant': {rn:(1, 5) for n,rn in rate_model.node_dict.items() if not n in input_nodes},
-                                'baseline': {rn:(-2, 2) for n,rn in rate_model.node_dict.items() if not n in input_nodes}}
-    edge_parameter_bounds = {'weight': {e:(-2, 2) for e in rate_model.edges}}
+    node_parameter_bounds =  {'gain': {rn:gain_range for n,rn in rate_model.node_dict.items() if not n in input_nodes}, \
+                                'time_constant': {rn:tconstant_range for n,rn in rate_model.node_dict.items() if not n in input_nodes},
+                                'baseline': {rn:baseline_range for n,rn in rate_model.node_dict.items() if not n in input_nodes}}
+    edge_parameter_bounds = {'weight': {e:weight_range for e in rate_model.edges}}
     
     real = {rate_model.node_dict[node]:data['amplitude'] for node,data in nn_chem_sub.nodes(data=True) if 'amplitude' in data}
     vars_to_fit = [rn for rn in real.keys() if not rn in [rate_model.node_dict[n] for n in input_nodes]]
     
     ## Setting parameter bounds for the paramters of interest and set the rest to default to simulate. Use a noisy output to fit.
-    o = optimizer.OptunaOptimizer(rate_model, real, optimizer.mean_squared_error, node_parameter_bounds, edge_parameter_bounds, vars_to_fit, num_trials=num_trials)
+    o = optimizer.OptunaOptimizer(rate_model, real, optimizer.mean_squared_error, node_parameter_bounds, edge_parameter_bounds, vars_to_fit, num_trials=num_trials, njobs=njobs)
     best_params, best_model = o.optimize()
     best_fit = best_model.simulate()
 
@@ -175,8 +184,8 @@ for j, (par, vars) in enumerate(sorted(var_dict.items(), key=lambda x:x[0])):
         ax[j].set_xticks(np.arange(len(xticks)), xticks, rotation=45)
         utils.simpleaxis(ax[j])
         ax[j].set_title(par)
-plt.show()
-
+plt.savefig('best_pars.png')
+plt.close()
 # %%
 f, ax = plt.subplots(figsize=(20,12), layout='constrained', nrows=len(var_dict['weight'])//100+1)
 xticks=[]
@@ -185,7 +194,8 @@ for j, (n, val) in enumerate(var_dict['weight'].items()):
     xticks.append('-'.join(n))
     # ax[j//100].set_xticks(np.arange(len(xticks)), xticks, rotation=45)
 utils.simpleaxis(ax)
-plt.show()
+plt.savefig('best_weights.png')
+plt.close()
 
 # %%
 f, ax = plt.subplots(figsize=(36,8), layout='constrained', nrows=2)
@@ -206,70 +216,70 @@ ax[0].set_xticks(np.arange(len(xticks_1)), xticks_1, rotation=45, fontsize='x-la
 ax[1].set_xticks(np.arange(len(xticks_2)), xticks_2, rotation=45, fontsize='x-large')
 utils.simpleaxis(ax)
 
-plt.savefig('weights.png')
+plt.savefig('command_int_weights.png')
 plt.close()
 
 # %%
-min_motif = ['1.1', '1.2', '2.1', '2.2', '3.1']
-tconstants = [1, 1, 1, 1,1,1,1]
-input_nodes = [min_motif[0]]
+# min_motif = ['1.1', '1.2', '2.1', '2.2', '3.1']
+# tconstants = [1, 1, 1, 1,1,1,1]
+# input_nodes = [min_motif[0]]
 
-weights = {e:1 for e in hseq.edges}
-gains = {node:1.0 for node in hseq.nodes}
-baselines = {node:0. for node in hseq.nodes}
-time_constants = {n:t for n,t in zip(hseq.nodes, tconstants)}
+# weights = {e:1 for e in hseq.edges}
+# gains = {node:1.0 for node in hseq.nodes}
+# baselines = {node:0. for node in hseq.nodes}
+# time_constants = {n:t for n,t in zip(hseq.nodes, tconstants)}
 
-# countdown = 10
-for database in jsons.keys():
-    nn_chem_sub = nn_chem.subnetwork(connections=all_edges)
-    all_ffgs = nn_chem_sub.search_motifs(hseq)
-    num_timepoints = len(jsons[database]['trace_array'][measuredNeurons[database][list(measuredNeurons[database].keys())[0]]])
-    for neuron in nn_chem_sub.neurons:
-        if neuron in measuredNeurons[database]:
-            nn_chem_sub.neurons[neuron].set_property('amplitude', jsons[database]['trace_array'][measuredNeurons[database][neuron]])
+# # countdown = 10
+# for database in jsons.keys():
+#     nn_chem_sub = nn_chem.subnetwork(connections=all_edges)
+#     all_ffgs = nn_chem_sub.search_motifs(hseq)
+#     num_timepoints = len(jsons[database]['trace_array'][measuredNeurons[database][list(measuredNeurons[database].keys())[0]]])
+#     for neuron in nn_chem_sub.neurons:
+#         if neuron in measuredNeurons[database]:
+#             nn_chem_sub.neurons[neuron].set_property('amplitude', jsons[database]['trace_array'][measuredNeurons[database][neuron]])
     
-    by_motif = {}
-    for j,ffg in enumerate(all_ffgs):
-        nodelist = []
-        for edge in sorted(edges):
-            if hasattr(nn_chem_sub.neurons[ffg[edge][0].name], 'amplitude') and hasattr(nn_chem_sub.neurons[ffg[edge][1].name], 'amplitude'):
-                nodelist+= [(edge[0], ffg[edge][0].name), (edge[1], ffg[edge][1].name)]
-        nodelist = sorted(set(nodelist))
-        if nodelist:# and countdown>0:
-            if all(n in list(zip(*nodelist))[0] for n in min_motif):
+#     by_motif = {}
+#     for j,ffg in enumerate(all_ffgs):
+#         nodelist = []
+#         for edge in sorted(edges):
+#             if hasattr(nn_chem_sub.neurons[ffg[edge][0].name], 'amplitude') and hasattr(nn_chem_sub.neurons[ffg[edge][1].name], 'amplitude'):
+#                 nodelist+= [(edge[0], ffg[edge][0].name), (edge[1], ffg[edge][1].name)]
+#         nodelist = sorted(set(nodelist))
+#         if nodelist:# and countdown>0:
+#             if all(n in list(zip(*nodelist))[0] for n in min_motif):
                 
-                cedne.GraphMap(ffg, hseq, nn_chem_sub, map_type='edge')
-                inputs = []
-                time_points = np.arange(0,jsons[database]['max_t'])
-                for inp in input_nodes:
-                    if hasattr(nn_chem_sub.neurons[hseq.nodes[inp]['map'].name], 'amplitude'):
-                        input_value = {t:nn_chem_sub.neurons[hseq.nodes[inp]['map'].name].amplitude[t] for t in time_points}
-                        inputs.append(simulator.TimeSeriesInput(input_nodes, input_value))
-                rate_model = simulator.RateModel(hseq, input_nodes, weights, gains, time_constants, baselines, static_nodes=input_nodes, time_points=time_points, inputs=inputs)
+#                 cedne.GraphMap(ffg, hseq, nn_chem_sub, map_type='edge')
+#                 inputs = []
+#                 time_points = np.arange(0,jsons[database]['max_t'])
+#                 for inp in input_nodes:
+#                     if hasattr(nn_chem_sub.neurons[hseq.nodes[inp]['map'].name], 'amplitude'):
+#                         input_value = {t:nn_chem_sub.neurons[hseq.nodes[inp]['map'].name].amplitude[t] for t in time_points}
+#                         inputs.append(simulator.TimeSeriesInput(input_nodes, input_value))
+#                 rate_model = simulator.RateModel(hseq, input_nodes, weights, gains, time_constants, baselines, static_nodes=input_nodes, time_points=time_points, inputs=inputs)
                 
-                node_parameter_bounds =  {'gain': {rn:(0, 5) for n,rn in rate_model.node_dict.items() if not n in input_nodes}, 'time_constant': {rn:(0, 20) for n,rn in rate_model.node_dict.items() if not n in input_nodes}, 'baseline': {rn:(0, 3) for n,rn in rate_model.node_dict.items() if not n in input_nodes}}
-                edge_parameter_bounds = {'weight': {e:(-10, 10) for e in rate_model.edges}}
+#                 node_parameter_bounds =  {'gain': {rn:(0, 2) for n,rn in rate_model.node_dict.items() if not n in input_nodes}, 'time_constant': {rn:(1, 10) for n,rn in rate_model.node_dict.items() if not n in input_nodes}, 'baseline': {rn:(0, 2) for n,rn in rate_model.node_dict.items() if not n in input_nodes}}
+#                 edge_parameter_bounds = {'weight': {e:(-2, 2) for e in rate_model.edges}}
                 
-                real = {rate_model.node_dict[node]:data['map'].amplitude for node,data in hseq.nodes(data=True) if hasattr(data['map'], 'amplitude')}
-                vars_to_fit = [rn for rn in real.keys() if not rn in input_nodes]
+#                 real = {rate_model.node_dict[node]:data['map'].amplitude for node,data in hseq.nodes(data=True) if hasattr(data['map'], 'amplitude')}
+#                 vars_to_fit = [rn for rn in real.keys() if not rn in input_nodes]
                 
-                ## Setting parameter bounds for the paramters of interest and set the rest to default to simulate. Use a noisy output to fit.
-                o = optimizer.OptunaOptimizer(rate_model, real, optimizer.mean_squared_error, node_parameter_bounds, edge_parameter_bounds, vars_to_fit, num_trials=1e3)
-                best_params, best_model = o.optimize()
-                best_fit = best_model.simulate()
+#                 ## Setting parameter bounds for the paramters of interest and set the rest to default to simulate. Use a noisy output to fit.
+#                 o = optimizer.OptunaOptimizer(rate_model, real, optimizer.mean_squared_error, node_parameter_bounds, edge_parameter_bounds, vars_to_fit, num_trials=1e3)
+#                 best_params, best_model = o.optimize()
+#                 best_fit = best_model.simulate()
                 
-                f, ax = plt.subplots(figsize=(10,2*len(hseq.nodes)), nrows=len(hseq.nodes), sharex=True)
-                # for k, (n, node) in enumerate(nodelist):
-                for j,k in enumerate(best_fit.keys()):
-                    if k.label in list(zip(*nodelist))[0]:
-                        ax[j].plot(nn_chem_sub.neurons[hseq.nodes[k.label]['map'].name].amplitude, label=f'{k.label}-{hseq.nodes[k.label]['map'].name}', color='gray')
-                        ax1 = ax[j]
-                        ax1.plot(best_fit[k], color='orange')
-                        utils.simpleaxis(ax[j])
-                        ax[j].set_title(f'{np.corrcoef(nn_chem_sub.neurons[hseq.nodes[k.label]['map'].name].amplitude, best_fit[k])[0,1]}')
-                        ax[j].legend(frameon=False)
-                f.suptitle(f'{database}')
-                plt.show()
+#                 f, ax = plt.subplots(figsize=(10,2*len(hseq.nodes)), nrows=len(hseq.nodes), sharex=True)
+#                 # for k, (n, node) in enumerate(nodelist):
+#                 for j,k in enumerate(best_fit.keys()):
+#                     if k.label in list(zip(*nodelist))[0]:
+#                         ax[j].plot(nn_chem_sub.neurons[hseq.nodes[k.label]['map'].name].amplitude, label=f'{k.label}-{hseq.nodes[k.label]["map"].name}', color='gray')
+#                         ax1 = ax[j]
+#                         ax1.plot(best_fit[k], color='orange')
+#                         utils.simpleaxis(ax[j])
+#                         ax[j].set_title(f'{np.corrcoef(nn_chem_sub.neurons[hseq.nodes[k.label]["map"].name].amplitude, best_fit[k])[0,1]}')
+#                         ax[j].legend(frameon=False)
+#                 f.suptitle(f'{database}')
+#                 plt.show()
                 # countdown-=1
 
 # %%
