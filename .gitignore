@@ -2,7 +2,10 @@
 __pycache__/
 *.py[cod]
 *$py.class
-*.pyc
+**/*.pyc
+
+# OS-specific files
+**/.DS_Store
 
 # C extensions
 *.so
@@ -28,12 +31,14 @@ share/python-wheels/
 
 # Outputs from 
 Output/
-temp/
+tmp/
 *.pkl
 *.png
 *.svg
 *.pdf
 MANIFEST
+*.log
+*.txt
 
 # Installer logs
 pip-log.txt
@@ -73,7 +78,7 @@ ipython_config.py
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
 #   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
-#poetry.lock
+poetry.lock
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
 __pypackages__/
@@ -100,6 +105,24 @@ venv.bak/
 # mkdocs documentation
 /site
 
-
 ## Exceptions
 !data_sources/*.pkl
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Temporary files
+*.tmp
+*.temp
+
+# Database files
+*.db
