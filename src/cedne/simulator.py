@@ -6,6 +6,7 @@ import numpy as np
 import networkx as nx
 import copy
 import logging
+from cedne import cedne
 
 logging.basicConfig(
     filename="debug_log.txt",  # Save logs to a file
@@ -137,7 +138,7 @@ class Neuron:
             model (Model): The model the neuron belongs to.
         """
         self.node = node
-        self.name = node.name
+        self.name = node.name if isinstance(node, cedne.Neuron) else node
         self.model = model
         self.gain = gain
         self.time_constant = time_constant

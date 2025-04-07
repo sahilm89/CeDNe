@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import datetime
 import copy
+import pickle
 
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -58,6 +59,8 @@ neuronPositions = DATADIR + "neuronPosition.pkl"
 cook_connectome = DOWNLOAD_DIR + 'cook_2019/'
 witvliet_connectome = DOWNLOAD_DIR + 'witvliet_2020/'
 
+lineage = DOWNLOAD_DIR + 'Worm_Atlas/Altun_lineage_corrected.xlsx'
+
 ## FlyWire
 fly_wire = DOWNLOAD_DIR + 'FlyWire/'
 
@@ -66,7 +69,7 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
     if import_parameters is None or (import_parameters['style'] == 'cook' and import_parameters['sex'] == 'hermaphrodite'):
         w = cedne.Worm(name)
         nn = cedne.NervousSystem(w)
-        nn.build_nervous_system(neuron_data=cell_list, \
+        build_nervous_system(nn, neuron_data=cell_list, \
                             chem_synapses=chemsyns, \
                             elec_synapses=elecsyns, \
                             positions=neuronPositions, \
@@ -142,15 +145,6 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
             nn.setup_chemical_connections(adj_chem)
         if not chem_only:
             nn.setup_gap_junctions(adj_gapjn)
-
-        # nn.build_nervous_system(neuron_data=cell_list, \
-        #                     chem_synapses=adj_chem, \
-        #                     elec_synapses=adj_gapjn, \
-        #                     #positions=neuronPositions, \
-        #                     chem_only=chem_only, \
-        #                     gapjn_only=gapjn_only)
-
-
     else:
         if import_parameters['style'] == 'witvliet':
             ind_dict = {'L1': [1,2,3,4], 'L2':[5] , 'L3':[6], 'adult':[7,8]}
@@ -215,6 +209,60 @@ def makeFly(name = ''):
         nn.setup_connections(adjacency, connection_type='chemical-synapse', input_type='edge', neurotransmitter=neurotransmitter)
     return f
 
+
+def build_nervous_system(nn, neuron_data, chem_synapses, elec_synapses, positions, chem_only=False, gapjn_only=False):
+        """
+        Builds the hermaphrodite nervous system by loading pickle files containing neuron data, chemical synapses,
+        electrical synapses, and positions.
+
+        Args:
+            neuron_data (str): 
+                The path to the pickle file containing neuron data.
+            chem_synapses (str): 
+                The path to the pickle file containing chemical synapses.
+            elec_synapses (str): 
+                The path to the pickle file containing electrical synapses.
+            positions (str): 
+                The path to the pickle file containing positions.
+
+        Returns:
+            None
+
+        Raises:
+            FileNotFoundError: If any of the pickle files do not exist.
+
+        Description:
+            This function loads the pickle files containing neuron data, chemical synapses,
+            electrical synapses, and positions. It then extracts the necessary information
+            from the pickle files and uses it to create neurons, set up chemical connections,
+            and set up gap junctions.
+
+        """
+        with open(neuron_data, 'rb') as neuron_file, \
+             open(chem_synapses, 'rb') as chem_file, \
+             open(elec_synapses, 'rb') as elec_file, \
+             open(positions, 'rb') as positions_file:
+
+            neuron_info = pickle.load(neuron_file)
+            chem_adjacency = pickle.load(chem_file)
+            elec_adjacency = pickle.load(elec_file)
+            locations = pickle.load(positions_file)
+
+            labels, neuron_types, categories, modalities = neuron_info.iloc[:,0].to_list(), \
+                                                    neuron_info.iloc[:,1].to_list(), \
+                                                    neuron_info.iloc[:,2].to_list(), \
+                                                    neuron_info.iloc[:,3].to_list()
+            #meaning, lineage, description = neuron_info.iloc[:,4].to_list(), neuron_info.iloc[:,5].to_list(), neuron_info.iloc[:,6].to_list()
+            nn.create_neurons(labels, type=neuron_types, category=categories, modality=modalities, position=locations) #meaning=meaning, lineage=lineage, description=description)
+            assert not all([gapjn_only, chem_only]), "Select at most one of gapjn_only or chem_only attributes to be True."
+            if not gapjn_only:
+                nn.setup_chemical_connections(chem_adjacency)
+            if not chem_only:
+                nn.setup_gap_junctions(elec_adjacency)
+
+def load_lineage(neural_network, sex='Hermaphrodite'):
+    lineage_meaning_description = pd.read_excel(lineage, sheet_name=sex, engine='openpyxl')
+    return(lineage_meaning_description)
 ## Neurotransmitter tables
 suffixes = ['', 'D', 'V', 'L', 'R', 'DL', 'DR', 'VL', 'VR', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13']
 present = False
@@ -560,7 +608,7 @@ def joinLRNodes(nn_old):
             n=m[:-1]+'R'
             if n in nn_new.neurons:
                 neuronPair = [m,n]
-                nn_new.contractNeurons(neuronPair)
+                nn_new.contract_neurons(neuronPair, m[:-1])
     return nn_new
 
 # def foldByNeuronType(nn_old):
@@ -1240,7 +1288,12 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
     
     return pos
 
-def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, title='', label=True, save=False):
+def is_left_neuron(n):
+    ''' Returns if a neuron is a left neuron. This works for Worms only for now.'''
+    if n[-1] == 'L' and n not in ['ADL', 'AVL']:
+        return True
+            
+def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, title='', label='all', save=False, figsize=(20,3), limit=None):
     """
     A function to plot the positions of neurons based on their coordinates and attributes.
 
@@ -1285,6 +1338,17 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
                 else:
                     raise ValueError(f"Neuron {n} has no position in axis {x}.")
     pos = np.array(pos)
+
+    if limit:
+        # limit should be a dict like {'AP': (0, 150)} or {'DV': (-50, 50), 'AP': (0, 200)}
+        mask = np.ones(len(pos), dtype=bool)
+        for coord, (low, high) in limit.items():
+            axis_idx = coords.index(coord)
+            mask &= (pos[:, axis_idx] >= low) & (pos[:, axis_idx] <= high)
+        # Filter positions and labels
+        pos = pos[mask]
+        nlabels = nlabels[mask]
+
     posDict = dict(zip(coords, pos.T))
     posDict['LR'] = -posDict['LR'] # flipping LR for plotting in the correct direction
     posDict['DV'] = -posDict['DV'] # flipping DV for plotting in the correct direction
@@ -1308,7 +1372,7 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
     y = np.array(y)
 
     if isinstance(highlight[0], str):
-        f,ax = plt.subplots(figsize=(20,3), dpi=300, layout='constrained')
+        f,ax = plt.subplots(figsize=figsize, dpi=300, layout='constrained')
         plt.axis('off')
         facecolors = np.array([booleanDictionary[n in highlight] for n in nlabels])
         alphas = np.array([1 if n in highlight else 0.25 for n in nlabels])
@@ -1317,7 +1381,6 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
         ax.scatter(x[~boolList], y[~boolList], s=200, facecolor=facecolors[~boolList], edgecolor=facecolors[~boolList], alpha=alphas[~boolList], zorder=1)
         ax.scatter(x[boolList], y[boolList], s=200, facecolor=facecolors[boolList], edgecolor=facecolors[boolList], alpha=alphas[boolList], zorder=2)
         if label:
-
             ta.allocate_text(f,ax,x[boolList], y[boolList],
                         nlabels[boolList],
                         x_scatter=x[boolList], y_scatter=y[boolList],
@@ -1325,7 +1388,7 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
 
     elif isinstance(highlight[0], list):
         buffer = 1.1
-        f,ax = plt.subplots( dpi=300, layout='constrained',figsize=(20,3)) #figsize=(2,0.3), dpi=300, layout='constrained'
+        f,ax = plt.subplots( dpi=300, layout='constrained',figsize=figsize) #figsize=(2,0.3), dpi=300, layout='constrained'
         plt.axis('off') 
         plt.xlim(min(x)*buffer,max(x)*buffer)
         plt.ylim(min(y)*buffer,max(y)*buffer)
@@ -1342,11 +1405,14 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
                 if n in hlc:
                     color_dict[n].append(facecolors[j])
                     alpha_dict[n] = 1
-                    boolList[i] = True
+                    if label == 'all':
+                        boolList[i] = True
+                    elif label == 'left' and is_left_neuron(n):
+                        boolList[i] = True
             if len(color_dict[n]) == 0:
                 color_dict[n].append("lightgrey")
         piesize=0.3
-        if label:
+        if not label == 'none':
             # if isinstance(label, int):
             #     randnum = np.random.default_rng()
             #     boolList = randnum.choice(boolList, size=label, replace=False)
@@ -1638,7 +1704,7 @@ def plot_simulation_results(results, twinx=True):
     rate_model, inputs, rates = results
     f, ax = plt.subplots(figsize=(2.5, 2.5), layout='constrained')
     for node in rates:
-        ax.plot(rate_model.time_points, rates[node], label=node.label, lw=2)
+        ax.plot(rate_model.time_points, rates[node], label=node.name, lw=2)
     # ax.set_ylim((-15,15))
 
     if twinx:
@@ -1667,8 +1733,8 @@ def compare_simulation_results(results1, results2, twinx=True):
     f, ax = plt.subplots(figsize=(2.5, 2.5), layout='constrained')
     colors = {node: plt.cm.viridis(i/len(rates1)) for i, node in enumerate(rates1)}
     for node in rates1:
-        ax.plot(rate_model.time_points, rates1[node], label=node.label, lw=2, color=colors[node])
-        ax.plot(rate_model.time_points, rates2[node], label=node.label, lw=2, color=colors[node], ls='--')
+        ax.plot(rate_model.time_points, rates1[node], label=node.label or node, lw=2, color=colors[node])
+        ax.plot(rate_model.time_points, rates2[node], label=node.label or node, lw=2, color=colors[node], ls='--')
     if twinx:
         ax2 = ax.twinx()
     else:

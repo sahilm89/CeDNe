@@ -30,6 +30,8 @@
 - [ ] !! Easy Loading functions for loading custom data.
 - [ ] !! Make movies for time series data.
 - [ ] !! Export graph for plotting elsewhere.
+- [ ] !! Dealing with missing (MISS), null (NOT) and alternative values (OR and AND) values for a given attribute.
+- [ ] !!! Seperate utility functions into different util modules.
 
 ## Examples
 

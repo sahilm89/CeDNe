@@ -65,34 +65,6 @@ class TestNervousSystem:
         assert nervous_system.worm is not None
         assert isinstance(nervous_system, nx.MultiDiGraph)
 
-    def test_build_nervous_system(self, tmpdir):
-        """
-        Tests if the NervousSystem object can be built correctly.
-        """
-        nervous_system = NervousSystem()
-        neuron_data = tmpdir.join('neuron_data.pkl')
-        chem_synapses = tmpdir.join('chem_synapses.pkl')
-        elec_synapses = tmpdir.join('elec_synapses.pkl')
-        positions = tmpdir.join('positions.pkl')
-
-        # Check if the files exist before writing to them
-        assert not neuron_data.exists()
-        assert not chem_synapses.exists()
-        assert not elec_synapses.exists()
-        assert not positions.exists()
-
-        # Check if the files exist after writing to them
-        assert neuron_data.exists()
-        assert chem_synapses.exists()
-        assert elec_synapses.exists()
-        assert positions.exists()
-
-        nervous_system.build_nervous_system(str(neuron_data), str(chem_synapses), str(elec_synapses), str(positions))
-
-        # Check if the required attributes are populated
-        assert len(nervous_system.neurons) > 0
-        assert len(nervous_system.connections) > 0
-
     def test_build_network(self, tmpdir):
         """
         Tests if the NervousSystem object can be built from a pickle file.

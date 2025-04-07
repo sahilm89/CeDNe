@@ -61,9 +61,9 @@ def load_pickle(file):
     ''' Loading restricted pickles.'''
     return RestrictedUnpickler(file).load()
 
-class Organism:
-    ''' This is a full organism class'''
-    def __init__(self, species = '', name='', stage='', sex='', genotype=''):
+class Animal:
+    ''' This is a full animal class'''
+    def __init__(self, species = '', name='', stage='', sex='', genotype='', **kwargs):
         ''' Initializes an Organism class'''
         self.species = species
         self.name = name
@@ -71,6 +71,9 @@ class Organism:
         self.sex = sex
         self.genotype = genotype
         self.networks = {}
+        for key, value in kwargs.items():
+            self.set_property(key, value)
+
 
     def save(self, file_path, file_format='pickle'):
         """
@@ -88,10 +91,20 @@ class Organism:
             pass
         else:
             raise NotImplementedError("Only pickle format is supported.")
+    
+    def set_property(self, key, value):
+        """
+        Set a property of the organism.
 
-class Worm(Organism):
+        Args:
+            key (str): The name of the property.
+            value: The value of the property.
+        """
+        setattr(self, key, value)
+
+class Worm(Animal):
     ''' This is an explicit Worm class, a container for network(s).'''
-    def __init__(self, name='', stage='Day-1 Adult', sex='Hermaphrodite', genotype='N2') -> None:
+    def __init__(self, name='', stage='Day-1 Adult', sex='Hermaphrodite', genotype='N2', **kwargs) -> None:
         """
         Initializes a Worm object.
 
@@ -110,11 +123,11 @@ class Worm(Organism):
         """
         if not name:
             name = 'Worm-' + generate_random_string()
-        super().__init__(species='Caenorhabditis elegans', name=name, stage=stage, sex=sex, genotype=genotype)
+        super().__init__(species='Caenorhabditis elegans', name=name, stage=stage, sex=sex, genotype=genotype, **kwargs)
 
-class Fly(Organism):
+class Fly(Animal):
     ''' This is an explicit Fly class, a container for network(s).'''
-    def __init__(self, name='', stage='Day-7 Adult', sex='Female', genotype='w1118 x Canton-S G1') -> None:
+    def __init__(self, name='', stage='Day-7 Adult', sex='Female', genotype='w1118 x Canton-S G1', **kwargs) -> None:
         """
         Initializes a Fly object.
 
@@ -171,7 +184,7 @@ class NervousSystem(nx.MultiDiGraph):
     '''
     This is the Nervous System class. This inherits from networkx.MultiDiGraph
       and is the main high level class for the nervous system. '''
-    def __init__(self, worm: Worm = None, network: str = "Neutral") -> None:
+    def __init__(self, worm: Worm = None, network: str = "Neutral", **kwargs) -> None:
         """
         Initializes the NervousSystem object with the given worm and network.
 
@@ -197,62 +210,29 @@ class NervousSystem(nx.MultiDiGraph):
         self._filtered_nodes = set()
         self._filtered_edges = set()
 
+        for key, value in kwargs.items():
+            self.set_property(key, value)
+
     @property
     def num_groups(self):
         """
         Returns the current number of Neuron Groups for the Nervous System.
         """
         return len(self.groups)
-
-    def build_nervous_system(self, neuron_data, chem_synapses, elec_synapses, positions, chem_only=False, gapjn_only=False):
+    
+    def set_property(self, key, value):
         """
-        Builds the nervous system by loading pickle files containing neuron data, chemical synapses,
-        electrical synapses, and positions.
+        Set a property of the nervous system.
 
         Args:
-            neuron_data (str): 
-                The path to the pickle file containing neuron data.
-            chem_synapses (str): 
-                The path to the pickle file containing chemical synapses.
-            elec_synapses (str): 
-                The path to the pickle file containing electrical synapses.
-            positions (str): 
-                The path to the pickle file containing positions.
+            key (str): The name of the property.
+            value: The value of the property.
 
         Returns:
             None
-
-        Raises:
-            FileNotFoundError: If any of the pickle files do not exist.
-
-        Description:
-            This function loads the pickle files containing neuron data, chemical synapses,
-            electrical synapses, and positions. It then extracts the necessary information
-            from the pickle files and uses it to create neurons, set up chemical connections,
-            and set up gap junctions.
-
         """
-        with open(neuron_data, 'rb') as neuron_file, \
-             open(chem_synapses, 'rb') as chem_file, \
-             open(elec_synapses, 'rb') as elec_file, \
-             open(positions, 'rb') as positions_file:
+        setattr(self, key, value)
 
-            neuron_info = pickle.load(neuron_file)
-            chem_adjacency = pickle.load(chem_file)
-            elec_adjacency = pickle.load(elec_file)
-            locations = pickle.load(positions_file)
-
-            labels, neuron_types, categories, modalities = neuron_info.iloc[:,0].to_list(), \
-                                                    neuron_info.iloc[:,1].to_list(), \
-                                                    neuron_info.iloc[:,2].to_list(), \
-                                                    neuron_info.iloc[:,3].to_list()
-
-            self.create_neurons(labels, type=neuron_types, category=categories, modality=modalities, position=locations)
-            assert not all([gapjn_only, chem_only]), "Select at most one of gapjn_only or chem_only attributes to be True."
-            if not gapjn_only:
-                self.setup_chemical_connections(chem_adjacency)
-            if not chem_only:
-                self.setup_gap_junctions(elec_adjacency)
     def build_network(self, neuron_data, adj, label):
         """
         Make a network with the neurons
