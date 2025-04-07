@@ -1,3 +1,21 @@
+'''
+This module contains the implementations for simulating neural networks
+using different neuron models. It includes classes for defining neurons,
+inputs, and models, as well as methods for simulating the dynamics of the network.
+The main classes are:
+- `Input`: Represents an input to a neuron.
+- `StepInput`: Represents a step input to a neuron.
+- `TimeDependentInput`: Represents a time-dependent input to a neuron.
+- `Neuron`: Represents a neuron in the network.
+- `Model`: Represents the base class for a neural network model.
+- `RateModel`: Represents a rate model for a neural network.
+- `JaxNeuron`: Represents a JAX-compatible neuron.
+- `JaxRateModel`: Represents a JAX-compatible rate model for a neural network.
+'''
+__author__ = "Sahil Moza"
+__date__ = "2025-04-06"
+__license__ = "MIT"
+
 import jax
 import jax.numpy as jnp
 import equinox as eqx

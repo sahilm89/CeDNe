@@ -1,3 +1,11 @@
+'''
+This module provides various optimization classes for parameter fitting in simulation models.
+It will include different optimization methods such as gradient descent, gradient-free, SciPy, Optuna, and JAX.
+'''
+__author__ = "Sahil Moza"
+__date__ = "2025-04-06"
+__license__ = "MIT"
+
 import numpy as np
 from cedne.simulator import RateModel
 import optuna
