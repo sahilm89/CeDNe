@@ -105,6 +105,9 @@ def plot_spiral(neunet, save=False, figsize=(8,8), font_size=11):
 
     Parameters:
     - neunet (NeuralNetwork): The neural network object.
+    - save (bool or str): If True or a string, saves the plot to a file.
+    - figsize (tuple): Figure size in inches.
+    - font_size (int): Font size for node labels.
 
     Returns:
     - pos (dict): A dictionary mapping node names to their positions in the graph.
@@ -127,11 +130,12 @@ def plot_spiral(neunet, save=False, figsize=(8,8), font_size=11):
     pos = nx.spiral_layout(neunet, equidistant=True, resolution=0.5)
 
     fig, ax = plt.subplots(figsize=figsize)
-    nx.draw(neunet, node_size = node_size, ax=ax, pos=pos, labels = {node: node.name for node in neunet.nodes}, with_labels=True, node_color = node_color, edge_color=edge_color, font_size=font_size)
+    nx.draw(neunet, node_size=node_size, ax=ax, pos=pos, labels={node: node.name for node in neunet.nodes}, with_labels=True, node_color=node_color, edge_color=edge_color, font_size=font_size)
     if save:
         plt.savefig(save)
-    plt.show()
     plt.close()
+    
+    return pos
 
 def add_gapjn_symbols(ax, pos, edges, line_length=0.05, alpha=1, color='k'):
     for edge in edges:
@@ -913,6 +917,7 @@ def plot_simulation_results(results, twinx=True):
     ax.set_ylabel('Rate')
     # ax.set_xticks([0,30,60,90])
     simpleaxis(ax)
+    # simpleaxis(ax2)
     f.legend(loc='outside upper center', ncol=len(rates), frameon=False)
     return f
 

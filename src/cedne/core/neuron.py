@@ -1,8 +1,8 @@
 """
 Neuron and cell-level primitives for CeDNe.
 
-This module defines the core data structures for representing neurons 
-and their organization within a nervous system. It includes:
+This module defines the core data structures for representing cells in the nervous system.
+It includes:
 
 - `Cell`: A base class for any biological cell modeled in the nervous system.
 - `Neuron`: A subclass of `Cell` specialized for neural structures, supporting
@@ -22,8 +22,17 @@ __license__ = "MIT"
 import networkx as nx
 import copy
 from .io import generate_random_string
+from typing import Optional, List, Dict, Any, Union, TYPE_CHECKING
+from dataclasses import dataclass, field
+import numpy as np
+from .config import F_SAMPLE
 from .recordings import Trial
 from .connection import Path
+
+if TYPE_CHECKING:
+    from .network import NervousSystem
+    from .connection import Path
+    from .recordings import Trial
 
 class Cell:
     ''' 
@@ -74,14 +83,14 @@ class Cell:
     
 class Neuron(Cell):
     ''' Models a biological neuron'''
-    def __init__(self, name, network, **kwargs): #neuron_type='', category='', modality='',\ position=None, presynapse=None, postsynapse=None,
+    def __init__(self, name: str, network: 'NervousSystem', **kwargs):
         """
         Initializes a new instance of the Neuron class.
 
         Args:
             name (str): 
                 The name of the neuron.
-            network (NeuronalNetwork): 
+            network (NervousSystem): 
                 The neuronal network to which the neuron belongs.
             type (str, optional): 
                 The type of the neuron. Defaults to ''.
@@ -95,8 +104,14 @@ class Neuron(Cell):
                 The list of presynaptic components. Defaults to None.
             postsynapses (dict, optional): 
                 The dictionary of postsynaptic components. Defaults to None.
+
+        Raises:
+            ValueError: If a neuron with the given name already exists in the network.
         """
+        if name in network.neurons:
+            raise ValueError(f"Neuron with name '{name}' already exists in the network")
         super().__init__(name, network, **kwargs)#cell_type=neuron_type, category=category, modality=modality,\ position=position)
+        self.network.neurons[name] = self
         # self.name = name
         # self.group_id = 0
         # self._data = {}
@@ -161,6 +176,7 @@ class Neuron(Cell):
         Returns:
             Trial: The newly added trial object.
         """
+        
         self.trial[trial_num] = Trial(self, trial_num)
         return self.trial[trial_num]
 
@@ -463,3 +479,44 @@ class NeuronGroup:
         Returns a list of all connections in the group.
         """
         return [neuron.get_connections() for neuron in self.members]
+
+    def add_neuron(self, neuron: 'Neuron') -> None:
+        """Add a neuron to the group.
+        
+        Args:
+            neuron: Neuron to add.
+        """
+        if neuron not in self.neurons:
+            self.neurons[neuron.name] = neuron
+
+    def remove_neuron(self, neuron: 'Neuron') -> None:
+        """Remove a neuron from the group.
+        
+        Args:
+            neuron: Neuron to remove.
+        """
+        if neuron in self.neurons:
+            self.neurons.pop(neuron.name)
+
+    def get_neurons_by_type(self, type: str) -> List['Neuron']:
+        """Get all neurons of a specific type.
+        
+        Args:
+            type: Neuron type to filter by.
+            
+        Returns:
+            List of neurons of the specified type.
+        """
+        return [n for n in self.neurons.values() if n.type == type]
+
+    def get_neurons_by_property(self, key: str, value: Any) -> List['Neuron']:
+        """Get neurons with a specific property value.
+        
+        Args:
+            key: Property name.
+            value: Property value to match.
+            
+        Returns:
+            List of neurons with matching property value.
+        """
+        return [n for n in self.neurons.values() if n.get_property(key) == value]

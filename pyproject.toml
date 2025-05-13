@@ -44,6 +44,9 @@ py2neo = "^2021.2.4"
 h5py = "^3.12.1"
 psycopg2 = "^2.9.10"
 psycopg2-binary = "^2.9.10"
+torch = "^2.7.0"
+plotly = "^6.0.1"
+nbformat = "^5.10.4"
 
 
 [build-system]

@@ -31,6 +31,7 @@ __license__ = "MIT"
 
 import copy
 import pickle
+import json
 import numpy as np
 import networkx as nx
 from .connection import Connection, \
@@ -130,13 +131,6 @@ class NervousSystem(nx.MultiDiGraph):
 
         Returns:
             None
-
-        This function iterates over the labels, types, categories, modalities, and positions
-        using the zip function. For each combination, it checks if the label is present in the
-        positions dictionary. If it is, it creates a Neuron object with the given label, type,
-        category, modality, and position. Otherwise, it creates a Neuron object with the given
-        label, type, category, and modality. The Neuron object is then added to the neurons
-        dictionary with the label as the key.
         """
         network_args = {}
         for key, value in kwargs.items():
@@ -153,29 +147,12 @@ class NervousSystem(nx.MultiDiGraph):
             else:
                 raise NotImplementedError(f"Attribute setting not implemented for datatype {type(value)}.")
         
-        
         for label in labels:
             neuron_args = {}
             for key, value in network_args.items():
                 neuron_args[key] = value[label]
-            #print(label, self, neuron_args)
-            neuron = Neuron(label, self, **neuron_args)
+            Neuron(label, self, **neuron_args)
 
-        # neuron_types=None, categories=None, modalities=None, positions=None
-
-        # neuron_types = [None] * len(labels) if neuron_types is None else neuron_types
-        # categories = [None] * len(labels) if categories is None else categories
-        # modalities = [None] * len(labels) if modalities is None else modalities
-        # positions = {} if positions is None else positions
-
-        # for label, neuron_type, category, modality in \
-        #     zip(labels, neuron_types, categories, modalities):
-        #     if label in positions:
-        #         neuron = Neuron(label, self, neuron_type, category, modality, positions[label])
-        #     else:
-        #         neuron = Neuron(label, self, neuron_type, category, modality)
-            self.neurons[label] = neuron
-    
     def create_neurons_from(self, network, data=False):
         """ 
         Creates a set of Neuron objects based on the given network.
@@ -190,10 +167,10 @@ class NervousSystem(nx.MultiDiGraph):
             raise TypeError("The network object must be a NervousSystem object")
         if not data:
             for node in network.nodes:
-                self.neurons.update({node.name:Neuron(node.name, self)})
+                Neuron(node.name, self)
         else:
             for node,data in network.nodes(data=True):
-                self.neurons.update({node.name:Neuron(node.name, self, **data)})
+                Neuron(node.name, self, **data)
 
     def create_connections_from(self, network, data=False):
         """
@@ -219,11 +196,13 @@ class NervousSystem(nx.MultiDiGraph):
 
     def update_neurons(self):
         """
-        Update the dictionary of neurons
+        Synchronizes the neurons dictionary with the network's nodes.
+        This should only be needed if the network's nodes are modified directly.
         """
         self.neurons.clear()
         for node in self.nodes:
-            self.neurons.update({node.name:node})
+            if node.name not in self.neurons:
+                self.neurons[node.name] = node
 
     def update_connections(self):
         """

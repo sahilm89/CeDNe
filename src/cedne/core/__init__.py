@@ -1,8 +1,7 @@
 """
-CeDNe core: fundamental data structures for organisms, neurons, and neural networks.
+Core module for CeDNe.
 
-This package provides the building blocks for constructing, manipulating,
-and analyzing biologically grounded neural networks.
+This module contains the fundamental classes and functions for the CeDNe package.
 """
 
 # Organism containers

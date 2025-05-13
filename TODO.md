@@ -8,11 +8,11 @@
 
 - [ ] !!! Add reading and writing to and from NWB format. Add that to the paper also.
 - [ ] !!! Write about csv/json integration.
-- [ ] !!! Add publication from where data is taken in a note section.
+- [ ] !!! Add note section to each class. Add data_source (publication + location) from where data is taken in a note section.
 
 ## New Classes
 
-- [ ] ! Integrate behavioral components.
+- [ ] !!! Integrate behavioral components. Since there are limited behavioral outputs for the worm, having a framework for each might be useful.
 - [ ] !! Other graph elements (Map another graph to an object)
 - [ ] ! Mapping functions.
 
@@ -22,6 +22,7 @@
 - [ ] !!! Formalizing connecting the StimResponse and Trial classes.
 
 ## ML stuff
+
 - [ ] !!! Jax based optimization.
 - [ ] !!! Latin hypercube sampling for hyperparameter optimization.
 
@@ -31,7 +32,6 @@
 - [ ] !! Make movies for time series data.
 - [ ] !! Export graph for plotting elsewhere.
 - [ ] !! Dealing with missing (MISS), null (NOT) and alternative values (OR and AND) values for a given attribute.
-- [ ] !!! Seperate utility functions into different util modules.
 
 ## Examples
 

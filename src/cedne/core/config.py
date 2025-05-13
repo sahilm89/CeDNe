@@ -7,7 +7,7 @@ import sys
 # Random seed for reproducibility
 RANDOM_SEED = 42
 
-# Sampling rate for calcium data (Hz)
+# Sampling rate for physiology calcium data (Hz)
 F_SAMPLE = 5
 
 # Maximum recursion depth (used in network folding, motif search)

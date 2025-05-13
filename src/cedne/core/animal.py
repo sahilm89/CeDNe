@@ -17,6 +17,8 @@ class Animal:
         self.sex = sex
         self.genotype = genotype
         self.networks = {}
+        self.contexts = {}  # Dict[str, Context]
+        self.active_context = None
         for key, value in kwargs.items():
             self.set_property(key, value)
 
@@ -47,6 +49,58 @@ class Animal:
             value: The value of the property.
         """
         setattr(self, key, value)
+    
+    def add_context(self, name, data=None):
+        """
+        Adds a context to the organism.
+
+        Args:
+            name (str): The name of the context.
+            data: Optional data to associate with the context.
+        """
+        self.contexts[name] = data
+
+    def remove_context(self, name):
+        """
+        Removes a context from the organism and clears active_context if it was active.
+
+        Args:
+            name (str): The name of the context to remove.
+        """
+        if name not in self.contexts:
+            raise ValueError(f"Context '{name}' not found.")
+        
+        # Clear active_context if it's the one being removed
+        if self.active_context == name:
+            self.active_context = None
+            
+        del self.contexts[name]
+
+    def get_context(self, name):
+        """
+        Get a context by name.
+
+        Args:
+            name (str): The name of the context.
+
+        Returns:
+            The context data, or None if not found.
+        """
+        return self.contexts.get(name)
+
+    def set_active_context(self, name):
+        """
+        Set the active context by name.
+        Args:
+            name (str): The name of the context to set as active.
+        """
+        if name not in self.contexts:
+            raise ValueError(f"Context '{name}' not found.")
+        self.active_context = name
+
+    def clear_active_context(self):
+        """Clear the active context."""
+        self.active_context = None
 
 class Worm(Animal):
     ''' This is an explicit Worm class, a container for network(s).'''
