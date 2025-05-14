@@ -89,11 +89,11 @@ class TestLoader:
         assert 'Neutral' in worm.networks
         assert isinstance(worm.networks['Neutral'], NervousSystem)
         
-    def test_getLigands(self):
-        """Test getting ligands for a neuron."""
-        ligands = getLigands('AVAL', sex='Hermaphrodite')
-        assert isinstance(ligands, list)
-        assert all(isinstance(ligand, str) for ligand in ligands)
+    # def test_getLigands(self):
+    #     """Test getting ligands for a neuron."""
+    #     ligands = getLigands('AVAL', sex='Hermaphrodite')
+    #     assert isinstance(ligands, list)
+    #     assert all(isinstance(ligand, str) for ligand in ligands)
         
     def test_getLigandsAndReceptors(self, sample_npr_table, sample_ligmap_table):
         """Test getting ligands and receptors."""

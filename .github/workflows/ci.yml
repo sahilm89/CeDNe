@@ -24,6 +24,12 @@ jobs:
         curl -sSL https://install.python-poetry.org | python3 -
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+    - name: Cache Poetry virtualenv
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
     - name: Install dependencies with dev extras
       run: poetry install --with dev
 
@@ -44,9 +50,3 @@ jobs:
     #  with:
     #    token: ${{ secrets.CODECOV_TOKEN }}
     #    files: ./coverage.xml
-
-    - name: Cache Poetry virtualenv
-      uses: actions/cache@v3
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
