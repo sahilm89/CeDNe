@@ -128,4 +128,5 @@ docker-compose.yml
 ## Exceptions
 !data_sources/*.pkl
 !.assets/*.svg
+!.assets/*.png
 
