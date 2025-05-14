@@ -106,9 +106,6 @@ venv.bak/
 # mkdocs documentation
 /site
 
-## Exceptions
-!data_sources/*.pkl
-
 # VS Code
 .vscode/
 *.code-workspace
@@ -127,3 +124,8 @@ docker-compose.yml
 
 # Database files
 *.db
+
+## Exceptions
+!data_sources/*.pkl
+!.assets/*.svg
+
