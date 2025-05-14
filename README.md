@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/sahilm89/CeDNe/main/assets/logo.svg" width="300"/>
+  <img src="https://raw.githubusercontent.com/sahilm89/CeDNe/main/.assets/logo.svg" width="300"/>
 </p>
 
 # CeDNe: *C. elegans* Dynamical Network
