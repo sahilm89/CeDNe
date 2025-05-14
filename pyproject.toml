@@ -9,7 +9,7 @@ license = "MIT"
 readme = "README.md"
 homepage = "https://cedne.org"
 repository = "https://github.com/sahilm89/cedne"
-packages = [{ include = "cedne" }]
+packages = [{ include = "cedne" , from= "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
