@@ -12,11 +12,11 @@ demonstrate its use. CeDNe can also easily integrate into existing Python based 
 
 ## Examples
 
-1. examples/notebooks/01-load_and_graph.ipynb
-2. examples/notebooks/02-load_neuropeptide_and_find_intersection_graphs.ipynb
-3. examples/notebooks/03-neuron-combinations-to-intersecting-transcripts.ipynb
-4. examples/notebooks/04-load-transcripts-and-view-positions.ipynb
-5. examples/notebooks/05-load-neuropeptide.ipynb
+1. examples/notebooks/01-load_and_graph.ipynb [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/HEAD?filepath=examples/notebooks/01-load_and_graph.ipynb)
+2. examples/notebooks/02-load_neuropeptide_and_find_intersection_graphs.ipynb [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/HEAD?filepath=examples/notebooks/02-load_neuropeptide_and_find_intersection_graphs.ipynb)
+3. examples/notebooks/03-neuron-combinations-to-intersecting-transcripts.ipynb [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/HEAD?filepath=examples/notebooks/03-neuron-combinations-to-intersecting-transcripts.ipynb)
+4. examples/notebooks/04-load-transcripts-and-view-positions.ipynb [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/HEAD?filepath=examples/notebooks/04-load-transcripts-and-view-positions.ipynb)
+5. examples/notebooks/05-load-neuropeptide.ipynb [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/HEAD?filepath=examples/notebooks/05-load-neuropeptide.ipynb)
 
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/HEAD?filepath=examples/notebooks/01-load_and_graph.ipynb)
+
