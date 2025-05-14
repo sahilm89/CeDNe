@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/sahilm89/CeDNe/.assets/cedne_logo.svg" width="300"/>
+</p>
 
 # CeDNe: *C. elegans* Dynamical Network
 
