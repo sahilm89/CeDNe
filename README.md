@@ -17,3 +17,6 @@ demonstrate its use. CeDNe can also easily integrate into existing Python based 
 3. examples/notebooks/03-neuron-combinations-to-intersecting-transcripts.ipynb
 4. examples/notebooks/04-load-transcripts-and-view-positions.ipynb
 5. examples/notebooks/05-load-neuropeptide.ipynb
+
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/HEAD?filepath=examples/notebooks/01-load_and_graph.ipynb)
