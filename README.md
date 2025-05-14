@@ -1,4 +1,7 @@
-![CeDNe Logo](.assets/cedne_logo.svg)
+<p align="center">
+  <img src=".assets/cedne_logo.svg" width="300"/>
+</p>
+
 # CeDNe: *C. elegans* Dynamical Network
 
 CeDNe (pronounced Sid-nee) is a Python Library for multi-omic integration of neuroscience data. CeDNe is built on top of **networkx** in order to leverage its graph structure
