@@ -233,23 +233,118 @@ def return_triads():
         triad_graphs[t] = nx.relabel_nodes(triad_graphs[t], mapping={'a':1, 'b':2, 'c':3}, copy=True)
     return triad_graphs
         
-def randomize_graph(G, seed=None, mode='edge-swap', multiplier='auto'):
-    g_copy = copy.deepcopy(G)
-    if multiplier == 'auto':
+def randomize_graph(G, seed=None, mode='edge-swap', multiplier=None, edge_subgroups=None, data=True):
+    """ Randomizes a directed graph using specified methods. Also randmize within graph subgroups.
+    Parameters:
+    - G: The directed graph to be randomized.
+    - seed: Random seed for reproducibility.
+    - mode: Method of randomization. Options are 'edge-swap', 'configuration-model', or 'num-nodes-edges'.
+    - multiplier: Multiplier for the number of swaps or edges. If None, it uses log of the number of edges as default.
+    - subgroups: Takes a list of subgroups to randomize within. If None, randomizes the entire graph.
+    Returns:
+    - g_copy: A new directed graph that is a randomized version of G.
+    Raises:
+    - ValueError: If the multiplier is not an integer when not 'auto'.
+    """
+    
+    if multiplier == None:
         multiplier = int(np.log(len(G.edges)))
     else:
         if not isinstance(multiplier, int):
             raise ValueError("Multiplier must be an integer")
-    if mode == 'edge-swap':
-        nswap = int(multiplier*len(G.edges))
-        nx.directed_edge_swap(g_copy, nswap=nswap, max_tries=nswap*100, seed=seed)
-    elif mode == 'configuration-model':
-        nodes = g_copy.nodes()
-        in_degree = [g_copy.in_degree(n) for n in nodes]
-        out_degree = [g_copy.out_degree(n) for n in nodes]
-        g_copy = nx.directed_configuration_model(in_degree, out_degree, seed=seed)
-    elif mode == 'num-nodes-edges':
-        g_copy = nx.gnm_random_graph(len(g_copy.nodes()), len(g_copy.edges()), seed=seed, directed=True)
+    if seed is not None:
+        np.random.seed(seed)
+        nx.utils.create_random_state(seed)
+    else:
+        seed = np.random.randint(0, 1000000)
+
+    if edge_subgroups is not None:
+        g_copy = G.copy_neurons()
+        if not isinstance(edge_subgroups, list):
+            raise ValueError("Edge Subgroups must be a list of lists")
+        for subgroup in edge_subgroups:
+            if not isinstance(subgroup, list):
+                raise ValueError("Each subgroup must be a list of edges")
+            subgraph = G.subnetwork(connections=subgroup, data=data)
+            if len(subgraph.edges) > 0:
+                if mode == 'edge-swap':
+                    multiplier = int(np.log(len(subgraph.edges)))
+                    nswap = int(multiplier*len(subgraph.edges))
+                    try:
+                        nx.directed_edge_swap(subgraph, nswap=nswap, max_tries=nswap * 100, seed=seed)
+                    except nx.NetworkXAlgorithmError:
+                        fallback_nswap = int(len(subgraph.edges) * 0.01)  # or some other conservative estimate
+                        print(f"Retrying with fallback nswap={fallback_nswap}")
+                        try:
+                            nx.directed_edge_swap(subgraph, nswap=fallback_nswap, max_tries=fallback_nswap * 1000, seed=seed)
+                        except nx.NetworkXAlgorithmError:
+                            print("Still failed, skipping this subgraph.")
+                elif mode == 'configuration-model':
+                    nodes = subgraph.nodes()
+                    in_degree = [subgraph.in_degree(n) for n in nodes]
+                    out_degree = [subgraph.out_degree(n) for n in nodes]
+                    subgraph = nx.directed_configuration_model(in_degree, out_degree, seed=seed)
+                elif mode == 'num-nodes-edges':
+                    subnet = nx.gnm_random_graph(len(subgraph.nodes()), len(subgraph.edges()), seed=seed, directed=True)
+                    nodelist = list(subgraph.nodes())
+                    neurons = [nodelist[n] for n in subnet.nodes]
+                    edge_dict = {(neurons[e[0]].name, neurons[e[1]].name):{} for e in subnet.edges}
+                    subgraph.remove_all_connections()
+                    subgraph.create_connections(edge_dict)
+                elif mode == 'stub-matching':
+                    if not subgroup:
+                        continue  # skip empty subgroups
+
+                    # Extract all source and target nodes in the subgroup
+                    src_nodes = set(e[0] for e in subgroup)
+                    tgt_nodes = set(e[1] for e in subgroup)
+
+                    # Infer src_type and tgt_type from node annotations
+                    src_type_set = {G.nodes[n]['type'] for n in src_nodes}
+                    tgt_type_set = {G.nodes[n]['type'] for n in tgt_nodes}
+
+                    if len(src_type_set) != 1 or len(tgt_type_set) != 1:
+                        print(f"Skipping subgroup with mixed neuron types: {src_type_set} → {tgt_type_set}")
+                        continue
+
+                    src_type = next(iter(src_type_set))
+                    tgt_type = next(iter(tgt_type_set))
+                    num_edges = len(subgroup)
+
+                    # All nodes in the whole graph of the correct type
+                    all_src = [n for n in subgraph.nodes if G.neurons[n.name].type == src_type]
+                    all_tgt = [n for n in subgraph.nodes if G.neurons[n.name].type == tgt_type]
+
+                    # All possible edges between src_type and tgt_type, excluding self-loops
+                    possible_edges = [(u, v) for u in all_src for v in all_tgt if u != v]
+
+                    if len(possible_edges) < num_edges:
+                        print(f"Not enough possible edges for {src_type}→{tgt_type} (have {len(possible_edges)}, need {num_edges})")
+                        continue
+
+                    # Randomly sample edges without replacement
+                    rng = np.random.default_rng(seed)
+                    sampled_edges = rng.choice(possible_edges, size=num_edges, replace=False)
+
+                    # Create edge dict for your custom graph object
+                    edge_dict = {(u.name, v.name): {} for u, v in sampled_edges}
+                    subgraph.remove_all_connections()
+                    subgraph.create_connections(edge_dict)
+                else:
+                    raise NotImplementedError(f"{mode} not in implemented modes for this method.")
+                g_copy.create_connections_from(subgraph, data=data)
+    else:
+        g_copy = copy.deepcopy(G)
+        if mode == 'edge-swap':
+            nswap = int(multiplier*len(G.edges))
+            nx.directed_edge_swap(g_copy, nswap=nswap, max_tries=nswap*100, seed=seed)
+        elif mode == 'configuration-model':
+            nodes = g_copy.nodes()
+            in_degree = [g_copy.in_degree(n) for n in nodes]
+            out_degree = [g_copy.out_degree(n) for n in nodes]
+            g_copy = nx.directed_configuration_model(in_degree, out_degree, seed=seed)
+        elif mode == 'num-nodes-edges':
+            g_copy = nx.gnm_random_graph(len(g_copy.nodes()), len(g_copy.edges()), seed=seed, directed=True)
     return g_copy
 
 def addBranch():

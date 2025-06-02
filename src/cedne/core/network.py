@@ -153,6 +153,15 @@ class NervousSystem(nx.MultiDiGraph):
                 neuron_args[key] = value[label]
             Neuron(label, self, **neuron_args)
 
+    def remove_neurons(self, neurons):
+        """ Remove neurons from the network."""
+        for neuron in neurons:
+            if not neuron in self.neurons:
+                raise TypeError(f" {neuron} is not a valid neuron name.")
+            else:
+                self.remove_node(neuron)
+        self.update_neurons()
+
     def create_neurons_from(self, network, data=False):
         """ 
         Creates a set of Neuron objects based on the given network.
@@ -171,6 +180,48 @@ class NervousSystem(nx.MultiDiGraph):
         else:
             for node,data in network.nodes(data=True):
                 Neuron(node.name, self, **data)
+
+    def create_connections(self, connection_dict):
+        ''' Creates a set of connections from a dictinary of connections with pre-post pairs as keys and
+        data as values.'''
+        for (pre,post), data in connection_dict.items():
+            if not pre in self.neurons or not post in self.neurons:
+                raise TypeError("Input dictionary must use neuron names for connection IDs")
+            n1 = self.neurons[pre]
+            n2 = self.neurons[post]
+            if len(data):
+                conn = Connection(n1,n2, **data)
+            else:
+                conn = Connection(n1,n2)
+            self.connections.update({(n1,n2,conn.uid): conn})
+
+    def remove_connections(self, connections):
+        """ Remove connections from the network """
+        for connection in connections:
+            if isinstance(connection, Connection):
+                self.remove_edge(connection.pre, connection.post)
+            elif isinstance(connection, tuple):
+                if isinstance(connection[0], Neuron) and isinstance(connection[1], Neuron):
+                    n1 = connection[0]
+                    n2 = connection[1]
+                    self.remove_edge(n1, n2)
+                elif isinstance(connection[0], str) and isinstance(connection[1], str): 
+                    if connection[0] in self.neurons and connection[1] in self.neurons:
+                        n1 = self.neurons[connection[0]]
+                        n2 = self.neurons[connection[1]]
+                        self.remove_edge(n1, n2)
+                    else:
+                        raise NameError(f"{connection[0]} and {connection[1]} not in the network")
+                else:
+                    raise TypeError("Connections must be either a list of tuples of neurons or neuron names, or a list of Connections.")
+            else:
+                raise TypeError("Connections must be either a list of tuples of neurons or neuron names, or a list of Connections.")
+        
+        self.update_connections()
+    
+    def remove_all_connections(self):
+        """ Remove all connections from the network """
+        self.remove_connections(self.connections)
 
     def create_connections_from(self, network, data=False):
         """
@@ -227,7 +278,6 @@ class NervousSystem(nx.MultiDiGraph):
             node.network = self
         for _, c in self.connections.items():
             c.network = self
-
 
     def setup_connections(self, adjacency, connection_type, input_type = 'adjacency', **kwargs):
         """
@@ -375,7 +425,7 @@ class NervousSystem(nx.MultiDiGraph):
         ''' Standard formats to load data into the network'''
         #pass
 
-    def subnetwork(self, neuron_names=None, name=None, connections=None, as_view=False):
+    def subnetwork(self, neuron_names=None, name=None, connections=None, as_view=False, data=True):
         """
         Generates a subgraph of the network based on the given list of neuron names.
 
@@ -391,33 +441,35 @@ class NervousSystem(nx.MultiDiGraph):
 
         
         if not as_view:
-            graph_copy = self.copy(copy_type='deep_custom', name=name)
+            if data==True:
+                graph_copy = self.copy(copy_type='deep_with_data', name=name)
+            else:
+                graph_copy = self.copy(copy_type='deep_without_data', name=name)
+
             assert not (neuron_names and connections),\
             "Specify either neuron_names or connections, not both."
 
             if neuron_names is not None:
                 subgraph_nodes = [graph_copy.neurons[name] for name in neuron_names]
-            elif connections is not None:
-                new_connections = [(graph_copy.neurons[conn[0].name], graph_copy.neurons[conn[1].name], conn[2])\
-                                 for conn in connections]
-                new_connections = [graph_copy.connections[key]._id for key in new_connections]
-            else:
-                subgraph = self
-
-            if neuron_names is not None:
                 subgraph = graph_copy.subgraph(subgraph_nodes)
                 subgraph.connections = {key: value for key, value in graph_copy.connections.items()\
                                          if key[0] in subgraph_nodes and key[1] in subgraph_nodes}
             elif connections is not None:
-                subgraph = graph_copy.edge_subgraph(new_connections)
-                subgraph.connections = {key: value for key, value in graph_copy.connections.items()\
-                                         if key in new_connections}
-            
+                new_connections = [(graph_copy.neurons[conn[0].name], graph_copy.neurons[conn[1].name], conn[2])\
+                                 for conn in connections]
+                new_connections = [graph_copy.connections[key]._id for key in new_connections]
+                subnet = graph_copy.edge_subgraph(new_connections) # That will put it through custom copy again.
+                subgraph = NervousSystem(self.worm, network=name)
+                subgraph.create_neurons_from(subnet)
+                subgraph.create_connections_from(subnet)
+                # subgraph.connections = {key: value for key, value in graph_copy.connections.items()\
+                    #  if key in new_connections}
+            else:
+                subgraph = self
             subgraph.update_network()
             subgraph.update_neurons()
             subgraph.update_connections()
             
-
         else:
             if neuron_names is not None:
                 filter_neurons = [self.neurons[name] for name in neuron_names]
@@ -507,7 +559,7 @@ class NervousSystem(nx.MultiDiGraph):
             names as keys and the neurons to fold as values. If there is only one\
                 neuron in the list of values, the neuron will be renamed to the key."
         
-        graph_copy = self.copy(copy_type='deep_custom', name=name)
+        graph_copy = self.copy(copy_type='deep_with_data', name=name)
         if exceptions is None:
             exceptions = []
         for merged_nodename, nodes_to_fold in fold_by.items():
@@ -782,13 +834,24 @@ class NervousSystem(nx.MultiDiGraph):
             return super().copy(as_view=False)
         elif copy_type=='deep':
             return copy.deepcopy(self)
-        elif copy_type == 'deep_custom':
+        elif copy_type == 'deep_with_data':
             deep_copy = NervousSystem(self.worm, network=name or self.name + "_copy")
             deep_copy.create_neurons_from(self, data=True)
             deep_copy.create_connections_from(self, data=True)
             return deep_copy
+        elif copy_type == 'deep_without_data':
+            deep_copy = NervousSystem(self.worm, network=name or self.name + "_copy")
+            deep_copy.create_neurons_from(self, data=False)
+            deep_copy.create_connections_from(self, data=False)
+            return deep_copy
         else:
             raise ValueError("copy_type must be 'deep', 'shallow'")
+    
+    def copy_neurons(self, name=None, data=False):
+        """ Copies the neurons from the network and creates a new network with them"""
+        new_network = NervousSystem(self.worm, network=name or self.name + "_copy")
+        new_network.create_neurons_from(self, data=data)
+        return new_network
 
     def subgraph_view(self, filter_neurons=None, filter_connections=None):
         ''' Creates a read only view of a subgraph'''

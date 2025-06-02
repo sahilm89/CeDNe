@@ -60,6 +60,8 @@ class Cell:
             postsynapses (dict, optional): 
                 The dictionary of postsynaptic components. Defaults to None.
         """
+        if not isinstance(name, str):
+            raise TypeError("name must be a string")
         self.name = name
         self.group_id = 0
         self._data = {}

@@ -913,12 +913,12 @@ def plot_simulation_results(results, twinx=True):
             ax2.axvline(x=inp.tstart, ls='--', color='gray', alpha=0.25)
             ax2.axvline(x=inp.tend, ls='--', color='gray', alpha=0.25)
     # ax.set_ylim((-1,1))
-    ax.set_xlabel('Time (s)')
-    ax.set_ylabel('Rate')
+    ax.set_xlabel('Time (s)', fontsize='x-large')
+    ax.set_ylabel('Rate', fontsize='x-large')
     # ax.set_xticks([0,30,60,90])
     simpleaxis(ax)
     # simpleaxis(ax2)
-    f.legend(loc='outside upper center', ncol=len(rates), frameon=False)
+    f.legend(loc='outside upper center', ncol=len(rates), frameon=False, fontsize='x-large')
     return f
 
 def compare_simulation_results(results1, results2, twinx=True):
