@@ -211,7 +211,7 @@ class OptunaOptimizer(Optimizer):
         """
         super().__init__(simulation_model, real_data, loss_function, neuron_parameter_bounds, edge_parameter_bounds, vars_to_fit, num_trials,  **kwargs)
         self.optimization_method = 'optuna'
-        sampler = optuna.samplers.TPESampler(multivariate=True, n_startup_trials=num_trials//3, gamma=gamma)
+        sampler = optuna.samplers.TPESampler(multivariate=True, n_startup_trials=num_trials//3)#, gamma=gamma) #Removing gamma for now.
         self.njobs = njobs
         self.neurons = {}
         self.current_loss = None
