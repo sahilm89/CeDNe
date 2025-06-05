@@ -1,0 +1,7 @@
+[tool.deptry]
+known_first_party = ["cedne"]
+src = ["src"]
+
+[tool.deptry.rules]
+ignore = ["DEP003"]
+ignore = ["DEP003"]
