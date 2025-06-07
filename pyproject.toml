@@ -12,7 +12,7 @@ repository = "https://github.com/sahilm89/cedne"
 packages = [{ include = "cedne",  from= "src"}]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.10,<=3.12"
 networkx = "^3.2.1"
 matplotlib = "^3.9.0"
 numpy = "^1.26.4"

@@ -855,9 +855,15 @@ files = [
 [package.dependencies]
 jaxlib = "0.4.38"
 ml_dtypes = ">=0.4.0"
-numpy = ">=1.24"
+numpy = [
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
+    {version = ">=1.24", markers = "python_version < \"3.12\""},
+]
 opt_einsum = "*"
-scipy = ">=1.10"
+scipy = [
+    {version = ">=1.11.1", markers = "python_version >= \"3.12\""},
+    {version = ">=1.10"},
+]
 
 [package.extras]
 ci = ["jaxlib (==0.4.36)"]
@@ -902,7 +908,10 @@ files = [
 [package.dependencies]
 ml-dtypes = ">=0.2.0"
 numpy = ">=1.24"
-scipy = ">=1.10"
+scipy = [
+    {version = ">=1.11.1", markers = "python_version >= \"3.12\""},
+    {version = ">=1.10"},
+]
 
 [[package]]
 name = "jaxtyping"
@@ -1404,6 +1413,7 @@ files = [
 
 [package.dependencies]
 numpy = [
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
     {version = ">=1.23.3", markers = "python_version >= \"3.11\""},
     {version = ">=1.21.2", markers = "python_version >= \"3.10\""},
 ]
@@ -3116,5 +3126,5 @@ files = [
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.10,<3.12"
-content-hash = "9fd75a0381f4c3721bc6c4b9b7cc52f9aec316c86ef99934465eeb20398ec9ed"
+python-versions = ">=3.10,<=3.12"
+content-hash = "cd8d8c7f71405665084a6099b8e3fe6732561c0eb32bab96b2f47fb695af4587"
