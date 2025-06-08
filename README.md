@@ -2,24 +2,120 @@
   <img src=".assets/cedne_logo.svg" width="300"/>
 </p>
 
-# CeDNe: *C. elegans* Dynamical Network
+# CeDNe (pronounced "Sid-nee")
 
-CeDNe (pronounced Sid-nee) is a Python Library for multi-omic integration of neuroscience data. CeDNe is built on top of **networkx** in order to leverage its graph structure
-and Python's object oriented capabilities together to create graph-based data containers that are
-intuitive to store and manage neuroscience data for analysis and modeling. Due to this structure, CeDNe acts as a multi-omic tool to integrate different sources of information together and facilitates contextualizing new data using existing information about *C. elegans*. In order to facilitate usage, CeDNe
-also comes with several utility functions that make common tasks very easy to execute. For advanced usage,
-users can access CeDNE objects directly.
+**CeDNe** is a modular, extensible Python library for multi-omic integration and systems-level modeling of the *C. elegans* nervous system. It enables researchers to **represent, combine, analyze, and simulate complex neuronal data** using a flexible, graph-based object model.
 
-CeDNe is easy to use with only a bit of programming experience and several examples have been provided to 
-demonstrate its use. CeDNe can also easily integrate into existing Python based analyses pipelines.
+Built on top of [NetworkX](https://networkx.org/), CeDNe allows intuitive access to neurons, connectomes, gene expression data, neurotransmitter systems, neuropeptide signaling, and calcium imaging activity — all structured in one coherent framework. This design supports both **high-level exploratory workflows** and **low-level modeling and simulation pipelines**.
+---
 
-## Examples
+## What CeDNe Can Do
 
-1. examples/notebooks/01-load_and_graph.ipynb [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/HEAD?filepath=examples/notebooks/01-load_and_graph.ipynb)
-2. examples/notebooks/02-load_neuropeptide_and_find_intersection_graphs.ipynb [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/HEAD?filepath=examples/notebooks/02-load_neuropeptide_and_find_intersection_graphs.ipynb)
-3. examples/notebooks/03-neuron-combinations-to-intersecting-transcripts.ipynb [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/HEAD?filepath=examples/notebooks/03-neuron-combinations-to-intersecting-transcripts.ipynb)
-4. examples/notebooks/04-load-transcripts-and-view-positions.ipynb [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/HEAD?filepath=examples/notebooks/04-load-transcripts-and-view-positions.ipynb)
-5. examples/notebooks/05-load-neuropeptide.ipynb [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/HEAD?filepath=examples/notebooks/05-load-neuropeptide.ipynb)
+- **Multi-omic integration**: unify anatomical, transcriptomic, neurochemical, and functional data
+- **Motif search and path analysis**: identify structural motifs, compute paths, and trace information flow
+- **Neuron-annotated visualizations**: render 2D/3D plots with contextual labels and spatial alignment
+- **Data contextualization**: map new experimental data (e.g., RNA-seq, imaging) onto known connectomic structures
+- **Graph-based simulation and optimization**: simulate neural activity and optimize parameters using Optuna
+- **Workflow examples**: ready-to-run notebooks for tasks ranging from data loading to motif-based simulation
+
+---
+
+## Why Use CeDNe?
+
+- Designed specifically for *C. elegans* neuroscience
+- Combines object-oriented structure with flexible graph analytics
+- Easy integration into existing Python pipelines
+- Modular API with support for advanced users, but approachable for beginners
+
+---
+
+## Getting Started
+
+You can start exploring with just a few lines of code and minimal setup. See the [`examples/notebooks`](https://github.com/sahilm89/CeDNe/tree/main/examples/notebooks) folder or try interactive notebooks in Binder:
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/01-load_and_graph.ipynb)
+
+For more notebooks, see the full list below:
 
 
+### 01. Create Worm and Graph Connections
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/01-create_worm_and_graph_connections.ipynb)
 
+Builds the worm object and initializes anatomical connectivity.
+
+---
+
+### 02. Save Worm and Load Worm
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/02-save_worm_and_load_worm.ipynb)
+
+Demonstrates serialization and deserialization of the worm model to/from disk.
+
+---
+
+### 03. Fold Network and Load Data
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/03-fold-network-and-load-data.ipynb)
+
+Introduces tools for network folding and attaches experimental data to network nodes.
+
+---
+
+### 04. Load Transcripts and View Positions
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/04-load-transcripts-and-view-positions.ipynb)
+
+Loads transcriptomic data and maps neuron positions in anatomical space.
+
+---
+
+### 05. View 3D Positions
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/05-view-3D-positions.ipynb)
+
+Interactive 3D visualization of neuron spatial layout using matplotlib.
+
+---
+
+### 06. Load Neuropeptides
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/06-load-neuropeptides.ipynb)
+
+Attaches neuropeptide expression data to neurons.
+
+---
+
+### 07. Load Neurotransmitters and Make Putative Graphs
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/07-load-neurotransmitters-and-make-putative-graphs.ipynb)
+
+Builds putative synaptic graphs using neurotransmitter and receptor identity.
+
+---
+
+### 08. All Paths Between Neuron Pair
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/08-all-paths-between-neuron-pair.ipynb)
+
+Computes and visualizes all possible paths between selected neuron pairs.
+
+---
+
+### 09. Load Different Connectomes
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/09-load-different-connectomes.ipynb)
+
+Loads and compares multiple anatomical or functional connectomes.
+
+---
+
+### 10. Time Series and Correlations
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/10*-time-series-and-correlations.ipynb)
+
+Analyzes calcium imaging time series and computes neuron-neuron correlation matrices.
+
+---
+
+### 11. Motif Search
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/11-motif-search.ipynb)
+
+Detects common topological motifs in the connectome using motif-finding tools.
+
+---
+
+### 12. Subnetwork Connectivity
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/12-subnetwork-connectivity.ipynb)
+
+Explores connectivity patterns in user-defined neuron subnetworks.
