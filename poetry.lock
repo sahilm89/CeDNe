@@ -476,44 +476,6 @@ files = [
 ]
 
 [[package]]
-name = "diffrax"
-version = "0.6.2"
-description = "GPU+autodiff-capable ODE/SDE/CDE solvers written in JAX."
-optional = false
-python-versions = "~=3.9"
-groups = ["main"]
-files = [
-    {file = "diffrax-0.6.2-py3-none-any.whl", hash = "sha256:05f14cbdc1146867f35dd2468a5f3a8cd666c0faff42d8e1cb953f47add05d22"},
-    {file = "diffrax-0.6.2.tar.gz", hash = "sha256:50fde010792a2e9d6105fdf2242e024dd779da27c618b56b92c244cd842bd3d1"},
-]
-
-[package.dependencies]
-equinox = ">=0.11.10"
-jax = ">=0.4.38"
-jaxtyping = ">=0.2.24"
-lineax = ">=0.0.5"
-optimistix = ">=0.0.7"
-typeguard = "2.13.3"
-typing-extensions = ">=4.5.0"
-
-[[package]]
-name = "equinox"
-version = "0.11.11"
-description = "Elegant easy-to-use neural networks in JAX."
-optional = false
-python-versions = ">=3.10"
-groups = ["main"]
-files = [
-    {file = "equinox-0.11.11-py3-none-any.whl", hash = "sha256:49e9674f9bff0cde7ebcfbf2cdf4585c9231eb377eda31168bbf6467f88241e5"},
-    {file = "equinox-0.11.11.tar.gz", hash = "sha256:648072c1384adc3528930a3bf089246fd77aa873310a19f1f21c08e7681f95a7"},
-]
-
-[package.dependencies]
-jax = ">=0.4.38"
-jaxtyping = ">=0.2.20"
-typing-extensions = ">=4.5.0"
-
-[[package]]
 name = "exceptiongroup"
 version = "1.3.0"
 description = "Backport of PEP 654 (exception groups)"
@@ -635,7 +597,7 @@ description = "Lightweight in-process concurrent programming"
 optional = false
 python-versions = ">=3.7"
 groups = ["main"]
-markers = "platform_machine == \"aarch64\" or platform_machine == \"ppc64le\" or platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"win32\" or platform_machine == \"WIN32\""
+markers = "(platform_machine == \"aarch64\" or platform_machine == \"ppc64le\" or platform_machine == \"x86_64\" or platform_machine == \"amd64\" or platform_machine == \"AMD64\" or platform_machine == \"win32\" or platform_machine == \"WIN32\") and python_version <= \"3.12\""
 files = [
     {file = "greenlet-3.1.1-cp310-cp310-macosx_11_0_universal2.whl", hash = "sha256:0bbae94a29c9e5c7e4a2b7f0aae5c17e8e90acbfd3bf6270eeba60c39fce3563"},
     {file = "greenlet-3.1.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:0fde093fb93f35ca72a556cf72c92ea3ebfda3d79fc35bb19fbe685853869a83"},
@@ -914,21 +876,6 @@ scipy = [
 ]
 
 [[package]]
-name = "jaxtyping"
-version = "0.2.37"
-description = "Type annotations and runtime checking for shape and dtype of JAX/NumPy/PyTorch/etc. arrays."
-optional = false
-python-versions = ">=3.10"
-groups = ["main"]
-files = [
-    {file = "jaxtyping-0.2.37-py3-none-any.whl", hash = "sha256:519f694ce569ba5000a1f8823e742df2d86e6da3956d2218769b6bdc5ad2d23a"},
-    {file = "jaxtyping-0.2.37.tar.gz", hash = "sha256:ae8c124abbea61b8c56455fb8b42f1183ab63353572aedfb1de355bb5b40e951"},
-]
-
-[package.dependencies]
-wadler-lindig = ">=0.1.3"
-
-[[package]]
 name = "jedi"
 version = "0.19.1"
 description = "An autocompletion tool for Python that can be used for text editors."
@@ -1171,24 +1118,6 @@ files = [
 test = ["anyconfig[toml] (>=0.14)", "coverage", "coverage-rich", "pytest"]
 
 [[package]]
-name = "lineax"
-version = "0.0.7"
-description = "Linear solvers in JAX and Equinox."
-optional = false
-python-versions = "~=3.9"
-groups = ["main"]
-files = [
-    {file = "lineax-0.0.7-py3-none-any.whl", hash = "sha256:c261977fd2104010ff34b7353deef22961da3ca46f341f158567dc2bbb8c2372"},
-    {file = "lineax-0.0.7.tar.gz", hash = "sha256:e43549a8d202432d4668afe54866741a0214ccb363487bacb2a980f72840ea48"},
-]
-
-[package.dependencies]
-equinox = ">=0.11.5"
-jax = ">=0.4.26"
-jaxtyping = ">=0.2.20"
-typing-extensions = ">=4.5.0"
-
-[[package]]
 name = "llvmlite"
 version = "0.43.0"
 description = "lightweight wrapper around basic LLVM functionality"
@@ -1379,11 +1308,46 @@ traitlets = "*"
 
 [[package]]
 name = "ml-dtypes"
+version = "0.4.1"
+description = ""
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+markers = "python_version >= \"3.13\""
+files = [
+    {file = "ml_dtypes-0.4.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:1fe8b5b5e70cd67211db94b05cfd58dace592f24489b038dc6f9fe347d2e07d5"},
+    {file = "ml_dtypes-0.4.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:8c09a6d11d8475c2a9fd2bc0695628aec105f97cab3b3a3fb7c9660348ff7d24"},
+    {file = "ml_dtypes-0.4.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9f5e8f75fa371020dd30f9196e7d73babae2abd51cf59bdd56cb4f8de7e13354"},
+    {file = "ml_dtypes-0.4.1-cp310-cp310-win_amd64.whl", hash = "sha256:15fdd922fea57e493844e5abb930b9c0bd0af217d9edd3724479fc3d7ce70e3f"},
+    {file = "ml_dtypes-0.4.1-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:2d55b588116a7085d6e074cf0cdb1d6fa3875c059dddc4d2c94a4cc81c23e975"},
+    {file = "ml_dtypes-0.4.1-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e138a9b7a48079c900ea969341a5754019a1ad17ae27ee330f7ebf43f23877f9"},
+    {file = "ml_dtypes-0.4.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:74c6cfb5cf78535b103fde9ea3ded8e9f16f75bc07789054edc7776abfb3d752"},
+    {file = "ml_dtypes-0.4.1-cp311-cp311-win_amd64.whl", hash = "sha256:274cc7193dd73b35fb26bef6c5d40ae3eb258359ee71cd82f6e96a8c948bdaa6"},
+    {file = "ml_dtypes-0.4.1-cp312-cp312-macosx_10_9_universal2.whl", hash = "sha256:827d3ca2097085cf0355f8fdf092b888890bb1b1455f52801a2d7756f056f54b"},
+    {file = "ml_dtypes-0.4.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:772426b08a6172a891274d581ce58ea2789cc8abc1c002a27223f314aaf894e7"},
+    {file = "ml_dtypes-0.4.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:126e7d679b8676d1a958f2651949fbfa182832c3cd08020d8facd94e4114f3e9"},
+    {file = "ml_dtypes-0.4.1-cp312-cp312-win_amd64.whl", hash = "sha256:df0fb650d5c582a9e72bb5bd96cfebb2cdb889d89daff621c8fbc60295eba66c"},
+    {file = "ml_dtypes-0.4.1-cp39-cp39-macosx_10_9_universal2.whl", hash = "sha256:e35e486e97aee577d0890bc3bd9e9f9eece50c08c163304008587ec8cfe7575b"},
+    {file = "ml_dtypes-0.4.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:560be16dc1e3bdf7c087eb727e2cf9c0e6a3d87e9f415079d2491cc419b3ebf5"},
+    {file = "ml_dtypes-0.4.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ad0b757d445a20df39035c4cdeed457ec8b60d236020d2560dbc25887533cf50"},
+    {file = "ml_dtypes-0.4.1-cp39-cp39-win_amd64.whl", hash = "sha256:ef0d7e3fece227b49b544fa69e50e607ac20948f0043e9f76b44f35f229ea450"},
+    {file = "ml_dtypes-0.4.1.tar.gz", hash = "sha256:fad5f2de464fd09127e49b7fd1252b9006fb43d2edc1ff112d390c324af5ca7a"},
+]
+
+[package.dependencies]
+numpy = {version = ">=1.26.0", markers = "python_version >= \"3.12\""}
+
+[package.extras]
+dev = ["absl-py", "pyink", "pylint (>=2.6.0)", "pytest", "pytest-xdist"]
+
+[[package]]
+name = "ml-dtypes"
 version = "0.5.1"
 description = ""
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
+markers = "python_version <= \"3.12\""
 files = [
     {file = "ml_dtypes-0.5.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:bd73f51957949069573ff783563486339a9285d72e2f36c18e0c1aa9ca7eb190"},
     {file = "ml_dtypes-0.5.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:810512e2eccdfc3b41eefa3a27402371a3411453a1efc7e9c000318196140fed"},
@@ -1413,7 +1377,7 @@ files = [
 
 [package.dependencies]
 numpy = [
-    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
+    {version = ">=1.26.0", markers = "python_version == \"3.12\""},
     {version = ">=1.23.3", markers = "python_version >= \"3.11\""},
     {version = ">=1.21.2", markers = "python_version >= \"3.10\""},
 ]
@@ -1601,25 +1565,6 @@ files = [
     {file = "opt_einsum-3.4.0-py3-none-any.whl", hash = "sha256:69bb92469f86a1565195ece4ac0323943e83477171b91d24c35afe028a90d7cd"},
     {file = "opt_einsum-3.4.0.tar.gz", hash = "sha256:96ca72f1b886d148241348783498194c577fa30a8faac108586b14f1ba4473ac"},
 ]
-
-[[package]]
-name = "optimistix"
-version = "0.0.10"
-description = "Nonlinear optimisation in JAX and Equinox."
-optional = false
-python-versions = "~=3.9"
-groups = ["main"]
-files = [
-    {file = "optimistix-0.0.10-py3-none-any.whl", hash = "sha256:f10eb93d24311aca21fb6d1e74f39a4a38f976d5accbd577ef1705218609bfdc"},
-    {file = "optimistix-0.0.10.tar.gz", hash = "sha256:80a481d66d64c9445eaf74158b71d65a9087b7e038f0c4bc7714ef5ff6350050"},
-]
-
-[package.dependencies]
-equinox = ">=0.11.7"
-jax = ">=0.4.28"
-jaxtyping = ">=0.2.23"
-lineax = ">=0.0.6"
-typing-extensions = ">=4.5.0"
 
 [[package]]
 name = "optuna"
@@ -3032,22 +2977,6 @@ docs = ["myst-parser", "pydata-sphinx-theme", "sphinx"]
 test = ["argcomplete (>=3.0.3)", "mypy (>=1.7.0)", "pre-commit", "pytest (>=7.0,<8.2)", "pytest-mock", "pytest-mypy-testing"]
 
 [[package]]
-name = "typeguard"
-version = "2.13.3"
-description = "Run-time type checker for Python"
-optional = false
-python-versions = ">=3.5.3"
-groups = ["main"]
-files = [
-    {file = "typeguard-2.13.3-py3-none-any.whl", hash = "sha256:5e3e3be01e887e7eafae5af63d1f36c849aaa94e3a0112097312aabfa16284f1"},
-    {file = "typeguard-2.13.3.tar.gz", hash = "sha256:00edaa8da3a133674796cf5ea87d9f4b4c367d77476e185e80251cc13dfbb8c4"},
-]
-
-[package.extras]
-doc = ["sphinx-autodoc-typehints (>=1.2.0)", "sphinx-rtd-theme"]
-test = ["mypy ; platform_python_implementation != \"PyPy\"", "pytest", "typing-extensions"]
-
-[[package]]
 name = "typing-extensions"
 version = "4.12.2"
 description = "Backported and Experimental Type Hints for Python 3.8+"
@@ -3058,6 +2987,7 @@ files = [
     {file = "typing_extensions-4.12.2-py3-none-any.whl", hash = "sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d"},
     {file = "typing_extensions-4.12.2.tar.gz", hash = "sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8"},
 ]
+markers = {dev = "python_version <= \"3.12\""}
 
 [[package]]
 name = "tzdata"
@@ -3097,22 +3027,6 @@ plot = ["bokeh", "colorcet", "datashader", "holoviews", "matplotlib", "pandas", 
 tbb = ["tbb (>=2019.0)"]
 
 [[package]]
-name = "wadler-lindig"
-version = "0.1.3"
-description = "A Wadler–Lindig pretty-printer for Python."
-optional = false
-python-versions = ">=3.10"
-groups = ["main"]
-files = [
-    {file = "wadler_lindig-0.1.3-py3-none-any.whl", hash = "sha256:3018e4e6b115a7ef21c77414a41cbe7e03e83f6b5e25004958e33432a17f3c94"},
-    {file = "wadler_lindig-0.1.3.tar.gz", hash = "sha256:476fb7015135f714cef8f8eac7c44b164c8b993345e651a9b6f25b7b112440c9"},
-]
-
-[package.extras]
-dev = ["numpy", "pre-commit", "pytest"]
-docs = ["jinja2 (==3.0.3)", "mkdocs (==1.3.0)", "mkdocs-autorefs (==1.0.1)", "mkdocs-include-exclude-files (==0.0.1)", "mkdocs-material (==7.3.6)", "mkdocs-material-extensions (==1.3.1)", "mkdocstrings (==0.17.0)", "mknotebooks (==0.7.1)", "nbconvert (==6.5.0)", "nbformat (==5.4.0)", "pygments (==2.14.0)", "pymdown-extensions (==9.4)", "pytkdocs-tweaks (==0.0.8)"]
-
-[[package]]
 name = "wcwidth"
 version = "0.2.13"
 description = "Measures the displayed width of unicode strings in a terminal"
@@ -3126,5 +3040,5 @@ files = [
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.10,<=3.12"
-content-hash = "cd8d8c7f71405665084a6099b8e3fe6732561c0eb32bab96b2f47fb695af4587"
+python-versions = ">=3.10,<=3.14.0"
+content-hash = "cf29fbda2ccb101de59983a7bfde4a036b143f6f0ce8b901178357027e22cb5b"
