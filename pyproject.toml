@@ -15,7 +15,6 @@ packages = [{ include = "cedne",  from= "src"}]
 python = ">=3.10,<=3.14.0"
 networkx = "^3.2.1"
 matplotlib = "^3.9.0"
-mpl_toolkits = "*"
 numpy = "^1.26.4"
 scipy = "^1.13.1"
 pandas = "2.0.3"
