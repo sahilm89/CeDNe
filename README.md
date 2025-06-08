@@ -7,6 +7,7 @@
 **CeDNe** is a modular, extensible Python library for multi-omic integration and systems-level modeling of the *C. elegans* nervous system. It enables researchers to **represent, combine, analyze, and simulate complex neuronal data** using a flexible, graph-based object model.
 
 Built on top of [NetworkX](https://networkx.org/), CeDNe allows intuitive access to neurons, connectomes, gene expression data, neurotransmitter systems, neuropeptide signaling, and calcium imaging activity — all structured in one coherent framework. This design supports both **high-level exploratory workflows** and **low-level modeling and simulation pipelines**.
+
 ---
 
 ## What CeDNe Can Do
@@ -33,7 +34,7 @@ Built on top of [NetworkX](https://networkx.org/), CeDNe allows intuitive access
 
 You can start exploring with just a few lines of code and minimal setup. See the [`examples/notebooks`](https://github.com/sahilm89/CeDNe/tree/main/examples/notebooks) folder or try interactive notebooks in Binder:
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/01-load_and_graph.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/)
 
 For more notebooks, see the full list below:
 
