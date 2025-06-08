@@ -133,6 +133,7 @@ def plot_spiral(neunet, save=False, figsize=(8,8), font_size=11):
     nx.draw(neunet, node_size=node_size, ax=ax, pos=pos, labels={node: node.name for node in neunet.nodes}, with_labels=True, node_color=node_color, edge_color=edge_color, font_size=font_size)
     if save:
         plt.savefig(save)
+    plt.show()
     plt.close()
     
     return pos
