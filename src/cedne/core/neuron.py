@@ -181,6 +181,12 @@ class Neuron(Cell):
         
         self.trial[trial_num] = Trial(self, trial_num)
         return self.trial[trial_num]
+    
+    def remove_trial(self, trial_num):
+        """
+        Removes a trial from the trial dictionary.
+        """
+        del self.trial[trial_num]
 
     def get_connections(self, paired_neuron=None, direction='both', connection_type='all'):
         """

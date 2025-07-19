@@ -11,22 +11,77 @@ import json
 # import py2neo
 
 # Restricting unpickling
-ALLOWED_MODULES = [
+# ALLOWED_MODULES = [
+#     "cedne",
+#     "networkx"
+#     "numpy",
+#     "numpy.core",
+#     "numpy.core.multiarray",
+#     "numpy.core.numeric"
+# ]
+
+# ALLOWED_CLASSES = {
+#     # Safe NumPy internals needed for unpickling arrays
+#     ("numpy.core.multiarray", "_reconstruct"),
+#     ("numpy.core.numeric", "_frombuffer"),
+#     ("numpy", "dtype"),
+#     ("numpy", "ndarray"),
+#     ("numpy", "float64"),
+#     ("numpy", "int64"),
+#     ("builtins", "set"),
+#     ("builtins", "frozenset"),
+#     ("builtins", "slice"),
+# }
+
+ALLOWED_CLASSES = {
+    # numpy internals
+    ("numpy.core.multiarray", "_reconstruct"),
+    ("numpy.core.numeric", "_frombuffer"),
+    ("numpy", "dtype"),
+    ("numpy", "ndarray"),
+    ("numpy", "float64"),
+    ("numpy", "int64"),
+    # builtins
+    ("builtins", "set"),
+    ("builtins", "frozenset"),
+    ("builtins", "slice"),
+}
+
+ALLOWED_MODULE_PREFIXES = [
     "cedne",
     "networkx"
 ]
 
 class RestrictedUnpickler(pickle.Unpickler):
-    """
-    A custom unpickler that restricts the loading of certain modules and classes.
-    """
     def find_class(self, module, name):
-        # Allow all functions and classes from the allowed modules and their submodules
-        if any(module.startswith(allowed_module) for allowed_module in ALLOWED_MODULES):
+        # Allow fully qualified safe classes
+        if (module, name) in ALLOWED_CLASSES:
             return getattr(__import__(module, fromlist=[name]), name)
-        if module == "builtins" and name in ["set", "frozenset"]:
-            return getattr(__import__(module), name)
+        
+        # Allow all classes from whitelisted module prefixes (like cedne.*)
+        if any(module == prefix or module.startswith(prefix + ".") for prefix in ALLOWED_MODULE_PREFIXES):
+            return getattr(__import__(module, fromlist=[name]), name)
+        
+        # Otherwise, reject
         raise pickle.UnpicklingError(f"global '{module}.{name}' is forbidden")
+    
+# class RestrictedUnpickler(pickle.Unpickler):
+#     """
+#     A custom unpickler that restricts the loading of certain modules and classes.
+#     """
+#     def find_class(self, module, name):
+#         # Allow all functions and classes from the allowed modules and their submodules
+#         if any(module == allowed_module or module.startswith(allowed_module + ".") for allowed_module in ALLOWED_MODULES):
+#             return getattr(__import__(module, fromlist=[name]), name)
+#         if module == "builtins" and name in ["set", "frozenset"]:
+#             return getattr(__import__(module), name)
+#         raise pickle.UnpicklingError(f"global '{module}.{name}' is forbidden")
+
+# class RestrictedUnpickler(pickle.Unpickler):
+#     def find_class(self, module, name):
+#         if (module, name) in ALLOWED_CLASSES:
+#             return getattr(__import__(module, fromlist=[name]), name)
+#         raise pickle.UnpicklingError(f"global '{module}.{name}' is forbidden")
 
 def load_pickle(file):
     ''' Loading restricted pickles.'''
@@ -54,8 +109,6 @@ def load_worm(file_path):
         raise FileNotFoundError(f"File {file_path} not found.") from exc
     except pickle.UnpicklingError as exc:
         raise pickle.UnpicklingError(f"Failed to unpickle {file_path}.") from exc
-    except TypeError as exc:
-        raise TypeError(f"Expected Worm object, got {type(w)}") from exc
     
 def generate_random_string(length: int = 8) -> str:
     """

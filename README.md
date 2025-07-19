@@ -30,6 +30,39 @@ Built on top of [NetworkX](https://networkx.org/), CeDNe allows intuitive access
 
 ---
 
+## Installation
+
+CeDNe requires Python ≥3.9 and uses [Poetry](https://python-poetry.org/) for dependency management. To get started:
+
+### Clone the repository
+
+```bash
+git clone https://github.com/sahilm89/CeDNe.git
+cd CeDNe
+```
+
+### Install poetry if you don't have it
+
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+### Install dependencies in an isolated virtual environment
+
+```bash
+poetry install
+```
+
+### To activate the virtual environment
+
+```bash
+poetry shell
+```
+
+For more details see [INSTALL.md](INSTALL.md)
+
+---
+
 ## Getting Started
 
 You can start exploring with just a few lines of code and minimal setup. See the [`examples/notebooks`](https://github.com/sahilm89/CeDNe/tree/main/examples/notebooks) folder or try interactive notebooks in Binder:
@@ -40,6 +73,7 @@ For more notebooks, see the full list below:
 
 
 ### 01. Create Worm and Graph Connections
+
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/01-create_worm_and_graph_connections.ipynb)
 
 Builds the worm object and initializes anatomical connectivity.
@@ -47,6 +81,7 @@ Builds the worm object and initializes anatomical connectivity.
 ---
 
 ### 02. Save Worm and Load Worm
+
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/02-save_worm_and_load_worm.ipynb)
 
 Demonstrates serialization and deserialization of the worm model to/from disk.
@@ -54,6 +89,7 @@ Demonstrates serialization and deserialization of the worm model to/from disk.
 ---
 
 ### 03. Fold Network and Load Data
+
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/03-fold-network-and-load-data.ipynb)
 
 Introduces tools for network folding and attaches experimental data to network nodes.
@@ -61,6 +97,7 @@ Introduces tools for network folding and attaches experimental data to network n
 ---
 
 ### 04. Load Transcripts and View Positions
+
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/04-load-transcripts-and-view-positions.ipynb)
 
 Loads transcriptomic data and maps neuron positions in anatomical space.
@@ -68,6 +105,7 @@ Loads transcriptomic data and maps neuron positions in anatomical space.
 ---
 
 ### 05. View 3D Positions
+
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/05-view-3D-positions.ipynb)
 
 Interactive 3D visualization of neuron spatial layout using matplotlib.
@@ -75,6 +113,7 @@ Interactive 3D visualization of neuron spatial layout using matplotlib.
 ---
 
 ### 06. Load Neuropeptides
+
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/06-load-neuropeptides.ipynb)
 
 Attaches neuropeptide expression data to neurons.
@@ -82,6 +121,7 @@ Attaches neuropeptide expression data to neurons.
 ---
 
 ### 07. Load Neurotransmitters and Make Putative Graphs
+
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/07-load-neurotransmitters-and-make-putative-graphs.ipynb)
 
 Builds putative synaptic graphs using neurotransmitter and receptor identity.
@@ -89,6 +129,7 @@ Builds putative synaptic graphs using neurotransmitter and receptor identity.
 ---
 
 ### 08. All Paths Between Neuron Pair
+
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/08-all-paths-between-neuron-pair.ipynb)
 
 Computes and visualizes all possible paths between selected neuron pairs.
@@ -96,6 +137,7 @@ Computes and visualizes all possible paths between selected neuron pairs.
 ---
 
 ### 09. Load Different Connectomes
+
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/09-load-different-connectomes.ipynb)
 
 Loads and compares multiple anatomical or functional connectomes.
@@ -103,6 +145,7 @@ Loads and compares multiple anatomical or functional connectomes.
 ---
 
 ### 10. Time Series and Correlations
+
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/10*-time-series-and-correlations.ipynb)
 
 Analyzes calcium imaging time series and computes neuron-neuron correlation matrices.
@@ -110,6 +153,7 @@ Analyzes calcium imaging time series and computes neuron-neuron correlation matr
 ---
 
 ### 11. Motif Search
+
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/11-motif-search.ipynb)
 
 Detects common topological motifs in the connectome using motif-finding tools.
@@ -117,6 +161,7 @@ Detects common topological motifs in the connectome using motif-finding tools.
 ---
 
 ### 12. Subnetwork Connectivity
+
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/sahilm89/CeDNe/main?filepath=examples/notebooks/12-subnetwork-connectivity.ipynb)
 
 Explores connectivity patterns in user-defined neuron subnetworks.

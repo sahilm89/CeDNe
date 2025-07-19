@@ -123,6 +123,27 @@ def foldByNeuronType(nn_old, exceptions=[], self_loops=True, data='clean'):
 #             nn_new.update_neurons()
 #     return nn_new 
 
+def foldLeftRight(nn_old, exceptions=[]):
+    """
+    This function performs a left-right folding operation on a neural network.
+    It takes the old neural network as input and produces a new neural network after the folding operation.
+    Parameters:
+    - nn_old: The original neural network to be folded dorsoventrally.
+    Returns:
+    - nn_new: The new neural network after the dorsoventral folding operation.
+    """
+    exceptions +=['AVL']
+    foldingDict = {}
+    for m in nn_old.neurons:
+        if m[-1] == 'L' and not m in exceptions:
+            n = m[:-1]+'R'
+            o = m[:-1]
+            if n in nn_old.neurons:
+                if o not in foldingDict:
+                    foldingDict[o] = [m,n]
+    nn_new = nn_old.fold_network(foldingDict)
+    return nn_new
+
 def foldDorsoVentral(nn_old):
     """
     This function performs a dorsoventral folding operation on a neural network.

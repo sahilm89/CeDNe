@@ -602,7 +602,13 @@ class NervousSystem(nx.MultiDiGraph):
 
     # def reassign_nodes(self):
     #     self.update_neurons()
-            
+    def adjacency(self, order=None):
+        """
+        Output the adjecency matrix for the network ordered by neurons
+        """
+        # nx.adjacency_matrix(self, nodelist = )
+        pass
+    
     def reassign_connections(self):
         """ 
         Reassign connections after folding based on the folding _ids and correcting connection names.
