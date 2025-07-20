@@ -38,10 +38,10 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
 
         ## Chemical synapses
         cook_chem = pd.read_excel(cook_connectome + input_file, sheet_name='male chemical', engine='openpyxl')
-        colnames = cook_chem.iloc[1][3:-1]
+        colnames = cook_chem.iloc[1, 3:-1].astype(str).tolist()
         labels = cook_chem.loc[2:383]['Unnamed: 2'].tolist()
 
-        ccl = cook_chem.iloc[2:,:2].ffill()
+        ccl = cook_chem.iloc[2:,:2].copy().ffill()
 
         list_1 = ccl.iloc[:,0].to_list() #.to_csv('temp_filled.csv', index=False)
         list_2 = ccl.iloc[:,1].to_list()
@@ -67,6 +67,11 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
         # cook_chem.ffill().to_csv('temp_filled.csv', index=False)
         
         cook_chem = cook_chem.drop(columns=cook_chem.columns[:3],index=cook_chem.index[:2])
+
+        cols_to_drop = cook_chem.columns[:3]
+        rows_to_drop = cook_chem.index[:2]
+        cook_chem = cook_chem.drop(columns=cols_to_drop, index=rows_to_drop)
+        cook_chem.reset_index(drop=True, inplace=True) #New addition
         #cols = ['/'.join(list(a)) for a in zip(l1_list, l2_list, colnames)]
         cook_chem = cook_chem.drop(columns=cook_chem.columns[-1],index=cook_chem.index[-1])
         cook_chem.columns = colnames
@@ -79,13 +84,14 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
 
         ## Gap junctions
         cook_gapjn = pd.read_excel(cook_connectome + input_file, sheet_name='male gap jn symmetric', engine='openpyxl')
-        colnames = cook_gapjn.iloc[1][3:-1]
+        colnames = cook_gapjn.iloc[1][3:-1].astype(str).tolist()
 
         row_labels = cook_gapjn.loc[2:383]['Unnamed: 2'].tolist()
 
         cook_gapjn = cook_gapjn.drop(columns=cook_gapjn.columns[:3],index=cook_gapjn.index[:2])
         #cols = ['/'.join(list(a)) for a in zip(l1_list, l2_list, colnames)]
         cook_gapjn = cook_gapjn.drop(columns=cook_gapjn.columns[-1],index=cook_gapjn.index[-1])
+        cook_chem.reset_index(drop=True, inplace=True) #New addition
         cook_gapjn.columns = colnames
         cols = cook_gapjn.columns.to_list()
         gapjn_adj = cook_gapjn.to_numpy()
