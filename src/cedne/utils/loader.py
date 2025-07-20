@@ -22,6 +22,7 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
     ''' Utility function to make a Worm based on import parameters.'''
     if import_parameters is None or (import_parameters['style'] == 'cook' and import_parameters['sex'] == 'hermaphrodite'):
         w = Worm(name)
+        w.citations.update({'cook_connectome':citations['cook_connectome']})
         nn = NervousSystem(w)
         build_nervous_system(nn, neuron_data=cell_list, \
                             chem_synapses=chemsyns, \
@@ -31,6 +32,7 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
                             gapjn_only=gapjn_only)
     elif (import_parameters['style'] == 'cook' and import_parameters['sex'] == 'male'):
         w = Worm(name)
+        w.citations.update({'cook_connectome':citations['cook_connectome']})
         nn = NervousSystem(w)
         input_file = 'SI 5 Connectome adjacency matrices, corrected July 2020.xlsx'
 
@@ -111,6 +113,7 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
             labels = [lab for lab in all_labels if not any(lab.startswith(k) for k in ['BWM-', 'CEPsh', 'GLR'])]
 
             w = Worm(name=name, stage=import_parameters['stage'])
+            w.citations.update({'witvliet_connectome':citations['witvliet_connectome']})
             nn = NervousSystem(w, network= '_'.join([import_parameters['style'],import_parameters['stage'], import_parameters['dataset_ind']]))
             nn.create_neurons(labels=labels)
             witvliet_input.rename(columns={'synapses': 'weight'}, inplace=True)
@@ -124,6 +127,7 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
 
 def makeFly(name = ''):
     f = Fly(name)
+    f.citations.update({'fly_wire': citations['fly_wire']})
     nn = NervousSystem(f)
 
     ## Neurons
@@ -287,6 +291,7 @@ def loadNeurotransmitters(nn, sex='Hermaphrodite'):
             for rec, lig in conn.receptors.items():
                 if lig in conn.ligands:
                     conn.putative_neurotrasmitter_receptors.append((lig, rec))
+    nn.worm.citations.update({'neurotransmitter_atlas':citations['neurotransmitter_atlas']})
 
 ## Neuropeptides tables
 
@@ -327,9 +332,10 @@ def loadNeuropeptides(w, neuropeps:str= 'all'):
                 print(nprc, model, models_dict[nprc])
                 nn_np = NervousSystem(w, network="{}".format(nprc))
                 nn_np.build_network(neuron_data=cell_list, adj=models_dict[nprc], label=nprc)
+                w.citations.update({'neuropeptide_atlas':citations['neuropeptide_atlas']})
             elif type(w)==NervousSystem:
                 w.setup_connections(adjacency=models_dict[nprc], connection_type=nprc)
-
+                w.worm.citations.update({'neuropeptide_atlas':citations['neuropeptide_atlas']})
 
 ## Load CENGEN tables
 thres_1 = DOWNLOAD_DIR + prefix_CENGEN + 'liberal_threshold1.csv'
@@ -462,6 +468,7 @@ def loadTranscripts(nn, threshold=4):
     th_i = [th1, th2, th3, th4]
     for n in nn.neurons:
         nn.neurons[n].set_property('transcript', th_i[threshold-1][cengen_neurons[n]])
+    nn.worm.citations.update({'cengen':citations['cengen']})
 
 def get_enriched_neurons(network, target_neurons, excluded_neurons=None, threshold=4):
     """
@@ -516,6 +523,7 @@ def loadGapJunctions(nn, threshold=4):
             #         if e[1].transcript[threshold][g]:
             #             n2.append(g)
             conn.set_property('putative_gapjn_subunits', set([(e1,e2) for e1 in n1 for e2 in n2]))
+    nn.worm.citations.update({'cengen':citations['cengen']})
 
 ## Synaptic weights
 def loadSynapticWeights(nn):
@@ -541,4 +549,5 @@ def loadSynapticWeights(nn):
                 nn.connections[sid].update_weight(np.nan)
         else:
             nn.connections[sid].update_weight(np.nan)
+    nn.worm.citations.update({'sig_prop_atlas':citations['sig_prop_atlas']})
     return wtMat

@@ -94,7 +94,8 @@ class NervousSystem(nx.MultiDiGraph):
 
     def build_network(self, neuron_data, adj, label):
         """
-        Make a network with the neurons
+        Make a network with the neurons.
+        
         Args:
             neurons: 
                 The file containing neuron information
@@ -165,6 +166,7 @@ class NervousSystem(nx.MultiDiGraph):
     def create_neurons_from(self, network, data=False):
         """ 
         Creates a set of Neuron objects based on the given network.
+        
         Args:
             network (Network): 
                 A Network object.
@@ -226,6 +228,7 @@ class NervousSystem(nx.MultiDiGraph):
     def create_connections_from(self, network, data=False):
         """
         Creates a set of Connection objects based on the given network.
+        
         Args:
             network (Network): 
                 A Network object.

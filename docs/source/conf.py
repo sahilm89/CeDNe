@@ -6,6 +6,11 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath("../../src"))
+
 project = 'CeDNe'
 copyright = '2024, Sahil Moza'
 author = 'Sahil Moza'
@@ -14,7 +19,11 @@ release = '0.1.0'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx.ext.autodoc', 'sphinx_rtd_theme']
+extensions = ['sphinx.ext.autodoc', 
+ 		"sphinx.ext.viewcode",
+		#'sphinx_rtd_theme'
+]
+
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']

@@ -18,6 +18,7 @@ class Animal:
         self.genotype = genotype
         self.networks = {}
         self.contexts = {}  # Dict[str, Context]
+        self.citations = {}
         self.active_context = None
         for key, value in kwargs.items():
             self.set_property(key, value)
@@ -91,6 +92,7 @@ class Animal:
     def set_active_context(self, name):
         """
         Set the active context by name.
+        
         Args:
             name (str): The name of the context to set as active.
         """

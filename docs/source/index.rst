@@ -10,7 +10,7 @@ Welcome to CeDNe's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-.. automodule:: cedne.cedne
+.. automodule:: cedne
    :members:
    :undoc-members:
    :show-inheritance:

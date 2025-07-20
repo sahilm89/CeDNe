@@ -12,12 +12,12 @@ repository = "https://github.com/sahilm89/cedne"
 packages = [{ include = "cedne",  from= "src"}]
 
 [tool.poetry.dependencies]
-python = ">=3.10,<=3.14.0"
+python = ">=3.11,<=3.14.0"
 networkx = "^3.2.1"
 matplotlib = "^3.9.0"
 numpy = "^1.26.4"
 scipy = "^1.13.1"
-pandas = "2.0.3"
+pandas = "2.2.2"
 ipykernel = "^6.29.4"
 textalloc = "^1.0.5"
 cmasher = "^1.8.0"
@@ -48,3 +48,8 @@ testpaths = ["tests"]
 pytest = "^8.2.2"
 nbval = "^0.10.0"  # if you're testing notebookscoverage = "^7.8.0"
 pytest-cov = "^6.1.1"
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "^7"
+pydata-sphinx-theme = "^0.16.1"
+myst-parser = "^4.0.1"

@@ -246,8 +246,8 @@ class ConnectionGroup:
         
         Args:
             weight (float): The new weight value or weight delta.
-            delta (bool, optional): If True, weight is added to current weights.
-                                  If False, weight replaces current weights.
+            delta (bool, optional): If True, weight is added to current weights. \
+                If False, weight replaces current weights.
         
         Raises:
             ValueError: If weight is not a numeric value.
