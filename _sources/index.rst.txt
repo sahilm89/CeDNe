@@ -15,7 +15,7 @@ Welcome to CeDNe's documentation!
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: cedne.utils
+.. automodule:: utils
    :members:
    :undoc-members:
    :show-inheritance:
