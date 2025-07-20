@@ -28,7 +28,9 @@ jobs:
         run: poetry install --with docs
 
       - name: Build Sphinx docs
-        run: poetry run sphinx-build docs/source docs/_build/html
+        run: |
+          poetry run sphinx-build docs/source docs/_build/html
+          echo "docs.cedne.org" > docs/_build/html/CNAME
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
