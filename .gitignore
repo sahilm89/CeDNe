@@ -41,6 +41,7 @@ MANIFEST
 *.log
 *.txt
 !.binder/requirements.txt
+!.binder/runtime.txt
 
 # Installer logs
 pip-log.txt
