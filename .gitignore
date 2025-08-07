@@ -128,6 +128,7 @@ docker-compose.yml
 
 # Future examples
 examples/notebooks/_future/
+examples/python/_future/
 
 ## Exceptions
 !data_sources/*.pkl

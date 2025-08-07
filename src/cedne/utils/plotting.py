@@ -728,6 +728,171 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
         plt.savefig(save)
     plt.show()
 
+def plot_position_oneside(nn, axis='AP-DV', highlight=None, booleanDictionary=None, title='', label='all', save=False, figsize=(20,3), limit=None):
+    """
+    # A function to plot the positions of neurons based on their coordinates and attributes.
+
+    # Parameters:
+    #     nn: NeuronNetwork object representing the neurons to be plotted.
+    #     axis: String, the orientation of the plot (default: 'AP-DV').
+    #     special: List of special neurons to highlight.
+    #     booleanDictionary: Dictionary mapping boolean values to colors.
+    #     title: String, the title of the plot.
+    #     save: Boolean, whether to save the plot as an image.
+
+    # Returns:
+    #     None
+    # """
+    pass
+    # if booleanDictionary is None:
+    #     active_color, passive_color = "#CC5500", "lightgrey"
+    #     booleanDictionary = {True: active_color, False: passive_color}
+
+    # coords = ['AP', 'DV', 'LR']
+    # nlabels = np.array([n for n in nn.neurons])
+    # pos = [[] for i in range(len(nlabels))]
+    # if highlight is None:
+    #     highlight = []
+    # elif isinstance(highlight, list):
+    #     if isinstance(highlight[0], str):
+    #         assert all([n in nn.neurons for n in highlight]), "Neuron(s) not found in the network."
+    #     elif isinstance(highlight[0], list):
+    #         assert all([n in nn.neurons for j in range(len(highlight)) for n in highlight[j]]), "Neuron(s) not found in the network."
+    #     else:
+    #         raise ValueError("Highlight must be a list of strings or a list of lists.")
+            
+    # for i,n in enumerate(nlabels):
+    #     if n in ['CANL']:
+    #         pos[i] = [510, 20, -1]
+    #     elif n in ['CANR']:
+    #         pos[i] = [490, 20, 1]
+    #     else:
+    #         for x in coords:
+    #             if x in nn.neurons[n].position: 
+    #                 pos[i].append(nn.neurons[n].position[x])
+    #             else:
+    #                 raise ValueError(f"Neuron {n} has no position in axis {x}.")
+    # pos = np.array(pos)
+
+    # if limit:
+    #     # limit should be a dict like {'AP': (0, 150)} or {'DV': (-50, 50), 'AP': (0, 200)}
+    #     mask = np.ones(len(pos), dtype=bool)
+    #     for coord, (low, high) in limit.items():
+    #         axis_idx = coords.index(coord)
+    #         mask &= (pos[:, axis_idx] >= low) & (pos[:, axis_idx] <= high)
+    #     # Filter positions and labels
+    #     pos = pos[mask]
+    #     nlabels = nlabels[mask]
+
+    # posDict = dict(zip(coords, pos.T))
+    # posDict['LR'] = -posDict['LR'] # flipping LR for plotting in the correct direction
+    # posDict['DV'] = -posDict['DV'] # flipping DV for plotting in the correct direction
+
+    # xax, yax = axis.split('-')
+    # if xax in coords:
+    #     x = posDict[xax]
+    # elif xax[::-1] in coords:
+    #     x = -posDict[xax[::-1]]
+    # else:
+    #     raise ValueError(f"Invalid axis: {xax}, use some combination of {coords}")
+
+    # if yax in coords:
+    #     y = posDict[yax]
+    # elif yax[::-1] in coords:
+    #     y = -posDict[yax[::-1]]
+    # else:
+    #     raise ValueError(f"Invalid axis: {yax}, use some combination of {coords}")
+    
+    # x = np.array(x)
+    # y = np.array(y)
+
+    # if isinstance(highlight[0], str):
+    #     f, ax = plt.subplots(figsize=figsize, dpi=300, layout='constrained')
+    #     plt.axis('off')
+    #     facecolors = np.array([booleanDictionary[n in highlight] for n in nlabels])
+    #     alphas = np.array([1 if n in highlight else 0.25 for n in nlabels])
+    #     boolList = np.array([n in highlight for n in nlabels])
+    #     ax.scatter(x[~boolList], y[~boolList], s=200, facecolor=facecolors[~boolList], edgecolor=facecolors[~boolList], alpha=alphas[~boolList], zorder=1)
+    #     ax.scatter(x[boolList], y[boolList], s=200, facecolor=facecolors[boolList], edgecolor=facecolors[boolList], alpha=alphas[boolList], zorder=2)
+    #     if label:
+    #         # Place all labels on an arc above the plot
+    #         n_highlight = np.sum(boolList)
+    #         if n_highlight > 0:
+    #             # Arc parameters
+    #             arc_radius = (max(x) - min(x)) * 0.6
+    #             arc_center_x = (max(x) + min(x)) / 2
+    #             arc_center_y = max(y) + (max(y) - min(y)) * 0.15
+    #             arc_theta = np.linspace(np.pi * 0.15, np.pi * 0.85, n_highlight)
+    #             arc_x = arc_center_x + arc_radius * np.cos(arc_theta)
+    #             arc_y = arc_center_y + arc_radius * np.sin(arc_theta)
+    #             # Draw lines and labels
+    #             for idx, nidx in enumerate(np.where(boolList)[0]):
+    #                 ax.plot([x[nidx], arc_x[idx]], [y[nidx], arc_y[idx]], color='gray', lw=1, alpha=0.7, zorder=0)
+    #                 ax.text(arc_x[idx], arc_y[idx], nlabels[nidx], fontsize=16, ha='center', va='bottom', rotation=0, zorder=10)
+    # elif isinstance(highlight[0], list):
+    #     buffer = 1.1
+    #     f,ax = plt.subplots( dpi=300, layout='constrained',figsize=figsize) #figsize=(2,0.3), dpi=300, layout='constrained'
+    #     plt.axis('off') 
+    #     plt.xlim(min(x)*buffer,max(x)*buffer)
+    #     plt.ylim(min(y)*buffer,max(y)*buffer)
+    #     # ax.set_aspect('equal')
+    #     trans=ax.transData.transform
+    #     trans2=f.transFigure.inverted().transform
+
+    #     facecolors = cmr.take_cmap_colors('cmr.tropical', len(highlight), cmap_range=(0.15, 0.85), return_fmt='hex')
+    #     color_dict = {n:[] for n in nlabels}
+    #     alpha_dict = {n:0.25 for n in nlabels}
+    #     boolList = np.array([False]*len(nlabels))
+    #     for i,n in enumerate(nlabels):
+    #         for j,hlc in enumerate(highlight):
+    #             if n in hlc:
+    #                 color_dict[n].append(facecolors[j])
+    #                 alpha_dict[n] = 1
+    #                 if label == 'all':
+    #                     boolList[i] = True
+    #                 elif label == 'left' and is_left_neuron(n):
+    #                     boolList[i] = True
+    #         if len(color_dict[n]) == 0:
+    #             color_dict[n].append("lightgrey")
+    #     piesize=0.3
+    #     if not label == 'none':
+    #         # if isinstance(label, int):
+    #         #     randnum = np.random.default_rng()
+    #         #     boolList = randnum.choice(boolList, size=label, replace=False)
+    #         ta.allocate_text(f,ax,x[boolList], y[boolList],
+    #                     nlabels[boolList],
+    #                     x_scatter=x[boolList], y_scatter=y[boolList],
+    #                     textsize='xx-large', linecolor='gray', avoid_label_lines_overlap=True)
+    #     # print(boolList, ~boolList, x[boolList])
+    #     # ax.scatter(x[~boolList], y[~boolList], s=200)
+    #     # ax.scatter(x[boolList], y[boolList], s=200)
+    #     for i,n in enumerate(nlabels):
+    #         xx,yy=trans((x[i],y[i])) # figure coordinates
+    #         xa,ya=trans2((xx,yy)) # axes coordinates
+    #         #plot_pie(n, (x[i], y[i]), a, color_dict, alpha_dict, piesize)
+    #         a = plt.axes([xa-piesize/2,ya-piesize/2, piesize, piesize])
+    #         a.set_aspect('equal')
+    #         plot_pie(n, (0,0), a, color_dict, alpha_dict, piesize=piesize)
+    #     #     ax.pie([1/len(color_dict[n])]*len(color_dict[n]), center = (x[i], y[i]), colors=color_dict[n], radius = piesize, counterclock=False, wedgeprops={'alpha': alpha_dict[n], 'zorder': len(color_dict[n])})
+
+
+    # #Add the legend to the plot
+    # legend_ax = f.add_axes([0.95, 0.1, 0.1, 0.1])
+    # # legend_ax.set_xlim(0, 1)
+    # # legend_ax.set_ylim(0, 1)
+    # legend_ax.set_xlabel(xax, fontsize="x-large")
+    # legend_ax.set_ylabel(yax, fontsize="x-large")
+    # legend_ax.set_xticks([])
+    # legend_ax.set_yticks([])
+    # legend_ax.set_aspect('equal')
+    # simpleaxis(legend_ax)
+    # ax.set_title(title, fontsize="xx-large")
+    # # f.draw_without_rendering()
+    # #ax.set_xlim((-0.9,-0.))
+    # if save:
+    #     plt.savefig(save)
+    # plt.show()
+
 def plot_pie(n, center, ax, color_dict, alpha_dict, pie_division = None, piesize=1): 
     # radius for pieplot size on a scatterplot
     if not pie_division:
@@ -886,8 +1051,6 @@ def plot_position_3D(nn, highlight=None, booleanDictionary=None, title='', label
     #             for n in ind["ind"]:
     #                 annot_bg[n].set_visible(False)
     #             f.canvas.draw_idle()
-
-    # f.canvas.mpl_connect("motion_notify_event", hover)
 
     if save:
         plt.savefig(save)
