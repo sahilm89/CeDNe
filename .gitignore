@@ -18,6 +18,7 @@ dist/
 data_sources/downloads/CENGEN
 data_sources/downloads/FlyWire
 data_sources/downloads/Atanas_2023
+!data_sources/downloads/Ripoll-Sanchez_2023/26012022_num_neuronID.txt
 eggs/
 .eggs/
 lib/
