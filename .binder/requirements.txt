@@ -111,3 +111,4 @@ wadler-lindig==0.1.6 ; python_full_version == "3.11.9"
 wcwidth==0.2.13 ; python_full_version == "3.11.9"
 webencodings==0.5.1 ; python_full_version == "3.11.9"
 jupyterlab
+-e .
