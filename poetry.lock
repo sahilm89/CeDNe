@@ -1123,9 +1123,15 @@ files = [
 [package.dependencies]
 jaxlib = "0.4.38"
 ml_dtypes = ">=0.4.0"
-numpy = ">=1.24"
+numpy = [
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
+    {version = ">=1.24", markers = "python_version < \"3.12\""},
+]
 opt_einsum = "*"
-scipy = ">=1.10"
+scipy = [
+    {version = ">=1.11.1", markers = "python_version >= \"3.12\""},
+    {version = ">=1.10"},
+]
 
 [package.extras]
 ci = ["jaxlib (==0.4.36)"]
@@ -1170,7 +1176,10 @@ files = [
 [package.dependencies]
 ml-dtypes = ">=0.2.0"
 numpy = ">=1.24"
-scipy = ">=1.10"
+scipy = [
+    {version = ">=1.11.1", markers = "python_version >= \"3.12\""},
+    {version = ">=1.10"},
+]
 
 [[package]]
 name = "jaxtyping"
@@ -1758,7 +1767,10 @@ files = [
 ]
 
 [package.dependencies]
-numpy = {version = ">=1.23.3", markers = "python_version >= \"3.11\""}
+numpy = [
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
+    {version = ">=1.23.3", markers = "python_version >= \"3.11\""},
+]
 
 [package.extras]
 dev = ["absl-py", "pyink", "pylint (>=2.6.0)", "pytest", "pytest-xdist"]
@@ -3822,5 +3834,5 @@ files = [
 
 [metadata]
 lock-version = "2.1"
-python-versions = "3.11.9"
-content-hash = "9f1207728abb8a1f0bcfd4abd54d2516a225e0af11c276b94ec0a63f97fe18de"
+python-versions = ">=3.11,<3.13"
+content-hash = "44d4642a8614ba894199a8047fba045432c03eb2fa7561d039dba5983d9fc594"
