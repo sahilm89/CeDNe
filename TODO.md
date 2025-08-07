@@ -9,6 +9,7 @@
 - [ ] !!! Add reading and writing to and from NWB format. Add that to the paper also.
 - [ ] !!! Write about csv/json integration.
 - [ ] !!! Add note section to each class. Add data_source (publication + location) from where data is taken in a note section.
+- [ ] !!! Redo the neuropeptide receptor connectivity. It has been redone in the git repo for the paper.
 
 ## New Classes
 

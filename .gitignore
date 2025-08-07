@@ -15,7 +15,9 @@ __pycache__/
 build/
 develop-eggs/
 dist/
-data_sources/downloads/
+data_sources/downloads/CENGEN
+data_sources/downloads/FlyWire
+data_sources/downloads/Atanas_2023
 eggs/
 .eggs/
 lib/
@@ -135,4 +137,3 @@ examples/python/_future/
 !data_sources/*.pkl
 !.assets/*.svg
 !.assets/*.png
-

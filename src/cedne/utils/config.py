@@ -39,6 +39,9 @@ lineage = DOWNLOAD_DIR + 'Worm_Atlas/Altun_lineage_corrected.xlsx'
 ## FlyWire
 fly_wire = DOWNLOAD_DIR + 'FlyWire/'
 
+## Atanas whole brain
+atanas_whole_brain = {'Control': DOWNLOAD_DIR + 'Atanas_2023/Control/', 'Heat': DOWNLOAD_DIR + 'Atanas_2023/Heat/'}
+
 #Download Links
 #CENGEN
 cengen_links = ['https://cengen.org/storage/021821_liberal_threshold1.csv',
@@ -56,8 +59,22 @@ flywire_links = ['https://codex.flywire.ai/api/download?data_product=consolidate
                  'https://codex.flywire.ai/api/download?data_product=neurons&data_version=783&dataset=fafb'
                  ]
 
+# Atanas et al
+atanas_links = {'Control' : ['2022-06-14-01.json', '2022-07-20-01.json', '2023-01-19-22.json',
+'2022-06-14-07.json', '2022-07-26-01.json',	'2023-01-23-01.json',
+'2022-06-14-13.json', '2022-08-02-01.json',	'2023-01-23-08.json',
+'2022-06-28-01.json', '2023-01-09-28.json',	'2023-01-23-15.json',
+'2022-06-28-07.json', '2023-01-17-01.json',	'2023-01-23-21.json',
+'2022-07-15-06.json', '2023-01-19-08.json',	'2023-03-07-01.json',
+'2022-07-15-12.json', '2023-01-19-15.json'], 'Heat' :  ['2022-12-21-06.json',	'2023-01-09-15.json',	'2023-01-16-15.json',
+'2023-01-05-01.json',	'2023-01-09-22.json',	'2023-01-16-22.json',
+'2023-01-05-18.json',	'2023-01-10-07.json',	'2023-01-17-07.json',
+'2023-01-06-01.json',	'2023-01-10-14.json',	'2023-01-17-14.json',
+'2023-01-06-08.json',	'2023-01-13-07.json',	'2023-01-18-01.json',
+'2023-01-06-15.json',	'2023-01-16-01.json', '2023-01-09-08.json',	'2023-01-16-08.json']}
+atanas_link_prefix = 'https://storage.googleapis.com/www-deploy-bucket/activity/atanas_kim_2023/'
 
-
+neuropeptide_atlas_links = ['01022024_neuropeptide_connectome_long_range_model.csv']
 ## Citation Tables
 citations = {
     'cengen': ['https://doi.org/10.1016/j.neuron.2018.07.042',

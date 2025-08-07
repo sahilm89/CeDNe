@@ -14,6 +14,7 @@ import pickle
 import numpy as np
 import pandas as pd
 import warnings
+import requests
 from cedne import Worm, Fly, NervousSystem
 from .config import *
 warnings.filterwarnings("ignore", category=UserWarning, module='openpyxl')
@@ -557,3 +558,56 @@ def loadSynapticWeights(nn):
             nn.connections[sid].update_weight(np.nan)
     nn.worm.citations.update({'sig_prop_atlas':citations['sig_prop_atlas']})
     return wtMat
+
+def download_datasets(key=''):
+    """
+    Downloads the required datasets from online sources.
+    """
+    if not key:
+        print("Nothing downloaded. Pass key")
+    elif key == 'cengen':
+        if not os.path.exists(DOWNLOAD_DIR + prefix_CENGEN):
+            os.makedirs(DOWNLOAD_DIR + prefix_CENGEN)
+        for link in cengen_links:
+            response = requests.get(link, stream=True)
+            response.raise_for_status()  # Raises HTTPError for bad responses
+            local_dir = DOWNLOAD_DIR + prefix_CENGEN
+            local_filename = link.split('021821_')[-1]
+            with open(local_dir + local_filename, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            print(f"Downloaded {local_filename} at {local_dir}")
+
+    # elif key == 'fly_wire':
+        # if not os.path.exists(fly_wire):
+        #     os.makedirs(fly_wire)
+        # for link in flywire_links:
+        #     response = requests.get(link, stream=True)
+        #     response.raise_for_status()  # Raises HTTPError for bad responses
+        #     local_dir = fly_wire
+
+        #     local_filename = link.split('data_product=')[-1].split('&data_version')[0] + '.csv.gz'
+        #     with open(local_dir + local_filename, "wb") as f:
+        #         for chunk in response.iter_content(chunk_size=8192):
+        #             f.write(chunk)
+        #     print(f"Downloaded {local_filename} at {local_dir}")
+
+    elif key == 'atanas_whole_brain':
+        for stim, location in atanas_whole_brain.items():
+            if not os.path.exists(location):
+                os.makedirs(location)
+
+            for suff in atanas_links[stim]:
+                link = atanas_link_prefix + suff
+                response = requests.get(link, stream=True)
+                response.raise_for_status()  # Raises HTTPError for bad responses
+                local_dir = location
+                local_filename = suff
+
+                with open(local_dir + local_filename, "wb") as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                print(f"Downloaded {local_filename} at {local_dir}")
+    # elif key == 'neuropeptide_atlas':
+    else:
+        print("Not yet supported. Download manually into the directory.")
