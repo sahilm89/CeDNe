@@ -25,6 +25,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import textalloc as ta
 
 import os
+from pathlib import Path
 from cedne import Neuron 
 from cedne import simulator
 
@@ -333,9 +334,9 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge
         if isinstance(save, str):
             plt.savefig(save)
         elif isinstance(save, bool):
-            if not os.path.exists(OUTPUT_DIR):
-                os.makedirs(OUTPUT_DIR)
-            plt.savefig(OUTPUT_DIR + '_'.join([n.name for n in shells[0]]) + '.svg')
+            OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+            outfile = OUTPUT_DIR / ( '_'.join([n.name for n in shells[0]]) + '.svg')
+            plt.savefig(outfile)
     #plt.show()
     if title:
         fig.suptitle(title)

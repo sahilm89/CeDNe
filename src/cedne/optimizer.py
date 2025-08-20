@@ -15,13 +15,14 @@ import jax.numpy as jnp
 import diffrax as dfx
 import equinox as eqx
 import os
+from pathlib import Path
 import cedne
 import getpass
 user = getpass.getuser()
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-CEDNE_ROOT = os.path.dirname(os.path.abspath(cedne.__file__))
-PACKAGE_ROOT = CEDNE_ROOT.split('src')[0]
+CEDNE_ROOT = Path(cedne.__file__).resolve().parent
+PACKAGE_ROOT = CEDNE_ROOT.parent  # assumes structure <root>/src/cedne
 
 LARGE_LOSS = 1e6
 
@@ -222,9 +223,9 @@ class OptunaOptimizer(Optimizer):
         
         if not storage:
             if dbtype == 'sqlite':
-                self.storage = f'sqlite:///{PACKAGE_ROOT}/tmp/{self.study_name}/cedne_optimization_optuna.db?timeout=30'
-                if not os.path.exists(f'{PACKAGE_ROOT}/tmp/{self.study_name}'):
-                    os.makedirs(f'{PACKAGE_ROOT}/tmp/{self.study_name}')
+                study_dir = PACKAGE_ROOT / 'tmp' / self.study_name
+                study_dir.mkdir(parents=True, exist_ok=True)
+                self.storage = f'sqlite:///{study_dir / "cedne_optimization_optuna.db"}?timeout=30'
             elif dbtype == 'postgresql':
                 storage_link = f"postgresql://{PGUSER}@/{PGDATABASE}?host={PGHOST}&port={PGPORT}"
                 # Configure engine options
@@ -242,10 +243,8 @@ class OptunaOptimizer(Optimizer):
         else:
             if dbtype == 'sqlite':
                 self.storage = storage
-                dbpath = self.storage.split('sqlite:///')[1]
-                dbdir = os.path.dirname(dbpath)
-                if not os.path.exists(dbdir):
-                    os.makedirs(dbdir)
+                dbpath = Path(self.storage.split('sqlite:///')[1])
+                dbpath.parent.mkdir(parents=True, exist_ok=True)
             elif dbtype == 'postgresql':
                 self.storage = storage
         print(f"Connecting to Optuna database: {self.storage}")

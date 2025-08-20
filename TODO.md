@@ -1,5 +1,9 @@
 # TODO
 
+## Compatability
+
+- [ ] !!! Windows and the forward slash... :\
+
 ## Cleanups
 
 - [ ] !!! Clean up the neurotransmitter table.

@@ -9,11 +9,10 @@ __author__ = "Sahil Moza"
 __date__ = "2025-04-06"
 __license__ = "MIT"
 
-import os
+import warnings
 import pickle
 import numpy as np
 import pandas as pd
-import warnings
 import requests
 from cedne import Worm, Fly, NervousSystem
 from .config import *
@@ -38,7 +37,7 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
         input_file = 'SI 5 Connectome adjacency matrices, corrected July 2020.xlsx'
 
         ## Chemical synapses
-        cook_chem = pd.read_excel(cook_connectome + input_file, sheet_name='male chemical', engine='openpyxl')
+        cook_chem = pd.read_excel(cook_connectome / input_file, sheet_name='male chemical', engine='openpyxl')
         colnames = cook_chem.iloc[1, 3:-1].astype(str).tolist()
         labels = cook_chem.loc[2:383]['Unnamed: 2'].tolist()
 
@@ -84,7 +83,7 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
             adj_chem[row] = {col1: {"weight": chem_adj[i,j]} for j,col1 in enumerate(cols) if col1 in labels}
 
         ## Gap junctions
-        cook_gapjn = pd.read_excel(cook_connectome + input_file, sheet_name='male gap jn symmetric', engine='openpyxl')
+        cook_gapjn = pd.read_excel(cook_connectome / input_file, sheet_name='male gap jn symmetric', engine='openpyxl')
         colnames = cook_gapjn.iloc[1][3:-1].astype(str).tolist()
 
         row_labels = cook_gapjn.loc[2:383]['Unnamed: 2'].tolist()
@@ -108,28 +107,27 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
             nn.setup_chemical_connections(adj_chem)
         if not chem_only:
             nn.setup_gap_junctions(adj_gapjn)
+    elif import_parameters['style'] == 'witvliet':
+        ind_dict = {'L1': [1,2,3,4], 'L2':[5] , 'L3':[6], 'adult':[7,8]}
+        assert import_parameters['stage'] in ['L1', 'L2', 'L3', 'adult'], "stage should be one of 'L1', 'L2', 'L3', 'adult'"
+        assert int(import_parameters['dataset_ind']) in range(1,len(ind_dict[import_parameters['stage']])+1) , f"Dataset id {int(import_parameters['dataset_ind'])} for stage {import_parameters['stage']} should be in {list(range(1,len(ind_dict[import_parameters['stage']])+1))}"
+
+        input_file = 'witvliet_2020_' + str(ind_dict[import_parameters['stage']][int(import_parameters['dataset_ind'])-1]) + ' ' + import_parameters['stage'] + '.xlsx'
+        witvliet_input = pd.read_excel(witvliet_connectome / input_file, engine='openpyxl')
+        all_labels = set(witvliet_input['pre']) | set(witvliet_input['post'])
+        labels = [lab for lab in all_labels if not any(lab.startswith(k) for k in ['BWM-', 'CEPsh', 'GLR'])]
+
+        w = Worm(name=name, stage=import_parameters['stage'])
+        w.citations.update({'witvliet_connectome':citations['witvliet_connectome']})
+        nn = NervousSystem(w, network='_'.join([import_parameters['style'], import_parameters['stage'], import_parameters['dataset_ind']]))
+        nn.create_neurons(labels=labels)
+        witvliet_input.rename(columns={'synapses': 'weight'}, inplace=True)
+        fin_input = witvliet_input[witvliet_input['pre'].isin(labels)]
+        fin_input = fin_input[fin_input['post'].isin(labels)]
+        for _, conn in fin_input.iterrows():
+            nn.setup_connections(conn, conn['type'], input_type='edge')
     else:
-        if import_parameters['style'] == 'witvliet':
-            ind_dict = {'L1': [1,2,3,4], 'L2':[5] , 'L3':[6], 'adult':[7,8]}
-            assert import_parameters['stage'] in ['L1', 'L2', 'L3', 'adult'], "stage should be one of 'L1', 'L2', 'L3', 'adult'"
-            assert int(import_parameters['dataset_ind']) in range(1,len(ind_dict[import_parameters['stage']])+1) , f"Dataset id {int(import_parameters['dataset_ind'])} for stage {import_parameters['stage']} should be in {list(range(1,len(ind_dict[import_parameters['stage']])+1))}"
-
-            input_file = 'witvliet_2020_' + str(ind_dict[import_parameters['stage']][int(import_parameters['dataset_ind'])-1]) + ' ' + import_parameters['stage'] + '.xlsx'
-            witvliet_input = pd.read_excel(witvliet_connectome + input_file, engine='openpyxl')
-            all_labels = set(witvliet_input['pre'])|set(witvliet_input['post'])
-            labels = [lab for lab in all_labels if not any(lab.startswith(k) for k in ['BWM-', 'CEPsh', 'GLR'])]
-
-            w = Worm(name=name, stage=import_parameters['stage'])
-            w.citations.update({'witvliet_connectome':citations['witvliet_connectome']})
-            nn = NervousSystem(w, network= '_'.join([import_parameters['style'],import_parameters['stage'], import_parameters['dataset_ind']]))
-            nn.create_neurons(labels=labels)
-            witvliet_input.rename(columns={'synapses': 'weight'}, inplace=True)
-            fin_input = witvliet_input[witvliet_input['pre'].isin(labels)]
-            fin_input = fin_input[fin_input['post'].isin(labels)]
-            for iter, conn in fin_input.iterrows():
-                nn.setup_connections(conn, conn['type'], input_type='edge')
-                
-
+        raise ValueError("Unsupported connectome style")
     return w
 
 def makeFly(name = ''):
@@ -140,7 +138,7 @@ def makeFly(name = ''):
     ## Neurons
 
     ### Names
-    names = pd.read_csv(fly_wire + 'names.csv')
+    names = pd.read_csv(fly_wire / 'names.csv')
     labs, neuron_types, lab_root_id = names['name'], names['group'], names['root_id']
     neuron_dict = {r:lab for r,lab in zip(lab_root_id, labs)}
     type_dict = {r:ntype for r,ntype in zip(lab_root_id, neuron_types)} 
@@ -150,12 +148,12 @@ def makeFly(name = ''):
     neuron_types = {neuron_dict[rid]:type_dict[rid] for rid in root_ids}
     
     ### Positions
-    coordinates = pd.read_csv(fly_wire + 'coordinates.csv')
+    coordinates = pd.read_csv(fly_wire / 'coordinates.csv')
     pos_root_id, position = coordinates['root_id'], coordinates['position']
     position_dict = {neuron_dict[rid]:np.array(list(filter(None, pos.split('[')[-1].split(']')[0].split(' '))), dtype=int) for rid,pos in zip(pos_root_id, position)}
     
     ### Stats
-    stats = pd.read_csv(fly_wire + 'cell_stats.csv')
+    stats = pd.read_csv(fly_wire / 'cell_stats.csv')
     stats_root_id, nlength, narea, nvolume = stats['root_id'], np.array(stats['length_nm'], dtype=int), np.array(stats['area_nm'], dtype=int), np.array(stats['size_nm'], dtype=int)
 
     length_dict = {neuron_dict[rid]:nlen for (rid,nlen) in zip(stats_root_id, nlength)}
@@ -165,7 +163,7 @@ def makeFly(name = ''):
     nn.create_neurons(labels, type=neuron_types, position=position_dict, length=length_dict, area=area_dict, volume=vol_dict)
 
     ## Connections
-    conns = pd.read_csv(fly_wire + 'connections_no_threshold.csv')
+    conns = pd.read_csv(fly_wire / 'connections_no_threshold.csv')
     pre_rid, post_rid, weights, nts = conns['pre_root_id'], conns['post_root_id'], conns['syn_count'], conns['nt_type']
 
     for pre, post, weight, nt in zip(pre_rid, post_rid, weights, nts ):
@@ -234,7 +232,7 @@ present = False
 
 def getLigands(neuron, sex='Hermaphrodite'):
     ''' Returns ligand for each neuron'''
-    lig_file = DOWNLOAD_DIR + prefix_NT +'ligand-table.xlsx'
+    lig_file = DOWNLOAD_DIR / prefix_NT / 'ligand-table.xlsx'
     if sex in ['Hermaphrodite', 'hermaphrodite']:
         ligtable = pd.read_excel(lig_file, sheet_name='Hermaphrodite, sorted by neuron', skiprows=7, engine='openpyxl')
     elif sex in ['Male', 'male']:
@@ -271,7 +269,7 @@ def getLigandsAndReceptors(npr, ligmap, col):
 def loadNeurotransmitters(nn, sex='Hermaphrodite'):
     ''' Loads Neurotransmitters into neurons using Wang et al 2024'''
     
-    npr_file = DOWNLOAD_DIR + prefix_NT + 'GenesExpressing-BATCH-thrs4_use.xlsx'
+    npr_file = DOWNLOAD_DIR / prefix_NT / 'GenesExpressing-BATCH-thrs4_use.xlsx'
     npr = pd.read_excel(npr_file, sheet_name='npr', true_values='TRUE', false_values='FALSE', engine='openpyxl')
     ligmap = pd.read_excel(npr_file, sheet_name='ligmap', engine='openpyxl')
 
@@ -306,10 +304,9 @@ def loadNeuropeptides(w, neuropeps:str= 'all'):
     ''' Loads Neuropeptides into neurons using Ripoll-Sanchez et al. 2023'''
 
     #csvfile = DOWNLOAD_DIR + prefix_NP + 'neuropeptideConnectome.txt'
-    lrm = DOWNLOAD_DIR +  prefix_NP + 'NPP_GPCR_networks_long_range_model_2.csv'
-    nid = DOWNLOAD_DIR +  prefix_NP + '26012022_num_neuronID.txt'
-    np_order = DOWNLOAD_DIR +  prefix_NP + '91-NPPGPCR networks'
-
+    lrm = DOWNLOAD_DIR /  prefix_NP / 'NPP_GPCR_networks_long_range_model_2.csv'
+    nid = DOWNLOAD_DIR /  prefix_NP / '26012022_num_neuronID.txt'
+    np_order = DOWNLOAD_DIR /  prefix_NP / '91-NPPGPCR networks'
     model = pd.read_csv(lrm,encoding= 'unicode_escape', header=None)
     neuronID = pd.read_csv(nid,encoding= 'unicode_escape', sep='\t', index_col=0, names=['NID', "Neuron"]) 
     neuropep_rec = pd.read_csv(np_order, sep=',', index_col=0)
@@ -345,10 +342,10 @@ def loadNeuropeptides(w, neuropeps:str= 'all'):
                 w.worm.citations.update({'neuropeptide_atlas':citations['neuropeptide_atlas']})
 
 ## Load CENGEN tables
-thres_1 = DOWNLOAD_DIR + prefix_CENGEN + 'liberal_threshold1.csv'
-thres_2 = DOWNLOAD_DIR + prefix_CENGEN + 'medium_threshold2.csv'
-thres_3 = DOWNLOAD_DIR + prefix_CENGEN + 'conservative_threshold3.csv'
-thres_4 = DOWNLOAD_DIR + prefix_CENGEN + 'stringent_threshold4.csv'
+thres_1 = DOWNLOAD_DIR / prefix_CENGEN / 'liberal_threshold1.csv'
+thres_2 = DOWNLOAD_DIR / prefix_CENGEN / 'medium_threshold2.csv'
+thres_3 = DOWNLOAD_DIR / prefix_CENGEN / 'conservative_threshold3.csv'
+thres_4 = DOWNLOAD_DIR / prefix_CENGEN / 'stringent_threshold4.csv'
 
 def returnThresholdDict(th1, th2, th3, th4, nnames, cengen_neurons):
     """
@@ -546,7 +543,7 @@ def loadSynapticWeights(nn):
         None
     """
     ## Load synaptic weights from Excel file
-    weightMatrix = DOWNLOAD_DIR + prefix_synaptic_weights + "41586_2023_6683_MOESM13_ESM.xls"
+    weightMatrix = DOWNLOAD_DIR / prefix_synaptic_weights / "41586_2023_6683_MOESM13_ESM.xls"
     wtMat = pd.read_excel(weightMatrix, index_col=0).T
     for sid in nn.connections.keys():
         if sid[0].name in wtMat:
@@ -566,14 +563,14 @@ def download_datasets(key=''):
     if not key:
         print("Nothing downloaded. Pass key")
     elif key == 'cengen':
-        if not os.path.exists(DOWNLOAD_DIR + prefix_CENGEN):
-            os.makedirs(DOWNLOAD_DIR + prefix_CENGEN)
+        cengen_dir = (DOWNLOAD_DIR / prefix_CENGEN).resolve()
+        cengen_dir.mkdir(parents=True, exist_ok=True)
         for link in cengen_links:
             response = requests.get(link, stream=True)
             response.raise_for_status()  # Raises HTTPError for bad responses
-            local_dir = DOWNLOAD_DIR + prefix_CENGEN
+            local_dir = cengen_dir
             local_filename = link.split('021821_')[-1]
-            with open(local_dir + local_filename, "wb") as f:
+            with open(local_dir / local_filename, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
             print(f"Downloaded {local_filename} at {local_dir}")
@@ -594,8 +591,7 @@ def download_datasets(key=''):
 
     elif key == 'atanas_whole_brain':
         for stim, location in atanas_whole_brain.items():
-            if not os.path.exists(location):
-                os.makedirs(location)
+            location.mkdir(parents=True, exist_ok=True)
 
             for suff in atanas_links[stim]:
                 link = atanas_link_prefix + suff
@@ -604,7 +600,7 @@ def download_datasets(key=''):
                 local_dir = location
                 local_filename = suff
 
-                with open(local_dir + local_filename, "wb") as f:
+                with open(local_dir / local_filename, "wb") as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         f.write(chunk)
                 print(f"Downloaded {local_filename} at {local_dir}")
