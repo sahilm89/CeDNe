@@ -892,6 +892,30 @@ def load_atanas(condition='Control', max_files=None, network=None):
             source_file=json_path.name,
         )
 
+        # Extract Behavior if present
+        behavior = None
+        behavior_keys = ['velocity', 'angular_velocity', 'head_curvature', 'body_curvature', 'pumping']
+        found_behavior = {k: data[k] for k in behavior_keys if k in data and isinstance(data[k], list)}
+        
+        if found_behavior:
+            from cedne.core.behavior import Behavior
+            behavior = Behavior(worm=w)
+            behavior.metadata['source_file'] = json_path.name
+            # Identify timepoints for timestamps
+            temp_num_tp = 0
+            if isinstance(trace_array, dict) and trace_array:
+                temp_num_tp = len(next(iter(trace_array.values())))
+            elif isinstance(trace_array, list) and trace_array:
+                temp_num_tp = len(trace_array[0])
+            
+            ts = np.arange(temp_num_tp) * (float(data.get('avg_timestep', 0.01)) * 60.0)
+            for k, vals in found_behavior.items():
+                if len(vals) == temp_num_tp:
+                    behavior.add_variable(k, np.array(vals, dtype=np.float64), timestamps=ts)
+            
+            # Link behavior to session
+            session.behavior = behavior
+
         # Assign traces to matching neurons
         trace_items = []
         if isinstance(trace_array, dict):
@@ -960,6 +984,10 @@ def load_atanas(condition='Control', max_files=None, network=None):
                     'dataset': 'atanas_whole_brain',
                     'sampling_rate': 1.0 / (float(data.get('avg_timestep', 0.01)) * 60.0)
                 })
+                # Link behavior to trial as well
+                if behavior:
+                    trial.behavior = behavior
+                
                 session.add_trial(trial)
                 neurons_loaded.add(matched_name)
 

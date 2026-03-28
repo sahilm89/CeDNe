@@ -28,6 +28,9 @@ from .core import (
 # Utility layer (plotting, analysis, loaders)
 from . import utils
 
+# Analysis module (state space, dynamical models)
+from . import analysis
+
 __all__ = [
     # Core models
     "Animal", "Worm", "Fly",
@@ -45,5 +48,8 @@ __all__ = [
     "logger",
 
     # Utilities (as a namespace)
-    "utils"
+    "utils",
+
+    # Analysis
+    "analysis",
 ]

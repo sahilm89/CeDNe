@@ -57,12 +57,14 @@ class Trial:
         self.i = trialnum
         self.discard: List[int] = []
         self._data: Optional[NDArray] = None
+        self.behavior = None  # Optional back-reference to Behavior object
         self.metadata: Dict[str, Any] = {
             'trial_number': trialnum,
             'neuron_id': id(neuron),
             'sampling_rate': F_SAMPLE,
             'processing_history': []
         }
+
 
     @property
     def recording(self) -> NDArray:

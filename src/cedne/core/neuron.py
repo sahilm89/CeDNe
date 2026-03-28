@@ -133,6 +133,9 @@ class Neuron(Cell):
                          3: 'Ca_time_to_peak', 4: 'Ca_area_to_peak',
                          5: 'Ca_min', 6: 'Ca_onset', 7: 'positive_area', 8: 'positive_time'})
         
+        # Loadings from dimensionality reduction (SVD/PCA/NMF)
+        # e.g. {"SVD_PC1": 0.45, "SVD_PC2": -0.12, "SVD_PC3": 0.03}
+        self.loadings = kwargs.pop('loadings', {})
         
         # self.presynapse = presynapse or []
         # self.postsynapse = postsynapse or {}
