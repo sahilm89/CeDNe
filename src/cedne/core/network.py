@@ -65,6 +65,8 @@ class NervousSystem(nx.MultiDiGraph):
             # dictionary of all neurons in the nervous system
         self.connections = ConnectionGroup(self, group_name='all_connections') \
               # dictionary of all connections in the nervous system
+        
+        self.visualization_metadata = {}
 
         self._filtered_nodes = set()
         self._filtered_edges = set()
@@ -240,13 +242,13 @@ class NervousSystem(nx.MultiDiGraph):
         if not isinstance(network, NervousSystem):
             raise TypeError("The network object must be a NervousSystem object")
         
-        for u,v,k,data in network.edges(keys=True, data=True):
+        for u,v,k,edge_data in network.edges(keys=True, data=True):
             n1 = self.neurons[u.name]
             n2 = self.neurons[v.name]
             if not data:
                 self.connections.update({(n1,n2,k):Connection(n1, n2, k)})
             else:
-                self.connections.update({(n1,n2,k):Connection(n1, n2, k, **data)})
+                self.connections.update({(n1,n2,k):Connection(n1, n2, k, **edge_data)})
 
     def update_neurons(self):
         """
@@ -463,8 +465,8 @@ class NervousSystem(nx.MultiDiGraph):
                 new_connections = [graph_copy.connections[key]._id for key in new_connections]
                 subnet = graph_copy.edge_subgraph(new_connections) # That will put it through custom copy again.
                 subgraph = NervousSystem(self.worm, network=name)
-                subgraph.create_neurons_from(subnet)
-                subgraph.create_connections_from(subnet)
+                subgraph.create_neurons_from(subnet, data=data)
+                subgraph.create_connections_from(subnet, data=data)
                 # subgraph.connections = {key: value for key, value in graph_copy.connections.items()\
                     #  if key in new_connections}
             else:
@@ -847,11 +849,13 @@ class NervousSystem(nx.MultiDiGraph):
             deep_copy = NervousSystem(self.worm, network=name or self.name + "_copy")
             deep_copy.create_neurons_from(self, data=True)
             deep_copy.create_connections_from(self, data=True)
+            deep_copy.visualization_metadata = copy.deepcopy(self.visualization_metadata)
             return deep_copy
         elif copy_type == 'deep_without_data':
             deep_copy = NervousSystem(self.worm, network=name or self.name + "_copy")
             deep_copy.create_neurons_from(self, data=False)
             deep_copy.create_connections_from(self, data=False)
+            deep_copy.visualization_metadata = copy.deepcopy(self.visualization_metadata)
             return deep_copy
         else:
             raise ValueError("copy_type must be 'deep', 'shallow'")
@@ -886,6 +890,18 @@ class NervousSystem(nx.MultiDiGraph):
             members = {edge:(subgraph_inverse[edge[0]], subgraph_inverse[edge[1]]) for edge in motif.edges}
             motif_graphs.append(members)
         return motif_graphs
+    
+    def shortest_path(self, source, target, weight=None, method='dijkstra'):
+        """
+        Finds a single shortest path between two neurons in the network.
+        """
+        return nx.shortest_path(self, source, target, weight=weight, method=method)
+
+    def shortest_paths(self, source, target, weight=None, method='dijkstra'):
+        """
+        Finds all shortest paths between two neurons in the network.
+        """
+        return nx.all_shortest_paths(self, source, target, weight=weight, method=method)
 
     def export_graph(self, path, fmt= 'dot'):
         """

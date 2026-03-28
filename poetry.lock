@@ -3660,19 +3660,20 @@ scipy = "*"
 
 [[package]]
 name = "textalloc"
-version = "1.1.8"
+version = "1.2.1"
 description = "Efficient Text Allocation in matplotlib using NumPy Broadcasting"
 optional = false
 python-versions = ">=3.6"
 groups = ["main"]
 files = [
-    {file = "textalloc-1.1.8-py3-none-any.whl", hash = "sha256:f155c0efe6e216bd55902968200b07b86a74e0821b165c899748770b40850bf4"},
-    {file = "textalloc-1.1.8.tar.gz", hash = "sha256:bb968559a10a67671aba32b468fbc181983a127d19cf6ecbb6152fcd41f71512"},
+    {file = "textalloc-1.2.1-py3-none-any.whl", hash = "sha256:8dda88a151ded1531fde0660051254647a3df2a764ffc7e7bafbd44425e49f55"},
+    {file = "textalloc-1.2.1.tar.gz", hash = "sha256:297ab2bcc249521ce9a88c44a16092c040b1e53ad017f745cbd5c9a05521fb9e"},
 ]
 
 [package.dependencies]
 matplotlib = "*"
 numpy = "*"
+packaging = "*"
 tqdm = {version = "*", markers = "python_version > \"3.6\""}
 
 [[package]]
@@ -3904,4 +3905,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.13"
-content-hash = "92fb1a072c847226034c14cdf66d85248c87d76bda6386c362a01c979b152b1b"
+content-hash = "0f58dddcb0e7523fea1c2072da68a849eb71e7b1aba462c3981a493429f67d89"

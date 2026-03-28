@@ -21,6 +21,7 @@ from .connection import (
 
 # Experimental trial recordings and features
 from .recordings import Trial, StimResponse
+from .session import Session
 
 # Utilities and constants
 from .config import F_SAMPLE, RANDOM_SEED, RECURSION_LIMIT
@@ -44,7 +45,7 @@ __all__ = [
     "ConnectionGroup", "Path",
     
     # Recordings
-    "Trial", "StimResponse",
+    "Trial", "StimResponse", "Session",
     
     # Graph mapping
     "GraphMap",

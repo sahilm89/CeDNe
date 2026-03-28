@@ -1,6 +1,6 @@
 # Installation Guide for CeDNe
 
-This guide provides step-by-step instructions for installing and setting up CeDNe, a Python-based framework for modeling and analyzing the *C. elegans* nervous system.
+This guide provides step-by-step instructions for installing and setting up CeDNe, a Python-based framework for modeling and analyzing the nervous system.
 
 ---
 

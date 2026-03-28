@@ -2,9 +2,9 @@
   <img src=".assets/cedne_logo.svg" width="300"/>
 </p>
 
-# CeDNe (pronounced "Sid-nee")
+# CeDNe (pronounced "Sydney")
 
-**CeDNe** is a modular, extensible Python library for multi-omic integration and systems-level modeling of the *C. elegans* nervous system. It enables researchers to **represent, combine, analyze, and simulate complex neuronal data** using a flexible, graph-based object model.
+**CeDNe** (Connectome-embedded Dynamical Networks) is a modular, extensible Python library for multi-omic integration and systems-level modeling. It enables researchers to **represent, combine, analyze, and simulate complex neuronal data** using a flexible, graph-based object model.
 
 Built on top of [NetworkX](https://networkx.org/), CeDNe allows intuitive access to neurons, connectomes, gene expression data, neurotransmitter systems, neuropeptide signaling, and calcium imaging activity — all structured in one coherent framework. This design supports both **high-level exploratory workflows** and **low-level modeling and simulation pipelines**.
 
@@ -23,10 +23,12 @@ Built on top of [NetworkX](https://networkx.org/), CeDNe allows intuitive access
 
 ## Why Use CeDNe?
 
-- Designed specifically for *C. elegans* neuroscience
+- Designed for multi-modal data integration and analysis
 - Combines object-oriented structure with flexible graph analytics
 - Easy integration into existing Python pipelines
-- Modular API with support for advanced users, but approachable for beginners
+- Modular API with support for advanced users
+- Extensible to several organisms
+- Web interface for data exploration and analysis
 
 ---
 
@@ -60,8 +62,7 @@ poetry shell
 ```
 
 For more details see [INSTALL.md](INSTALL.md)
-
----
+You may have to install a [plugin](https://github.com/python-poetry/poetry-plugin-shell) now.
 
 ## Getting Started
 

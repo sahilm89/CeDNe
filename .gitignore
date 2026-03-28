@@ -18,6 +18,8 @@ dist/
 data_sources/downloads/CENGEN
 data_sources/downloads/FlyWire
 data_sources/downloads/Atanas_2023
+data_sources/downloads/Winding_2023
+data_sources/downloads/Veraszto_2025
 eggs/
 .eggs/
 lib/
@@ -132,9 +134,10 @@ docker-compose.yml
 # Future examples
 examples/notebooks/_future/
 examples/python/_future/
-
+examples/*.py
+examples/*.csv
+examples/fits/
 ## Exceptions
 !data_sources/*.pkl
 !.assets/*.svg
 !.assets/*.png
-!data_sources/downloads/Ripoll-Sanchez_2023/26012022_num_neuronID.txt

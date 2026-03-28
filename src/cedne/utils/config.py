@@ -41,6 +41,12 @@ atanas_whole_brain = {
     'Heat': DOWNLOAD_DIR / 'Atanas_2023' / 'Heat'
 }
 
+# Winding connectome - Fly Larva Instar-1
+winding_connectome = DOWNLOAD_DIR / 'Winding_2023'
+
+# Ciona connectome
+ciona_connectome = DOWNLOAD_DIR / 'Ryan_2016'
+
 #Download Links
 #CENGEN
 cengen_links = ['https://cengen.org/storage/021821_liberal_threshold1.csv',
@@ -74,6 +80,7 @@ atanas_links = {'Control' : ['2022-06-14-01.json', '2022-07-20-01.json', '2023-0
 atanas_link_prefix = 'https://storage.googleapis.com/www-deploy-bucket/activity/atanas_kim_2023/'
 
 neuropeptide_atlas_links = ['01022024_neuropeptide_connectome_long_range_model.csv']
+
 ## Citation Tables
 citations = {
     'cengen': ['https://doi.org/10.1016/j.neuron.2018.07.042',
@@ -96,5 +103,7 @@ citations = {
     'neurotransmitter_atlas': ['https://doi.org/10.7554/eLife.95402.3'],
     'atanas_whole_brain': ['https://doi.org/10.1016/j.cell.2023.07.035'],
     'altun_neurotrasmitters_receptors': ['https://doi.org/10.3908/wormatlas.5.202'],
-    'lineage': 'https://doi.org/10.1016/0012-1606(77)90158-0'
+    'worm_lineage': ['https://doi.org/10.1016/0012-1606(77)90158-0'],
+    'winding_connectome': ['https://doi.org/10.1126/science.add9330'], 
+    'ciona_connectome': ['https://doi.org/10.7554/eLife.16962']
     }

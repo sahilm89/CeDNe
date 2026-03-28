@@ -128,14 +128,15 @@ class Neuron(Cell):
         # self.out_connections = {}
         
         # self.network.add_node(self, type=self.type, category=self.category, modality=self.modality)
-        self.trial = {}
-        self.features = {0: 'Ca_max', 1: 'Ca_area', 2: 'Ca_avg',
+        self.trial = kwargs.pop('trial', {})
+        self.features = kwargs.pop('features', {0: 'Ca_max', 1: 'Ca_area', 2: 'Ca_avg',
                          3: 'Ca_time_to_peak', 4: 'Ca_area_to_peak',
-                         5: 'Ca_min', 6: 'Ca_onset', 7: 'positive_area', 8: 'positive_time'}
+                         5: 'Ca_min', 6: 'Ca_onset', 7: 'positive_area', 8: 'positive_time'})
         
         
         # self.presynapse = presynapse or []
         # self.postsynapse = postsynapse or {}
+        self.spatial_mask = kwargs.pop('spatial_mask', None)
         #self.cable_length = kwargs.pop('cable_length', 1)
         
 
@@ -180,6 +181,8 @@ class Neuron(Cell):
         """
         
         self.trial[trial_num] = Trial(self, trial_num)
+        # B4: Sync to node attributes so **data works in subnetwork/copy
+        nx.set_node_attributes(self.network, {self: {'trial': self.trial}})
         return self.trial[trial_num]
     
     def remove_trial(self, trial_num):
@@ -528,3 +531,67 @@ class NeuronGroup:
             List of neurons with matching property value.
         """
         return [n for n in self.neurons.values() if n.get_property(key) == value]
+
+    # ---- Set operations ----
+
+    def union(self, other: 'NeuronGroup', group_name: str = None) -> 'NeuronGroup':
+        """Return a new NeuronGroup containing neurons from both groups.
+
+        Args:
+            other: Another NeuronGroup to union with.
+            group_name: Optional name for the resulting group.
+
+        Returns:
+            A new NeuronGroup with the combined members.
+        """
+        assert isinstance(other, NeuronGroup), "Operand must be a NeuronGroup"
+        assert self.network is other.network, "Both groups must belong to the same network"
+        merged = {**self.neurons, **other.neurons}
+        name = group_name or f"{self.group_name}_union_{other.group_name}"
+        return NeuronGroup(self.network, members=list(merged.values()), group_name=name)
+
+    def intersection(self, other: 'NeuronGroup', group_name: str = None) -> 'NeuronGroup':
+        """Return a new NeuronGroup containing only neurons present in both groups.
+
+        Args:
+            other: Another NeuronGroup to intersect with.
+            group_name: Optional name for the resulting group.
+
+        Returns:
+            A new NeuronGroup with the shared members.
+        """
+        assert isinstance(other, NeuronGroup), "Operand must be a NeuronGroup"
+        assert self.network is other.network, "Both groups must belong to the same network"
+        common_keys = set(self.neurons.keys()) & set(other.neurons.keys())
+        members = [self.neurons[k] for k in common_keys]
+        name = group_name or f"{self.group_name}_intersect_{other.group_name}"
+        return NeuronGroup(self.network, members=members, group_name=name)
+
+    def difference(self, other: 'NeuronGroup', group_name: str = None) -> 'NeuronGroup':
+        """Return a new NeuronGroup containing neurons in self but not in other.
+
+        Args:
+            other: Another NeuronGroup to subtract.
+            group_name: Optional name for the resulting group.
+
+        Returns:
+            A new NeuronGroup with the difference members.
+        """
+        assert isinstance(other, NeuronGroup), "Operand must be a NeuronGroup"
+        assert self.network is other.network, "Both groups must belong to the same network"
+        diff_keys = set(self.neurons.keys()) - set(other.neurons.keys())
+        members = [self.neurons[k] for k in diff_keys]
+        name = group_name or f"{self.group_name}_diff_{other.group_name}"
+        return NeuronGroup(self.network, members=members, group_name=name)
+
+    def __or__(self, other: 'NeuronGroup') -> 'NeuronGroup':
+        """Operator ``|`` — union."""
+        return self.union(other)
+
+    def __and__(self, other: 'NeuronGroup') -> 'NeuronGroup':
+        """Operator ``&`` — intersection."""
+        return self.intersection(other)
+
+    def __sub__(self, other: 'NeuronGroup') -> 'NeuronGroup':
+        """Operator ``-`` — difference."""
+        return self.difference(other)

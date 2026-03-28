@@ -253,8 +253,14 @@ def return_triads():
     for t in triad_graphs:
         triad_graphs[t] = nx.relabel_nodes(triad_graphs[t], mapping={'a':1, 'b':2, 'c':3}, copy=True)
     return triad_graphs
-        
-def randomize_graph(G, seed=None, mode='edge-swap', multiplier=None, edge_subgroups=None, data=True):
+
+def randomize_graph(
+        G, 
+        seed=None, 
+        mode='edge-swap', 
+        multiplier=None, 
+        edge_subgroups=None, 
+        data=True):
     """ Randomizes a directed graph using specified methods. Also randmize within graph subgroups.
     Parameters:
     - G: The directed graph to be randomized.
@@ -289,11 +295,15 @@ def randomize_graph(G, seed=None, mode='edge-swap', multiplier=None, edge_subgro
             subgraph = G.subnetwork(connections=subgroup, data=data)
             if len(subgraph.edges) > 0:
                 if mode == 'edge-swap':
+                    if len(subgraph) < 4 or len(subgraph.edges) < 3:
+                        # Cannot randomize very small subgraphs while preserving degrees 
+                        # using the double-edge swap method.
+                        continue
                     multiplier = int(np.log(len(subgraph.edges)))
                     nswap = int(multiplier*len(subgraph.edges))
                     try:
                         nx.directed_edge_swap(subgraph, nswap=nswap, max_tries=nswap * 100, seed=seed)
-                    except nx.NetworkXAlgorithmError:
+                    except (nx.NetworkXAlgorithmError, nx.NetworkXError):
                         fallback_nswap = int(len(subgraph.edges) * 0.01)  # or some other conservative estimate
                         print(f"Retrying with fallback nswap={fallback_nswap}")
                         try:

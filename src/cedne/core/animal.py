@@ -20,20 +20,21 @@ class Animal:
         self.contexts = {}  # Dict[str, Context]
         self.citations = {}
         self.active_context = None
+        self.active_network = None
         for key, value in kwargs.items():
             self.set_property(key, value)
 
 
-    def save(self, file_path, file_format='pickle'):
+    def save(self, file_path, file_format='cedne'):
         """
         Saves the Organism object to a pickle file at the specified file path.
 
         Args:
             file_path (str): The path to the pickle file.
         """
-        if file_format == 'pickle':
-            if not file_path.endswith('.pkl'):
-                file_path += '.pkl'
+        if file_format == 'cedne':
+            if not file_path.endswith('.cedne'):
+                file_path += '.cedne'
             with open(file_path, 'wb') as pickle_file:
                 pickle.dump(self, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
         elif file_format == 'full':

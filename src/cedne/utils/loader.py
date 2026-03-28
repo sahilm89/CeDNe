@@ -9,12 +9,16 @@ __author__ = "Sahil Moza"
 __date__ = "2025-04-06"
 __license__ = "MIT"
 
+from calendar import c
 import warnings
 import pickle
 import numpy as np
 import pandas as pd
 import requests
 from cedne import Worm, Fly, NervousSystem
+from cedne.core import Neuron, Behavior, Session
+from cedne.core.context import Context, ExperimentalContext
+from cedne.core.animal import Animal
 from .config import *
 warnings.filterwarnings("ignore", category=UserWarning, module='openpyxl')
 
@@ -130,47 +134,98 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
         raise ValueError("Unsupported connectome style")
     return w
 
-def makeFly(name = ''):
-    f = Fly(name)
-    f.citations.update({'fly_wire': citations['fly_wire']})
-    nn = NervousSystem(f)
+def makeFly(name = '', import_parameters=None):
+    if import_parameters is not None and import_parameters['style'] == 'fly_wire':
+        f = Fly(name)
+        f.citations.update({'fly_wire': citations['fly_wire']})
+        nn = NervousSystem(f)
+
+        ## Neurons
+
+        ### Names
+        names = pd.read_csv(fly_wire / 'names.csv')
+        labs, neuron_types, lab_root_id = names['name'], names['group'], names['root_id']
+        neuron_dict = {r:lab for r,lab in zip(lab_root_id, labs)}
+        type_dict = {r:ntype for r,ntype in zip(lab_root_id, neuron_types)} 
+        
+        root_ids = sorted(lab_root_id)
+        labels = [neuron_dict[rid] for rid in root_ids]
+        neuron_types = {neuron_dict[rid]:type_dict[rid] for rid in root_ids}
+        
+        ### Positions
+        coordinates = pd.read_csv(fly_wire / 'coordinates.csv')
+        pos_root_id, position = coordinates['root_id'], coordinates['position']
+        position_dict = {neuron_dict[rid]:np.array(list(filter(None, pos.split('[')[-1].split(']')[0].split(' '))), dtype=int) for rid,pos in zip(pos_root_id, position)}
+        
+        ### Stats
+        stats = pd.read_csv(fly_wire / 'cell_stats.csv')
+        stats_root_id, nlength, narea, nvolume = stats['root_id'], np.array(stats['length_nm'], dtype=int), np.array(stats['area_nm'], dtype=int), np.array(stats['size_nm'], dtype=int)
+
+        length_dict = {neuron_dict[rid]:nlen for (rid,nlen) in zip(stats_root_id, nlength)}
+        area_dict = {neuron_dict[rid]:nare for (rid,nare) in zip(stats_root_id, narea)}
+        vol_dict = {neuron_dict[rid]:nvol for (rid,nvol) in zip(stats_root_id, nvolume)}
+
+        nn.create_neurons(labels, type=neuron_types, position=position_dict, length=length_dict, area=area_dict, volume=vol_dict)
+
+        ## Connections
+        conns = pd.read_csv(fly_wire / 'connections_no_threshold.csv')
+        pre_rid, post_rid, weights, nts = conns['pre_root_id'], conns['post_root_id'], conns['syn_count'], conns['nt_type']
+
+        for pre, post, weight, nt in zip(pre_rid, post_rid, weights, nts ):
+            adjacency = {'pre':neuron_dict[pre], 'post':neuron_dict[post], 'weight':weight}
+            neurotransmitter = {'neurotransmitter':nt}
+            nn.setup_connections(adjacency, connection_type='chemical-synapse', input_type='edge', neurotransmitter=neurotransmitter)
+    
+    elif import_parameters['style'] == 'Winding_2023':
+        f = Fly(name, stage='Larva Instar-1')
+        f.citations.update({'winding_connectome': citations['winding_connectome']})
+        nn = NervousSystem(f)
+
+        names = pd.read_csv(winding_connectome/ 'annotations.csv')
+        base_neuron_names = names['left_id'].tolist() + names['right_id'].tolist()
+        base_neuron_type = names['celltype'].tolist() + names['celltype'].tolist()
+
+        numNeurons = len(base_neuron_names)
+        neuron_types = {}
+        for j in range(numNeurons):
+            if base_neuron_names[j] != 'no pair':
+                neuron_types[str(base_neuron_names[j])] = str(base_neuron_type[j])
+
+        conns = pd.read_csv(winding_connectome/ 'all-all_connectivity_matrix.csv', index_col= 0)
+
+        neuron_names = [str(n) for n in conns.index]
+        nn.create_neurons(neuron_names, neuron_type=[neuron_types[nname] if nname in neuron_types else 'unannotated' for nname in neuron_names])
+        
+        for pre in conns.index:
+            for post in conns.columns:
+                weight = conns.loc[pre, post]
+                if weight > 0:
+                    adjacency = {'pre': str(pre), 'post': str(post), 'weight': float(weight)}
+                    nn.setup_connections(adjacency, connection_type='chemical-synapse', input_type='edge')
+
+    return f
+
+def make_ciona():
+    a = Animal(name='Ciona intestinalis', species='Ciona intestinalis', common_name='sea squirt', phylum='Chordata', clade='Tunicata')
+    a.citations.update({'ciona_connectome': citations['ciona_connectome']})
+    nn = NervousSystem(a)
+    names = pd.read_csv(ciona_connectome / 'nodes.csv')
+    conns = pd.read_csv(ciona_connectome / 'edges.csv')
 
     ## Neurons
-
-    ### Names
-    names = pd.read_csv(fly_wire / 'names.csv')
-    labs, neuron_types, lab_root_id = names['name'], names['group'], names['root_id']
-    neuron_dict = {r:lab for r,lab in zip(lab_root_id, labs)}
-    type_dict = {r:ntype for r,ntype in zip(lab_root_id, neuron_types)} 
+    neuron_indices = list(set(conns['# source'].tolist() + conns[' target'].tolist()))    
+    neuron_names = {n:names[n] for n in neuron_indices}
     
-    root_ids = sorted(lab_root_id)
-    labels = [neuron_dict[rid] for rid in root_ids]
-    neuron_types = {neuron_dict[rid]:type_dict[rid] for rid in root_ids}
-    
-    ### Positions
-    coordinates = pd.read_csv(fly_wire / 'coordinates.csv')
-    pos_root_id, position = coordinates['root_id'], coordinates['position']
-    position_dict = {neuron_dict[rid]:np.array(list(filter(None, pos.split('[')[-1].split(']')[0].split(' '))), dtype=int) for rid,pos in zip(pos_root_id, position)}
-    
-    ### Stats
-    stats = pd.read_csv(fly_wire / 'cell_stats.csv')
-    stats_root_id, nlength, narea, nvolume = stats['root_id'], np.array(stats['length_nm'], dtype=int), np.array(stats['area_nm'], dtype=int), np.array(stats['size_nm'], dtype=int)
-
-    length_dict = {neuron_dict[rid]:nlen for (rid,nlen) in zip(stats_root_id, nlength)}
-    area_dict = {neuron_dict[rid]:nare for (rid,nare) in zip(stats_root_id, narea)}
-    vol_dict = {neuron_dict[rid]:nvol for (rid,nvol) in zip(stats_root_id, nvolume)}
-
-    nn.create_neurons(labels, type=neuron_types, position=position_dict, length=length_dict, area=area_dict, volume=vol_dict)
-
+    nn.create_neurons(neuron_names.values())
     ## Connections
-    conns = pd.read_csv(fly_wire / 'connections_no_threshold.csv')
-    pre_rid, post_rid, weights, nts = conns['pre_root_id'], conns['post_root_id'], conns['syn_count'], conns['nt_type']
+    for pre, post, weight in zip(conns['# source'], conns[' target'], conns['depth']):
+        adjacency = {'pre': neuron_names[pre], 'post': neuron_names[post], 'weight': weight}
+        nn.setup_connections(adjacency, connection_type='chemical-synapse', input_type='edge')
 
-    for pre, post, weight, nt in zip(pre_rid, post_rid, weights, nts ):
-        adjacency = {'pre':neuron_dict[pre], 'post':neuron_dict[post], 'weight':weight}
-        neurotransmitter = {'neurotransmitter':nt}
-        nn.setup_connections(adjacency, connection_type='chemical-synapse', input_type='edge', neurotransmitter=neurotransmitter)
-    return f
+    return a
+
+def make_platynereis():
+    pass
 
 
 def build_nervous_system(nn, neuron_data, chem_synapses, elec_synapses, positions, chem_only=False, gapjn_only=False):
@@ -341,6 +396,12 @@ def loadNeuropeptides(w, neuropeps:str= 'all'):
                 w.setup_connections(adjacency=models_dict[nprc], connection_type=nprc)
                 w.worm.citations.update({'neuropeptide_atlas':citations['neuropeptide_atlas']})
 
+def getNeuropeptideList():
+    ''' Returns the list of available neuropeptide networks '''
+    np_order = DOWNLOAD_DIR / prefix_NP / '91-NPPGPCR networks'
+    neuropep_rec = pd.read_csv(np_order, sep=',', index_col=0)
+    return neuropep_rec['pair_names_NPP'].tolist()
+
 ## Load CENGEN tables
 thres_1 = DOWNLOAD_DIR / prefix_CENGEN / 'liberal_threshold1.csv'
 thres_2 = DOWNLOAD_DIR / prefix_CENGEN / 'medium_threshold2.csv'
@@ -433,7 +494,8 @@ def loadTranscripts(nn, threshold=4):
     ## CENGEN neurons 
     suffixes = ['D', 'V', 'L', 'R', 'DL', 'DR', 'VL', 'VR', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13']
     cengen_neurons  = {m:'' for m in groupNames.keys()}
-    for m in cengen_neurons.keys():
+    neuron_keys = list(cengen_neurons.keys())
+    for m in neuron_keys:
         if m in th1.columns:
             cengen_neurons[m] = m
         elif groupNames[m] in th1.columns:
@@ -607,3 +669,310 @@ def download_datasets(key=''):
     # elif key == 'neuropeptide_atlas':
     else:
         print("Not yet supported. Download manually into the directory.")
+
+
+""" This is experimental, not yet tested """
+def load_nwb(filepath):
+    """
+    Loads an NWB file and maps its content to CeDNe core objects.
+    
+    Supports standard NWB mapping and C. elegans extensions (NWBelegans).
+    
+    Args:
+        filepath (str): Path to the NWB file.
+        
+    Returns:
+        tuple: (NervousSystem, Session)
+    """
+    try:
+        from pynwb import NWBHDF5IO
+    except ImportError:
+        raise ImportError("pynwb is required for load_nwb. Install it via 'pip install pynwb'.")
+
+    
+    
+    with NWBHDF5IO(filepath, 'r') as io:
+        nwbfile = io.read()
+        species = getattr(nwbfile.subject, 'species', '').lower()
+        if 'elegans' in species or not species: # Default to Worm if unspecified or elegans
+            w = Worm(name=nwbfile.session_id or "NWB_Worm")
+            nn = NervousSystem(w)
+        else:
+            a = Animal(name=nwbfile.session_id or "NWB_Animal", species=species)
+            nn = NervousSystem(a)
+        
+        # Setting up context
+        exp_context = ExperimentalContext(
+            name="NWB_Context", 
+            experimental_params={"description": nwbfile.session_description}
+        )
+        ctx = Context(name="NWB_Combined_Context", experimental=exp_context)
+        
+        # Setting up session
+        session = Session(
+            name=nwbfile.session_id or "NWB_Session",
+            context=ctx,
+            date=nwbfile.session_start_time,
+            experimenter=nwbfile.experimenter,
+            lab=nwbfile.lab,
+            institution=nwbfile.institution
+        )
+        
+        #Volumetric Imaging (NWBelegans/ophys)
+        if 'ophys' in nwbfile.processing:
+            ophys_mod = nwbfile.processing['ophys']
+            
+            # Look for VolumeSegmentation (Cell IDs and Masks)
+            for name, obj in ophys_mod.data_interfaces.items():
+                if 'Segmentation' in obj.type_hierarchy: # Matches VolumeSegmentation or ImageSegmentation
+                    # In NWBelegans, there might be multiple planes/volumes
+                    for plane_seg in obj.plane_segmentations.values():
+                        for row in plane_seg:
+                            neuron_name = str(row.index[0]) # Fallback to index if no name
+                            if 'cell_id' in plane_seg.colnames:
+                                neuron_name = row['cell_id'].values[0]
+                            
+                            # Create Neuron if it doesn't exist
+                            if neuron_name not in nn.neurons:
+                                mask = None
+                                if 'voxel_mask' in plane_seg.colnames:
+                                    mask = row['voxel_mask'].values[0]
+                                elif 'image_mask' in plane_seg.colnames:
+                                    mask = row['image_mask'].values[0]
+                                    
+                                Neuron(neuron_name, nn, spatial_mask=mask)
+
+            # MultiChannelVolumeSeries (Activity Traces)
+            if 'Fluorescence' in ophys_mod.data_interfaces:
+                fl = ophys_mod.data_interfaces['Fluorescence']
+                for roi_resp_series in fl.roi_response_series.values():
+                    # Map ROI indices to Neuron objects
+                    # This assumes Neurons were created from VolumeSegmentation in order
+                    neuron_list = list(nn.neurons.values())
+                    for i, neuron in enumerate(neuron_list):
+                        if i < roi_resp_series.data.shape[1]:
+                            trial = neuron.add_trial(0)
+                            trial.recording = roi_resp_series.data[:, i]
+                            # Add OpticalChannel metadata if available
+                            if hasattr(roi_resp_series, 'imaging_plane'):
+                                plane = roi_resp_series.imaging_plane
+                                for j, channel in enumerate(plane.optical_channel):
+                                    trial.add_metadata(f'optical_channel_{j}', {
+                                        'excitation_lambda': channel.excitation_lambda,
+                                        'emission_lambda': channel.emission_lambda,
+                                        'description': channel.description
+                                    })
+                            session.add_trial(trial)
+
+        # Spikes (Units), for future implementations, i.e. not C.elegans or perhaps some neurons like AWA?
+        if nwbfile.units:
+            for i, unit_id in enumerate(nwbfile.units.id):
+                neuron_name = f"Unit_{unit_id}"
+                if neuron_name not in nn.neurons:
+                    neuron = Neuron(neuron_name, nn)
+                else:
+                    neuron = nn.neurons[neuron_name]
+                
+                trial = neuron.add_trial(0)
+                trial.recording = nwbfile.units['spike_times'][i]
+                session.add_trial(trial)
+
+        # Handle Behavior (SpatialSeries)
+        if 'behavior' in nwbfile.processing:
+            beh_mod = nwbfile.processing['behavior']
+            for name, obj in beh_mod.data_interfaces.items():
+                if 'SpatialSeries' in obj.type_hierarchy:
+                    if not hasattr(nn.worm, 'behavior'):
+                        nn.worm.behavior = Behavior()
+                    setattr(nn.worm.behavior, name, obj.data[:])
+
+        return nn, session
+
+
+def load_atanas(condition='Control', max_files=None, network=None):
+    """
+    Load Atanas et al. (2023) whole-brain calcium imaging data into CeDNe.
+
+    Reads downloaded JSON recordings from the Atanas whole-brain dataset and
+    populates Trial objects on neurons in the network. Each JSON file is treated
+    as a separate Session with its own ExperimentalContext.
+
+    Args:
+        condition (str): 'Control' or 'Heat'. Selects the experimental condition.
+        max_files (int, optional): Limit how many JSON files to load (for quick demos).
+            If None, loads all available files.
+        network (NervousSystem, optional): Existing network to attach recordings to.
+            If None, a new worm is created via makeWorm('atanas', chem_only=True).
+
+    Returns:
+        dict: {
+            'network': NervousSystem,
+            'sessions': list of Session objects,
+            'neurons_loaded': int (number of neurons with recordings),
+            'num_timepoints': int (length of first trace found),
+            'condition': str,
+            'worm': Worm
+        }
+
+    Raises:
+        FileNotFoundError: If no Atanas data files are found. Run
+            download_data('atanas_whole_brain') first.
+        ValueError: If condition is not 'Control' or 'Heat'.
+    """
+    import json
+
+    if condition not in atanas_whole_brain:
+        raise ValueError(
+            f"condition must be one of {list(atanas_whole_brain.keys())}, got '{condition}'"
+        )
+
+    data_dir = atanas_whole_brain[condition]
+    if not data_dir.exists():
+        raise FileNotFoundError(
+            f"Atanas data directory not found at {data_dir}. "
+            "Run download_data('atanas_whole_brain') first."
+        )
+
+    # Find available JSON files
+    json_files = sorted(data_dir.glob('*.json'))
+    if not json_files:
+        raise FileNotFoundError(f"No JSON files found in {data_dir}")
+    if max_files:
+        json_files = json_files[:max_files]
+
+    # Build or use existing network
+    if network is None:
+        w = makeWorm('atanas', chem_only=True)
+        nn = w.networks['Neutral']
+    else:
+        nn = network
+        w = nn.worm
+
+    sessions = []
+    neurons_loaded = set()
+    num_timepoints = 0
+
+    for trial_num, json_path in enumerate(json_files):
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+
+        trace_array = data.get('trace_array', {})
+        neuron_labels = data.get('neuron_labels', {})
+
+        # Build a reverse map: neuron_label_index → trace_key
+        # In the Atanas format, neuron_labels maps index → neuron name,
+        # and trace_array maps neuron name → trace
+        label_to_name = {}
+        if isinstance(neuron_labels, dict):
+            label_to_name = {v: v for v in neuron_labels.values()}
+        elif isinstance(neuron_labels, list):
+            label_to_name = {name: name for name in neuron_labels}
+
+        # Create experimental context for this recording
+        exp_context = ExperimentalContext(
+            name=f"Atanas_{condition}_{json_path.stem}",
+            experimental_params={
+                'condition': condition,
+                'source_file': json_path.name,
+                'dataset': 'Atanas et al. (2023)',
+                'doi': 'https://doi.org/10.1016/j.cell.2023.07.035',
+                'imaging_modality': 'whole-brain calcium imaging',
+            }
+        )
+        ctx = Context(
+            name=f"{condition}_{json_path.stem}",
+            experimental=exp_context,
+            description=f"Whole-brain calcium imaging, {condition} condition"
+        )
+
+        session = Session(
+            name=json_path.stem,
+            context=ctx,
+            condition=condition,
+            source_file=json_path.name,
+        )
+
+        # Assign traces to matching neurons
+        trace_items = []
+        if isinstance(trace_array, dict):
+            # Format: { "NeuronName": [trace], ... }
+            trace_items = list(trace_array.items())
+        elif isinstance(trace_array, list):
+            # Format: [ [trace], [trace], ... ]
+            # We must map indices to names.
+            
+            # Path A: Try neuron_labels (list of names or dict index->name)
+            if isinstance(neuron_labels, list) and len(neuron_labels) > 0:
+                for idx, name in enumerate(neuron_labels):
+                    if idx < len(trace_array):
+                        trace_items.append((name, trace_array[idx]))
+            elif isinstance(neuron_labels, dict) and len(neuron_labels) > 0:
+                for idx_str, name in neuron_labels.items():
+                    try:
+                        idx = int(idx_str)
+                        if idx < len(trace_array):
+                            trace_items.append((name, trace_array[idx]))
+                    except ValueError:
+                        pass
+            
+            # Path B: If Path A yielded nothing, try 'labeled' (dict index -> {label: name, ...})
+            if not trace_items:
+                labeled = data.get('labeled', {})
+                if isinstance(labeled, dict):
+                    for idx_str, info in labeled.items():
+                        try:
+                            idx = int(idx_str)
+                            # In labeled dict, 'label' usually contains the neuron name
+                            name = None
+                            if isinstance(info, dict):
+                                name = info.get('label')
+                            elif isinstance(info, str):
+                                name = info
+                            
+                            if name and idx < len(trace_array):
+                                trace_items.append((name, trace_array[idx]))
+                        except (ValueError, TypeError):
+                            pass
+        
+        if not trace_items:
+            print(f"Warning: No valid trace mapping found in {json_path}")
+            continue
+
+        for neuron_name, trace in trace_items:
+            # Match neuron names to network neurons (handle case differences)
+            matched_name = None
+            if neuron_name in nn.neurons:
+                matched_name = neuron_name
+            else:
+                # Try case-insensitive matching
+                for nn_name in nn.neurons:
+                    if nn_name.upper() == neuron_name.upper():
+                        matched_name = nn_name
+                        break
+
+            if matched_name is not None:
+                neuron = nn.neurons[matched_name]
+                trial = neuron.add_trial(trial_num)
+                trial.recording = np.array(trace, dtype=np.float64)
+                trial.metadata.update({
+                    'condition': condition,
+                    'source_file': json_path.name,
+                    'dataset': 'atanas_whole_brain',
+                    'sampling_rate': 1.0 / (float(data.get('avg_timestep', 0.01)) * 60.0)
+                })
+                session.add_trial(trial)
+                neurons_loaded.add(matched_name)
+
+                if num_timepoints == 0:
+                    num_timepoints = len(trace)
+
+        sessions.append(session)
+
+    return {
+        'network': nn,
+        'sessions': sessions,
+        'neurons_loaded': len(neurons_loaded),
+        'num_timepoints': num_timepoints,
+        'condition': condition,
+        'worm': w,
+    }

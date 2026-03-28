@@ -1,0 +1,7 @@
+# prop_name, value
+name,cintestinalis
+description,Entire connectivity matrix for the complete brain of a larva of Ciona intestinalis. Each directed edge represents a synaptic connection from pre-synaptic cell i to post-synaptic cell j (may not be a neuron). Edge weights represent the cumulative depth of presynaptic contacts in µm.
+citation,"['K. Ryan, Z. Lu, & I. A. Meinertzhagen, \"The CNS connectome of a tadpole larva of Ciona intestinalis (L.) highlights sidedness in the brain of a chordate sibling.\" eLife 5, e16962 (2016), https://doi.org/10.7554/eLife.16962.001']"
+url,https://elifesciences.org/articles/16962#fig16
+upstream_license,"CC BY 4.0, https://creativecommons.org/licenses/by/4.0/"
+tags,"['Biological', 'Connectome', 'Weighted']"

@@ -19,7 +19,7 @@ numpy = "^1.26.4"
 scipy = "^1.13.1"
 pandas = "2.0.3"
 ipykernel = "^6.29.4"
-textalloc = "^1.0.5"
+textalloc = "^1.2.1"
 cmasher = "^1.8.0"
 joblib = "^1.4.2"
 pywavelets = "^1.6.0"
@@ -34,14 +34,19 @@ psycopg2 = "^2.9.10"
 openpyxl = "^3.1.2" 
 nbconvert = "^7.16.6"
 ipympl = "^0.9.7"
+pynwb = "^2.8.2"
+ndx-multichannel-volume = "^0.1.2"
 
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry.scripts]
+cedne = "cedne.serve:cli"
+
 [tool.pytest.ini_options]
-minversion = "8.0"
+minversion = "7.0"
 addopts = "-ra -q --cov=cedne --cov-report=xml --cov-report=term-missing"
 testpaths = ["tests"]
 
@@ -54,3 +59,11 @@ pytest-cov = "^6.1.1"
 sphinx = "^7"
 pydata-sphinx-theme = "^0.16.1"
 myst-parser = "^4.0.1"
+
+[tool.poetry.group.web]
+optional = true
+
+[tool.poetry.group.web.dependencies]
+fastapi = ">=0.100.0"
+uvicorn = {version = ">=0.23.0", extras = ["standard"]}
+click = ">=8.0.0"

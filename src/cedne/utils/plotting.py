@@ -19,6 +19,8 @@ from matplotlib.text import Annotation
 from matplotlib.gridspec import GridSpec
 from mpl_toolkits.mplot3d.proj3d import proj_transform
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import matplotlib.patheffects as pe
+from matplotlib.patches import Wedge
 
 import networkx as nx
 from mpl_toolkits.mplot3d import Axes3D
@@ -27,11 +29,33 @@ import textalloc as ta
 import os
 from pathlib import Path
 from cedne import Neuron 
-from cedne import simulator
+
+try:
+    from cedne import simulator
+except ImportError:
+    simulator = None
+
+from tqdm import trange
 
 from .config import *
 from .graphtools import is_left_neuron
 import cmasher as cmr
+
+matplotlib.rcParams['font.family'] = 'Arial'
+matplotlib.rcParams['svg.fonttype'] = 'none'
+
+single_column = 90
+double_column = 180
+full_page = 170
+half_page = full_page/2
+font_size_big = 7 #pts
+font_size_mid = 6
+font_size_small = 5
+DPI = 600
+
+def mm_to_inches(fig_dims):
+    fig_width_mm, fig_height_mm = fig_dims
+    return (fig_width_mm / 25.4, fig_height_mm / 25.4)
 
 def simpleaxis(axes, every=False, outward=False):
     """
@@ -229,9 +253,9 @@ def add_circular_arrowheads(ax, pos, edges, node_size, scale_factor=0.001, color
         # Draw the circle at the end of the arrow
         circle = Circle(circle_center, radius, color=color, zorder=2)
         ax.add_patch(circle)
-            
-def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge_color_dict=None, edge_alpha_dict=None,\
-                node_color_dict=None, edge_labels=False, handles=None, fontsize=11, width_logbase=2, title=None):
+
+def plot_shell(neunet, center=None, shells=None, save=False, figsize=mm_to_inches((single_column/4,single_column/4)), edge_color_dict=None, edge_alpha_dict=None,\
+                node_color_dict=None, edge_labels=False, handles=None, fontsize=font_size_mid, width_logbase=2, title=None, node_size=300):
     """
     Generates a shell layout for the network.
 
@@ -243,8 +267,8 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge
     """
     MAX_LENGTH_FOR_STRAIGHT_TEXT = 20
     arc_rad = 0.1
-    node_size = 800
-    arrow_size=20
+    # node_size = 800
+    arrow_size=node_size/20
     rotation = 0 #45
         
     if shells is None:
@@ -286,8 +310,10 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge
     # print(len(pos))
     # print([(n, pos[neu]) for (n,neu) in neunet.neurons.items()])
     # nx.draw(neunet, node_size = 800, ax=ax, pos=pos, with_labels=False, node_color = node_color, edge_color=edge_color)
-    nx.draw_networkx_nodes(neunet, pos=pos, node_size = node_size, ax=ax, node_color = node_color)
-    
+    node_c = nx.draw_networkx_nodes(neunet, pos=pos, node_size = node_size, ax=ax, node_color = node_color)
+    node_c.set_clip_on(False)           
+    node_c.set_zorder(5)                
+
     if len(neunet.connections.keys()):
         for edge,connection in neunet.connections.items():
             edge_color = edge_color_dict[edge]
@@ -330,20 +356,23 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=(8,8), edge
     plt.axis('off')
     if handles:
         fig.legend(handles=handles,loc='outside center right')
+    
+    for txt in ax.texts:
+        txt.set_zorder(60)
     if save:
         if isinstance(save, str):
-            plt.savefig(save)
+            plt.savefig(save, transparent=True, bbox_inches="tight", pad_inches=0.02)
         elif isinstance(save, bool):
             OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
             outfile = OUTPUT_DIR / ( '_'.join([n.name for n in shells[0]]) + '.svg')
-            plt.savefig(outfile)
+            plt.savefig(outfile, transparent=True, bbox_inches="tight", pad_inches=0.02)
     #plt.show()
     if title:
-        fig.suptitle(title)
+        fig.suptitle(title, fontsize=font_size_mid)
     return fig
     
     
-def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, save=False, title='', extraNodes=[], extraEdges=[], pos=[], mark_anatomical=False, colorbar=False):
+def plot_layered(interesting_conns, neunet, nodeColors=None, node_alpha=0.8, edgeColors = None, save=False, title='', extraNodes=[], extraEdges=[], pos=[], mark_anatomical=False, colorbar=False, fontsize=8, figsize=(40,4), node_size=2000):
     """
     Generates a graph visualization of a given neural network. Change this function to make more streamlined.
 
@@ -492,19 +521,18 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
         pos, boxes = groupPosition(pos, type_cat)
 
     #print(edges_within, edges_across)
-    fig, ax = plt.subplots(figsize=(40,4))
+    fig, ax = plt.subplots(figsize=figsize)
     #edge_color = 'k'
     #nx.draw(G, node_size = 1000, ax=ax, pos=pos, with_labels=True, edge_color=edge_color, node_color = node_color)#, width=weights, font_size=12)
     #plotNodes = []
-    node_size=  2000
     for type in node_types:
-        nx.draw_networkx_nodes(node_types[type], node_shape=node_shapes[type], node_size = node_size, ax=ax, pos=pos, node_color = node_color[type],  linewidths=1, alpha=0.8)#node_alpha[type]))#, width=weights, font_size=12)
+        nx.draw_networkx_nodes(node_types[type], node_shape=node_shapes[type], node_size = node_size, ax=ax, pos=pos, node_color = node_color[type],  linewidths=1, alpha=node_alpha)#node_alpha[type]))#, width=weights, font_size=12)
     for node, (x, y) in pos.items():
         label = str(node)
         if len(label)>3:
-            plt.text(x, y, label, fontsize=20, rotation=45, ha='center', va='center')
+            plt.text(x, y, label, fontsize=fontsize, rotation=45, ha='center', va='center')
         else:
-            plt.text(x, y, label, fontsize=20, ha='center', va='center')
+            plt.text(x, y, label, fontsize=fontsize, ha='center', va='center')
 
     # nx.draw_networkx_labels(G, pos=pos, labels={o:o for o in oriNodes if len(o)<4}, ax=ax, font_size=20)
     # nx.draw_networkx_labels(G, pos=pos, labels={o:o for o in oriNodes if len(o)>3}, ax=ax, font_size=20, rotation=45)
@@ -553,26 +581,25 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, edgeColors = None, 
                     cat = cat.replace(suffix,'')
             ax.text(xy[0], xy[1]-0.002, cat, #-height
             horizontalalignment='left',
-            verticalalignment='top', fontsize=28, color=classcolor)
+            verticalalignment='top', fontsize=fontsize, color=classcolor)
             # Add the patch to the Axes
             ax.add_patch(rect)
     simpleaxis(ax, every=True)
-    ax.set_title(title, y=1.01, fontsize=40)
+    ax.set_title(title, y=1.01, fontsize=fontsize)
     ax.set_xticks([])
     ax.set_yticks([])
     # plt.colorbar(m)
     plt.tight_layout()
     plt.subplots_adjust(top=2)
     if not save==False:
-        plt.savefig(save)
-    
+        plt.savefig(save, transparent=True)
     plt.show()
     plt.close()
     
     return pos
 
 
-def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, title='', label='all', save=False, figsize=(20,3), limit=None):
+def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, title='', label='all', save=False, figsize=(20,3), limit=None, cmr_cmap='tropical', font_size=font_size_mid, piesize=0.3, draw_all=False):
     """
     A function to plot the positions of neurons based on their coordinates and attributes.
 
@@ -589,7 +616,7 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
     """
 
     if booleanDictionary is None:
-        active_color, passive_color = "#CC5500", "lightgrey"
+        active_color, passive_color = "#CC5500", "grey"
         booleanDictionary = {True: active_color, False: passive_color}
 
     coords = ['AP', 'DV', 'LR']
@@ -597,13 +624,22 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
     pos = [[] for i in range(len(nlabels))]
     if highlight is None:
         highlight = []
-    elif isinstance(highlight, list):
-        if isinstance(highlight[0], str):
-            assert all([n in nn.neurons for n in highlight]), "Neuron(s) not found in the network."
-        elif isinstance(highlight[0], list):
-            assert all([n in nn.neurons for j in range(len(highlight)) for n in highlight[j]]), "Neuron(s) not found in the network."
-        else:
-            raise ValueError("Highlight must be a list of strings or a list of lists.")
+    
+    if not isinstance(highlight, list):
+        raise ValueError("Highlight must be a list of strings or a list of lists.")
+    is_str_list  = isinstance(highlight, list) and len(highlight)>0 and isinstance(highlight[0], str)
+    is_list_list = isinstance(highlight, list) and len(highlight)>0 and isinstance(highlight[0], list)
+    
+    if is_str_list:
+        if not all([n in nn.neurons for n in highlight]):
+            raise ValueError("Neuron(s) not found in the network.")
+    elif is_list_list:
+        if not all([n in nn.neurons for j in range(len(highlight)) for n in highlight[j]]):
+            raise ValueError("Neuron(s) not found in the network.")
+        # elif isinstance(highlight[0], list):
+        #     assert all([n in nn.neurons for j in range(len(highlight)) for n in highlight[j]]), "Neuron(s) not found in the network."
+        # else:
+        #     raise ValueError("Highlight must be a list of strings or a list of lists.")
             
     for i,n in enumerate(nlabels):
         if n in ['CANL']:
@@ -650,65 +686,157 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
     x = np.array(x)
     y = np.array(y)
 
+    f,ax = plt.subplots(figsize=figsize, dpi=600, layout='constrained')
+    plt.axis('off')
+    ## dummy scatter plot for text allocation
+    f.canvas.draw() 
+    def data_dx_to_axes_frac(ax, dx):
+        p0 = ax.transData.transform((0, 0))
+        p1 = ax.transData.transform((dx, 0))
+        a0 = ax.transAxes.inverted().transform(p0)
+        a1 = ax.transAxes.inverted().transform(p1)
+        return abs(a1[0] - a0[0])  # x-fraction of the axes
+
+    def return_fake_scatter(ax, x, y, piesize, boolList):
+        pts = []
+        sizes = []
+        for xi, yi in zip(x[boolList], y[boolList]):
+            # convert data radius -> points
+            x0, y0 = ax.transData.transform((xi, yi))
+            x1, _  = ax.transData.transform((xi + piesize, yi))
+            r_pix  = abs(x1 - x0)
+            r_pt   = r_pix * 72.0 / ax.figure.dpi
+            s_area = np.pi * (r_pt ** 2)        # scatter size is area in pt^2
+            pts.append((xi, yi))
+            sizes.append(s_area)
+
+        return np.array(pts), np.array(sizes)
+    # piesize is your pie radius in *data* units
+    # min_dist = data_dx_to_axes_frac(ax, piesize*2.5)   # push label ~1.2× radius away
+    # margin   = data_dx_to_axes_frac(ax, piesize*2.5)   # clearance to marker edge
+    # max_dist = max(min_dist*3.0, margin*2.0)
+
+    # margin = max(0.015, min(0.03, data_dx_to_axes_frac(ax, piesize*1.2)))
+    # min_dist = max(0.02,  min(0.05, data_dx_to_axes_frac(ax, piesize*1.6)))
+    # max_dist = max(0.08,  min(0.15, data_dx_to_axes_frac(ax, piesize*6.0)))
+    
+    # keep units consistent: data units everywhere
+    min_dist = piesize * 0.02      # label–label separation in DATA units
+    margin   = piesize * 0.03      # label–point clearance in DATA units
+    max_dist = piesize * 0.3      # cap to prevent long leader lines
+    print(min_dist, margin, max_dist)   # should be ~0.01–0.10, not 0.0
+    #
     if isinstance(highlight[0], str):
-        f,ax = plt.subplots(figsize=figsize, dpi=300, layout='constrained')
-        plt.axis('off')
         facecolors = np.array([booleanDictionary[n in highlight] for n in nlabels])
         alphas = np.array([1 if n in highlight else 0.25 for n in nlabels])
         boolList = np.array([n in highlight for n in nlabels])
+
+        pts, sizes = return_fake_scatter(ax, x, y, piesize, boolList)
+        # invisible but geometry-aware collection
+        sc = ax.scatter(pts[:,0], pts[:,1], s=sizes, alpha=0.0, zorder=1) # Dummy scatter
         #print([(n,facecolors[j]) for j,n in enumerate(nlabels) if n in highlight])
+        if label:
+            ta.allocate(ax,x[boolList], y[boolList],
+            nlabels[boolList],
+            # x_scatter=x[boolList], y_scatter=y[boolList],
+            scatter_plot=sc,
+            # direction='north',
+            margin=margin,
+            min_distance=min_dist,
+            max_distance=max_dist,
+            nbr_candidates=3000,
+            draw_all=draw_all,
+            plot_kwargs=dict(
+            zorder=60,
+            # weight='bold',
+            path_effects=[pe.withStroke(linewidth=2.0, foreground='white')]
+            # optional: bbox=dict(boxstyle='round,pad=0.2', fc='white', ec='none', alpha=0.8)
+            ),
+            zorder=60,
+            textsize=font_size, 
+            linecolor='gray',
+            avoid_label_lines_overlap=True,
+            clip_on=False)
+
+            # ta.allocate_text(f,ax,x[boolList], y[boolList],
+            #             nlabels[boolList],
+            #             x_scatter=x[boolList], y_scatter=y[boolList],
+            #             textsize=font_size, linecolor='gray', avoid_label_lines_overlap=True)
+        
         ax.scatter(x[~boolList], y[~boolList], s=200, facecolor=facecolors[~boolList], edgecolor=facecolors[~boolList], alpha=alphas[~boolList], zorder=1)
         ax.scatter(x[boolList], y[boolList], s=200, facecolor=facecolors[boolList], edgecolor=facecolors[boolList], alpha=alphas[boolList], zorder=2)
-        if label:
-            ta.allocate_text(f,ax,x[boolList], y[boolList],
-                        nlabels[boolList],
-                        x_scatter=x[boolList], y_scatter=y[boolList],
-                        textsize='xx-large', linecolor='gray', avoid_label_lines_overlap=True)
 
-    elif isinstance(highlight[0], list):
+    elif is_list_list:
         buffer = 1.1
-        f,ax = plt.subplots( dpi=300, layout='constrained',figsize=figsize) #figsize=(2,0.3), dpi=300, layout='constrained'
-        plt.axis('off') 
+        # f,ax = plt.subplots( dpi=600, layout='constrained',figsize=figsize) #figsize=(2,0.3), dpi=300, layout='constrained'
+        # plt.axis('off')
         plt.xlim(min(x)*buffer,max(x)*buffer)
         plt.ylim(min(y)*buffer,max(y)*buffer)
         # ax.set_aspect('equal')
         trans=ax.transData.transform
         trans2=f.transFigure.inverted().transform
 
-        facecolors = cmr.take_cmap_colors('cmr.tropical', len(highlight), cmap_range=(0.15, 0.85), return_fmt='hex')
+        facecolors = cmr.take_cmap_colors('cmr.' + cmr_cmap, len(highlight), cmap_range=(0.15, 0.85), return_fmt='hex')
         color_dict = {n:[] for n in nlabels}
         alpha_dict = {n:0.25 for n in nlabels}
         boolList = np.array([False]*len(nlabels))
+        group_idx  = {n: None for n in nlabels}
         for i,n in enumerate(nlabels):
             for j,hlc in enumerate(highlight):
                 if n in hlc:
                     color_dict[n].append(facecolors[j])
                     alpha_dict[n] = 1
-                    if label == 'all':
-                        boolList[i] = True
-                    elif label == 'left' and is_left_neuron(n):
+                    if label == 'all' or (label == 'left' and is_left_neuron(n)):
                         boolList[i] = True
             if len(color_dict[n]) == 0:
-                color_dict[n].append("lightgrey")
-        piesize=0.3
+                color_dict[n].append("grey")
+        
         if not label == 'none':
+            
             # if isinstance(label, int):
             #     randnum = np.random.default_rng()
             #     boolList = randnum.choice(boolList, size=label, replace=False)
-            ta.allocate_text(f,ax,x[boolList], y[boolList],
+
+            # pts, sizes = return_fake_scatter(ax, x, y, piesize, np.array([True]*len(nlabels)))
+            pts, sizes = return_fake_scatter(ax, x, y, piesize, boolList)
+            # invisible but geometry-aware collection
+            sc = ax.scatter(pts[:,0], pts[:,1], s=sizes, alpha=0.0, zorder=1) # Dummy scatter
+            ta.allocate(ax,x[boolList], y[boolList],
                         nlabels[boolList],
-                        x_scatter=x[boolList], y_scatter=y[boolList],
-                        textsize='xx-large', linecolor='gray', avoid_label_lines_overlap=True)
+                        # x_scatter=x[boolList], y_scatter=y[boolList],
+                        scatter_plot=sc,
+                        # direction='north',
+                        margin=margin,
+                        min_distance=min_dist,
+                        max_distance=max_dist,
+                        nbr_candidates=3000,
+                        draw_all=draw_all,
+                        plot_kwargs=dict(
+                        zorder=60,
+                        # weight='bold',
+                        path_effects=[pe.withStroke(linewidth=2.0, foreground='white')]
+                        # optional: bbox=dict(boxstyle='round,pad=0.2', fc='white', ec='none', alpha=0.8)
+                        ),
+                        zorder=60,
+                        textsize=font_size, 
+                        linecolor='gray',
+                        avoid_label_lines_overlap=True,
+                        clip_on=False)
         # print(boolList, ~boolList, x[boolList])
         # ax.scatter(x[~boolList], y[~boolList], s=200)
         # ax.scatter(x[boolList], y[boolList], s=200)
         for i,n in enumerate(nlabels):
             xx,yy=trans((x[i],y[i])) # figure coordinates
             xa,ya=trans2((xx,yy)) # axes coordinates
+            z = 1 if not boolList[i] else 2
             #plot_pie(n, (x[i], y[i]), a, color_dict, alpha_dict, piesize)
-            a = plt.axes([xa-piesize/2,ya-piesize/2, piesize, piesize])
+            a = plt.axes([xa-piesize/2,ya-piesize/2, piesize, piesize], zorder=z)
+            a.set_facecolor("none")
             a.set_aspect('equal')
-            plot_pie(n, (0,0), a, color_dict, alpha_dict, piesize=piesize)
+            pie = plot_pie(n, (0,0), a, color_dict, alpha_dict, piesize=piesize)
+            ax.set_zorder(10)
+            for txt in ax.texts:
+                txt.set_zorder(60)
         #     ax.pie([1/len(color_dict[n])]*len(color_dict[n]), center = (x[i], y[i]), colors=color_dict[n], radius = piesize, counterclock=False, wedgeprops={'alpha': alpha_dict[n], 'zorder': len(color_dict[n])})
 
 
@@ -716,17 +844,24 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
     legend_ax = f.add_axes([0.95, 0.1, 0.1, 0.1])
     # legend_ax.set_xlim(0, 1)
     # legend_ax.set_ylim(0, 1)
-    legend_ax.set_xlabel(xax, fontsize="x-large")
-    legend_ax.set_ylabel(yax, fontsize="x-large")
+    legend_ax.set_xlabel(xax, fontsize=font_size)
+    legend_ax.set_ylabel(yax, fontsize=font_size)
     legend_ax.set_xticks([])
     legend_ax.set_yticks([])
     legend_ax.set_aspect('equal')
     simpleaxis(legend_ax)
-    ax.set_title(title, fontsize="xx-large")
+    ax = f.gca()
+    ax.set_title(title, fontsize=font_size)
     # f.draw_without_rendering()
     #ax.set_xlim((-0.9,-0.))
+    
+    for txt in ax.texts:
+        txt.set_weight('bold')
+        txt.fontsize = font_size
+        txt.set_path_effects([pe.withStroke(linewidth=2, foreground='white')])
+        txt.set_zorder(1000)
     if save:
-        plt.savefig(save)
+        plt.savefig(save, transparent=True)
     plt.show()
 
 def plot_position_oneside(nn, axis='AP-DV', highlight=None, booleanDictionary=None, title='', label='all', save=False, figsize=(20,3), limit=None):
@@ -898,7 +1033,39 @@ def plot_pie(n, center, ax, color_dict, alpha_dict, pie_division = None, piesize
     # radius for pieplot size on a scatterplot
     if not pie_division:
         pie_division = [1/len(color_dict[n])]*len(color_dict[n])
-    ax.pie(pie_division, center = center, colors=color_dict[n], radius = piesize, counterclock=False, wedgeprops={'alpha': alpha_dict[n], 'zorder': len(color_dict[n])})
+    pie = ax.pie(pie_division, center = center, colors=color_dict[n], radius = piesize, counterclock=False, wedgeprops={'alpha': alpha_dict[n], 'zorder': len(color_dict[n])})
+    return pie
+
+def plot_pie_data(n, center, ax, color_dict, alpha_dict,
+                  pie_division=None, piesize=1.0,
+                  startangle=90.0, ccw=True, z=10):
+    # fractions
+    if pie_division is None or np.sum(pie_division) == 0:
+        k = len(color_dict[n])
+        fracs = np.full(k, 1.0 / k, dtype=float)
+    else:
+        fracs = np.asarray(pie_division, dtype=float)
+        fracs = fracs / fracs.sum()
+
+    colors = color_dict[n]
+    if len(colors) != len(fracs):
+        raise ValueError(f"{n}: colors ({len(colors)}) != fracs ({len(fracs)})")
+
+    # cumulative angles
+    angles = 360.0 * fracs
+    if not ccw:
+        angles = angles[::-1]  # optional: reverse order instead of negative angles
+    edges = np.concatenate(([startangle], startangle + np.cumsum(angles)))
+
+    patches = []
+    for ang1, ang2, col in zip(edges[:-1], edges[1:], colors):
+        w = Wedge(center, piesize, float(ang1), float(ang2),
+                  transform=ax.transData,
+                  facecolor=col, edgecolor='none',
+                  alpha=alpha_dict[n], zorder=z)
+        ax.add_patch(w)
+        patches.append(w)
+    return patches
 
 class Annotation3D(Annotation):
     '''Annotate the point xyz with text s'''
@@ -1058,9 +1225,9 @@ def plot_position_3D(nn, highlight=None, booleanDictionary=None, title='', label
     plt.show()
 
 ## For simulation module
-def plot_simulation_results(results, twinx=True):
+def plot_simulation_results(results, twinx=True, figsize=mm_to_inches((single_column/4, single_column/4)), xticks=None):
     rate_model, inputs, rates = results
-    f, ax = plt.subplots(figsize=(2.5, 2.5), layout='constrained')
+    f, ax = plt.subplots(figsize=figsize, layout='constrained')
     for node in rates:
         ax.plot(rate_model.time_points, rates[node], label=node.name, lw=2)
     # ax.set_ylim((-15,15))
@@ -1078,12 +1245,18 @@ def plot_simulation_results(results, twinx=True):
             ax2.axvline(x=inp.tstart, ls='--', color='gray', alpha=0.25)
             ax2.axvline(x=inp.tend, ls='--', color='gray', alpha=0.25)
     # ax.set_ylim((-1,1))
-    ax.set_xlabel('Time (s)', fontsize='x-large')
-    ax.set_ylabel('Rate', fontsize='x-large')
+    ax.set_xlabel('Time (s)', fontsize=font_size_mid)
+    ax.set_ylabel('Rate', fontsize=font_size_mid)
+    ax2.set_ylabel('Input', fontsize=font_size_mid)
+
+    ax.tick_params(axis='both', which='major', labelsize=font_size_mid)
+    ax2.tick_params(axis='both', which='major', labelsize=font_size_mid)
+    if not xticks is None:
+        ax.set_xticks(xticks[0], xticks[1])
     # ax.set_xticks([0,30,60,90])
     simpleaxis(ax)
     # simpleaxis(ax2)
-    f.legend(loc='outside upper center', ncol=len(rates), frameon=False, fontsize='x-large')
+    # f.legend(loc='outside upper center', ncol=1, frameon=False, fontsize=font_size_mid)
     return f
 
 def compare_simulation_results(results1, results2, twinx=True):

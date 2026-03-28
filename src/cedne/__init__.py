@@ -1,8 +1,8 @@
 """
-CeDNe: C. elegans Dynamic Network
+CeDNe: Connectome-embedded Dynamical Networks
 A composable framework for building, analyzing, and visualizing nervous systems.
 
-This top-level module exports the core components (e.g., Worm, Neuron, NervousSystem)
+This top-level module exports the core components (e.g., Worm, Fly, Neuron, NervousSystem)
 and utility functions (e.g., graph motifs, loaders, visualization) from its submodules.
 
 Modules:

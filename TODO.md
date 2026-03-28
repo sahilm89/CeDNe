@@ -7,6 +7,7 @@
 ## Cleanups
 
 - [ ] !!! Clean up the neurotransmitter table.
+- [ ] !!! Make sure all citations are correct: neurotransmitter citations are currently incomplete.
 
 ## Data integration
 
@@ -14,6 +15,7 @@
 - [ ] !!! Write about csv/json integration.
 - [ ] !!! Add note section to each class. Add data_source (publication + location) from where data is taken in a note section.
 - [ ] !!! Redo the neuropeptide receptor connectivity. It has been redone in the git repo for the paper.
+- [ ] !!  An adaptor connecting the CATMAID API directly into CeDNe objects.
 
 ## New Classes
 

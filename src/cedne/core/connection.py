@@ -340,6 +340,70 @@ class ConnectionGroup:
         }
         return stats
 
+    # ---- Set operations ----
+
+    def union(self, other: 'ConnectionGroup', group_name: str = None) -> 'ConnectionGroup':
+        """Return a new ConnectionGroup containing connections from both groups.
+
+        Args:
+            other: Another ConnectionGroup to union with.
+            group_name: Optional name for the resulting group.
+
+        Returns:
+            A new ConnectionGroup with the combined members.
+        """
+        assert isinstance(other, ConnectionGroup), "Operand must be a ConnectionGroup"
+        assert self.network is other.network, "Both groups must belong to the same network"
+        merged = {**self.connections, **other.connections}
+        name = group_name or f"{self.group_name}_union_{other.group_name}"
+        return ConnectionGroup(self.network, members=list(merged.values()), group_name=name)
+
+    def intersection(self, other: 'ConnectionGroup', group_name: str = None) -> 'ConnectionGroup':
+        """Return a new ConnectionGroup containing only connections present in both groups.
+
+        Args:
+            other: Another ConnectionGroup to intersect with.
+            group_name: Optional name for the resulting group.
+
+        Returns:
+            A new ConnectionGroup with the shared members.
+        """
+        assert isinstance(other, ConnectionGroup), "Operand must be a ConnectionGroup"
+        assert self.network is other.network, "Both groups must belong to the same network"
+        common_keys = set(self.connections.keys()) & set(other.connections.keys())
+        members = [self.connections[k] for k in common_keys]
+        name = group_name or f"{self.group_name}_intersect_{other.group_name}"
+        return ConnectionGroup(self.network, members=members, group_name=name)
+
+    def difference(self, other: 'ConnectionGroup', group_name: str = None) -> 'ConnectionGroup':
+        """Return a new ConnectionGroup containing connections in self but not in other.
+
+        Args:
+            other: Another ConnectionGroup to subtract.
+            group_name: Optional name for the resulting group.
+
+        Returns:
+            A new ConnectionGroup with the difference members.
+        """
+        assert isinstance(other, ConnectionGroup), "Operand must be a ConnectionGroup"
+        assert self.network is other.network, "Both groups must belong to the same network"
+        diff_keys = set(self.connections.keys()) - set(other.connections.keys())
+        members = [self.connections[k] for k in diff_keys]
+        name = group_name or f"{self.group_name}_diff_{other.group_name}"
+        return ConnectionGroup(self.network, members=members, group_name=name)
+
+    def __or__(self, other: 'ConnectionGroup') -> 'ConnectionGroup':
+        """Operator ``|`` — union."""
+        return self.union(other)
+
+    def __and__(self, other: 'ConnectionGroup') -> 'ConnectionGroup':
+        """Operator ``&`` — intersection."""
+        return self.intersection(other)
+
+    def __sub__(self, other: 'ConnectionGroup') -> 'ConnectionGroup':
+        """Operator ``-`` — difference."""
+        return self.difference(other)
+
 class Path(ConnectionGroup):
     ''' This is a sequence of Connections in the network.'''
     def __init__(self, network, members=None, group_name=None):
