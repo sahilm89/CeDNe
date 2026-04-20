@@ -16,6 +16,7 @@
 - [ ] !!! Add note section to each class. Add data_source (publication + location) from where data is taken in a note section.
 - [ ] !!! Redo the neuropeptide receptor connectivity. It has been redone in the git repo for the paper.
 - [ ] !!  An adaptor connecting the CATMAID API directly into CeDNe objects.
+- [ ] !! Natively read nd2 files, process them and load them into CeDNe objects.
 
 ## New Classes
 
@@ -32,6 +33,7 @@
 
 - [ ] !!! Jax based optimization.
 - [ ] !!! Latin hypercube sampling for hyperparameter optimization.
+- [ ] !! Expose some tools via MCP server 
 
 ## Utility functions
 

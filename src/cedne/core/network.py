@@ -34,6 +34,7 @@ import pickle
 import json
 import numpy as np
 import networkx as nx
+from collections.abc import Sequence
 from .connection import Connection, \
     ChemicalSynapse, GapJunction, ConnectionGroup
 from .neuron import Neuron, NeuronGroup
@@ -607,12 +608,76 @@ class NervousSystem(nx.MultiDiGraph):
 
     # def reassign_nodes(self):
     #     self.update_neurons()
-    def adjacency(self, order=None):
+    def adjacency(self, order=None, weighted=False, connection_type=None):
         """
-        Output the adjecency matrix for the network ordered by neurons
+        Output the adjacency matrix for the network ordered by neurons.
+
+        Args:
+            order:
+                Optional ordered list of neuron names or neuron objects.
+                When omitted, neurons are ordered deterministically by name.
+            weighted (bool):
+                If ``True``, matrix entries are summed edge weights. Otherwise
+                returns a binary adjacency matrix.
+            connection_type:
+                Optional string or list of strings selecting which connection
+                types to include. Supports convenience aliases such as
+                ``"chemical"``, ``"gap-junction"``, and ``"bulk"`` in
+                addition to exact connection type names.
         """
-        # nx.adjacency_matrix(self, nodelist = )
-        pass
+        if order is None:
+            ordered_neurons = sorted(self.neurons.values(), key=lambda neuron: neuron.name)
+        else:
+            ordered_neurons = []
+            for item in order:
+                if isinstance(item, Neuron):
+                    ordered_neurons.append(item)
+                elif isinstance(item, str):
+                    if item not in self.neurons:
+                        raise KeyError(f"Neuron '{item}' not found in network")
+                    ordered_neurons.append(self.neurons[item])
+                else:
+                    raise TypeError("order entries must be neuron names or Neuron objects")
+
+        if connection_type is None:
+            selected_types = None
+            include_bulk = False
+        else:
+            selectors = [connection_type] if isinstance(connection_type, str) else list(connection_type)
+            selected_types = set()
+            include_bulk = False
+            for selector in selectors:
+                if not isinstance(selector, str):
+                    raise TypeError("connection_type entries must be strings")
+                key = selector.strip().lower()
+                if key in {"chemical", "chemical-synapse", "chemical_synapse"}:
+                    selected_types.add("chemical-synapse")
+                elif key in {"gap", "gap-junction", "gap_junction"}:
+                    selected_types.add("gap-junction")
+                elif key == "bulk":
+                    include_bulk = True
+                else:
+                    selected_types.add(selector)
+
+        index_map = {neuron: idx for idx, neuron in enumerate(ordered_neurons)}
+        adjacency = np.zeros((len(ordered_neurons), len(ordered_neurons)), dtype=float)
+
+        for pre, post, edge_data in self.edges(data=True):
+            if pre not in index_map or post not in index_map:
+                continue
+
+            edge_type = edge_data.get("connection_type")
+            if selected_types is not None:
+                is_bulk = edge_type not in {"chemical-synapse", "gap-junction"}
+                if edge_type not in selected_types and not (include_bulk and is_bulk):
+                    continue
+
+            adjacency[index_map[pre], index_map[post]] += edge_data.get("weight", 1.0) if weighted else 1.0
+
+        if not weighted:
+            adjacency = (adjacency > 0).astype(int)
+
+        return adjacency
     
     def reassign_connections(self):
         """ 

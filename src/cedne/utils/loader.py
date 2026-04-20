@@ -12,6 +12,7 @@ __license__ = "MIT"
 from calendar import c
 import warnings
 import pickle
+import re
 import numpy as np
 import pandas as pd
 import requests
@@ -70,14 +71,9 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
 
         # cook_chem.ffill().to_csv('temp_filled.csv', index=False)
         
-        cook_chem = cook_chem.drop(columns=cook_chem.columns[:3],index=cook_chem.index[:2])
-
-        cols_to_drop = cook_chem.columns[:3]
-        rows_to_drop = cook_chem.index[:2]
-        cook_chem = cook_chem.drop(columns=cols_to_drop, index=rows_to_drop)
-        cook_chem.reset_index(drop=True, inplace=True) #New addition
-        #cols = ['/'.join(list(a)) for a in zip(l1_list, l2_list, colnames)]
-        cook_chem = cook_chem.drop(columns=cook_chem.columns[-1],index=cook_chem.index[-1])
+        cook_chem = cook_chem.drop(columns=cook_chem.columns[:3], index=cook_chem.index[:2])
+        cook_chem = cook_chem.drop(columns=cook_chem.columns[-1], index=cook_chem.index[-1])
+        cook_chem.reset_index(drop=True, inplace=True)
         cook_chem.columns = colnames
         cols = cook_chem.columns.to_list()
         chem_adj = cook_chem.to_numpy()
@@ -92,10 +88,9 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
 
         row_labels = cook_gapjn.loc[2:383]['Unnamed: 2'].tolist()
 
-        cook_gapjn = cook_gapjn.drop(columns=cook_gapjn.columns[:3],index=cook_gapjn.index[:2])
-        #cols = ['/'.join(list(a)) for a in zip(l1_list, l2_list, colnames)]
-        cook_gapjn = cook_gapjn.drop(columns=cook_gapjn.columns[-1],index=cook_gapjn.index[-1])
-        cook_chem.reset_index(drop=True, inplace=True) #New addition
+        cook_gapjn = cook_gapjn.drop(columns=cook_gapjn.columns[:3], index=cook_gapjn.index[:2])
+        cook_gapjn = cook_gapjn.drop(columns=cook_gapjn.columns[-1], index=cook_gapjn.index[-1])
+        cook_gapjn.reset_index(drop=True, inplace=True)
         cook_gapjn.columns = colnames
         cols = cook_gapjn.columns.to_list()
         gapjn_adj = cook_gapjn.to_numpy()
@@ -209,17 +204,98 @@ def make_ciona():
     a = Animal(name='Ciona intestinalis', species='Ciona intestinalis', common_name='sea squirt', phylum='Chordata', clade='Tunicata')
     a.citations.update({'ciona_connectome': citations['ciona_connectome']})
     nn = NervousSystem(a)
-    names = pd.read_csv(ciona_connectome / 'nodes.csv')
-    conns = pd.read_csv(ciona_connectome / 'edges.csv')
-
-    ## Neurons
-    neuron_indices = list(set(conns['# source'].tolist() + conns[' target'].tolist()))    
-    neuron_names = {n:names[n] for n in neuron_indices}
     
-    nn.create_neurons(neuron_names.values())
+    # Load core data
+    names_df = pd.read_csv(ciona_connectome / 'nodes.csv')
+    names_df.columns = names_df.columns.str.strip().str.lstrip('#').str.strip()
+    conns = pd.read_csv(ciona_connectome / 'edges.csv')
+    conns.columns = conns.columns.str.strip().str.lstrip('#').str.strip()
+
+    # Load enrichment data
+    fig1_xl = pd.read_excel(ciona_connectome / 'elife-16962-fig1-data1-v1.xlsx', sheet_name='Sheet1').ffill()
+    fig3_xl = pd.read_excel(ciona_connectome / 'elife-16962-fig3-data1-v1.xlsx', sheet_name='Sheet2')
+    
+    # Coordinates mapping from Fig 3 (3D)
+    pos3d_dict = {}
+    for _, row in fig3_xl.iterrows():
+        try:
+            cell_id = str(row['Cell'])
+            pos3d_dict[cell_id] = np.array([float(row['X']), float(row['Y']), float(row['Z'])])
+        except:
+            continue
+
+    # Biological mapping from Fig 1
+    bio_mapping = {}
+    for _, row in fig1_xl.iterrows():
+        ids_str = str(row['Cell IDs'])
+        # Handle ranges like pr1-pr23
+        range_match = re.search(r'([a-zA-Z]+)(\d+)-(\1|)(\d+)', ids_str)
+        if range_match:
+            prefix, start, _, end = range_match.groups()
+            for i in range(int(start), int(end) + 1):
+                bio_mapping[f'{prefix}{i}'] = {'cell_type': row['Cell Type'], 'annotation': row['Annotation']}
+        
+        # Handle individual IDs and aliases in parentheses
+        # e.g. "ACIN1L (109*), ACIN2L (tail7)"
+        items = re.findall(r'([a-zA-Z0-9]+(?:\*[^*]*)?)(?:\s*\(([^)]+)\))?', ids_str)
+        for name, alias in items:
+            info = {'cell_type': row['Cell Type'], 'annotation': row['Annotation']}
+            bio_mapping[name] = info
+            if alias:
+                # remove * and other symbols
+                clean_alias = alias.replace('*', '').strip()
+                bio_mapping[clean_alias] = info
+                # handle 'tail' -> 'midtail' for nodes.csv compatibility
+                if clean_alias.startswith('tail'):
+                    bio_mapping[clean_alias.replace('tail', 'midtail')] = info
+
+    # Build final node mapping
+    neuron_dict = names_df.set_index('index')['name'].to_dict()
+    
+    # Fallback to nodes.csv 2D positions if 3D not found
+    pos_dict = {}
+    for _, row in names_df.iterrows():
+        idx = str(row['index'])
+        name = str(row['name'])
+        if idx in pos3d_dict:
+            pos_dict[name] = pos3d_dict[idx]
+        elif name in pos3d_dict:
+            pos_dict[name] = pos3d_dict[name]
+        else:
+            # Parse 2D array from nodes.csv
+            try:
+                # nodes.csv has 2D projection
+                p2d = np.array([float(x) for x in row['_pos'].split('[')[-1].split(']')[0].split(',')])
+                pos_dict[name] = np.array([p2d[0], p2d[1], 0.0]) # Add dummy Z
+            except:
+                pos_dict[name] = np.array([0.0, 0.0, 0.0])
+
+    node_colors = {row['name']: "#" + row['color'][-6:] for _, row in names_df.iterrows()}
+    
+    neuron_indices = sorted(names_df['index'].tolist())    
+    
+    # Enrichment attributes
+    type_dict = {}
+    annot_dict = {}
+    for nidx in neuron_indices:
+        name = neuron_dict[nidx]
+        info = bio_mapping.get(name) or bio_mapping.get(str(nidx))
+        if info:
+            type_dict[name] = info['cell_type']
+            annot_dict[name] = info['annotation']
+        else:
+            type_dict[name] = 'Other'
+            annot_dict[name] = 'Unknown'
+
+    nn.create_neurons([neuron_dict[n] for n in neuron_indices], 
+                      position=pos_dict,
+                      color=node_colors,
+                      cell_type=type_dict,
+                      annotation=annot_dict)
+
     ## Connections
-    for pre, post, weight in zip(conns['# source'], conns[' target'], conns['depth']):
-        adjacency = {'pre': neuron_names[pre], 'post': neuron_names[post], 'weight': weight}
+    for _, row in conns.iterrows():
+        adjacency = {'pre': neuron_dict[row['source']], 'post': neuron_dict[row['target']], 'weight': row['depth']}
         nn.setup_connections(adjacency, connection_type='chemical-synapse', input_type='edge')
 
     return a

@@ -37,6 +37,7 @@ share/python-wheels/
 Output/
 tmp/
 examples/notebooks/*.pkl
+*.cedne
 *.pkl
 *.png
 *.svg
@@ -135,9 +136,14 @@ docker-compose.yml
 examples/notebooks/_future/
 examples/python/_future/
 examples/*.py
+examples/notebooks/*.md
+examples/notebooks/*.py
 examples/*.csv
 examples/fits/
 ## Exceptions
 !data_sources/*.pkl
 !.assets/*.svg
 !.assets/*.png
+
+examples/notebooks/dynamics_March31_2026.ipynb
+examples/notebooks/dynamics_figures/

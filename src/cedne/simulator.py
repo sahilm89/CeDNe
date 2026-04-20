@@ -164,10 +164,17 @@ class Neuron:
         self.static = static
         self.set_activation(activation)
 
-        self.neuron_parameters = {'gain':gain, 'time_constant':time_constant, 'baseline':baseline, 'static':static, 'activation':activation}
-
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+        self.neuron_parameters = {
+            'gain': gain,
+            'time_constant': time_constant,
+            'baseline': baseline,
+            'static': static,
+            'activation': activation,
+            **kwargs,
+        }
         
         self.model.add_node(self, gain=gain, time_constant=time_constant, baseline=baseline, static=static, activation=activation, **kwargs)
     
@@ -266,7 +273,8 @@ class InputNeuron(Neuron):
         Returns:
             float: The processed inputs.
         """
-        return sum([self.gain*inp.process_input(t) for inp in self.inputs])
+        gain = 1.0 if self.gain is None else self.gain
+        return sum([gain * inp.process_input(t) for inp in self.inputs])
 
 class Model(nx.MultiDiGraph):
     """ 
@@ -283,6 +291,7 @@ class Model(nx.MultiDiGraph):
             time_constants (dict): A dictionary where the keys are the neurons and the values are the list of time constants for each neuron.
         """
         super().__init__()
+        self.source_graph = graph
         self.neurons = {}
         self.input_neurons = {}
         if static_neurons is None:
@@ -331,25 +340,96 @@ class Model(nx.MultiDiGraph):
         for neuron in self.input_neurons:
             self.neurons[neuron].inputs = []
         self.inputs = None
+
+    def _ensure_time_points(self, time_points=None):
+        """Normalize and validate the model time axis."""
+        if time_points is not None:
+            self.time_points = time_points
+        if self.time_points is None:
+            raise ValueError("Time points must be set")
+        return self.time_points
+
+    def _empty_static_rates(self):
+        """Allocate the static-neuron trajectory array for the current time axis."""
+        return np.zeros((len(self.time_points), len(self.static_neurons)), dtype=np.float32)
+
+    def _initialize_static_rates(self, static_rates):
+        """Populate static neurons at the first time point."""
+        if len(self.static_neurons) == 0:
+            return
+        static_rates[0] = [neuron.process_inputs(self.time_points[0]) for neuron in self.static_neurons]
+        for i, neuron in enumerate(self.static_neurons):
+            neuron.rate = static_rates[0, i]
+
+    def _advance_static_rates(self, static_rates, t_idx):
+        """Advance static-neuron inputs to the next time step."""
+        if len(self.static_neurons) == 0:
+            return
+        static_rates[t_idx + 1, :] = [
+            neuron.process_inputs(self.time_points[t_idx + 1]) for neuron in self.static_neurons
+        ]
+        for i, neuron in enumerate(self.static_neurons):
+            neuron.rate = static_rates[t_idx + 1, i]
+
+    def _pack_observable_trajectories(self, dynamic_values, static_rates):
+        """Return the standard dict[neuron -> trajectory] observable contract."""
+        rates = {neuron: [] for neuron in self.static_neurons + self.dynamic_neurons}
+        for i, neuron in enumerate(self.static_neurons):
+            rates[neuron] = static_rates[:, i]
+        for i, neuron in enumerate(self.dynamic_neurons):
+            rates[neuron] = dynamic_values[:, i]
+        return rates
+
+    def _dynamic_weight_matrix(self, connection_type=None):
+        """Return the weighted adjacency over dynamic neurons in simulator order."""
+        ordered_neurons = list(self.dynamic_neurons)
+        index_map = {neuron: idx for idx, neuron in enumerate(ordered_neurons)}
+        matrix = np.zeros((len(ordered_neurons), len(ordered_neurons)), dtype=np.float32)
+
+        selectors = None
+        if connection_type is not None:
+            selectors = [connection_type] if isinstance(connection_type, str) else list(connection_type)
+
+        for pre, post, edge_data in self.edges(data=True):
+            if pre not in index_map or post not in index_map:
+                continue
+            if selectors is not None:
+                edge_type = edge_data.get("connection_type")
+                include_edge = False
+                for selector in selectors:
+                    if selector == "chemical" and edge_type == "chemical-synapse":
+                        include_edge = True
+                    elif selector in {"gap", "gap-junction"} and edge_type == "gap-junction":
+                        include_edge = True
+                    elif selector == "bulk" and edge_type not in {"chemical-synapse", "gap-junction"}:
+                        include_edge = True
+                    elif edge_type == selector:
+                        include_edge = True
+                if not include_edge:
+                    continue
+            matrix[index_map[pre], index_map[post]] += edge_data.get("weight", 1.0)
+        return matrix
     
     def set_neuron_parameters(self, neuron_parameters):
         """Set the parameters of the neurons.""" 
         for par in self.neuron_parameters:
+            updated_values = neuron_parameters.get(par, {})
             for neuron in self.neuron_parameters[par]:
                 if not neuron in self.neurons.values():
                     raise ValueError(f"Neuron {neuron} not found in the model")
-                if neuron in neuron_parameters[par]:
-                    neuron.set_parameter(par, neuron_parameters[par][neuron])
+                if neuron in updated_values:
+                    neuron.set_parameter(par, updated_values[neuron])
         self.update_neuron_parameters()
 
     def set_edge_parameters(self, edge_parameters):
         """Set the parameters of the edges."""
         for par in self.edge_parameters:
+            updated_values = edge_parameters.get(par, {})
             for edge in self.edge_parameters[par]:
                 if not edge in self.edges:
                     raise ValueError(f"Edge {edge} not found in the model")
-                if edge in edge_parameters[par]:
-                    nx.set_edge_attributes(self, {edge: {par: edge_parameters[par][edge]}})
+                if edge in updated_values:
+                    nx.set_edge_attributes(self, {edge: {par: updated_values[edge]}})
         self.update_edge_parameters()
     
     def update_neuron_parameters(self):
@@ -395,33 +475,15 @@ class RateModel(Model):
             list: The derivatives of the rates with respect to time.
         """
         num_dynamic_neurons = len(self.dynamic_neurons)
-        derivatives = np.zeros(num_dynamic_neurons, dtype=np.float32)
-        synaptic_inputs = np.zeros(num_dynamic_neurons, dtype=np.float32)
         external_inputs = np.zeros(num_dynamic_neurons, dtype=np.float32)
+        rates = np.array([neuron.rate for neuron in self.dynamic_neurons], dtype=np.float32)
 
         # Process external inputs efficiently
         input_neurons_mask = np.array([neuron.name in self.input_neurons for neuron in self.dynamic_neurons])
         external_inputs[input_neurons_mask] = np.array([neuron.process_inputs(t) for neuron, mask in zip(self.dynamic_neurons, input_neurons_mask) if mask])
 
-        for i, neuron in enumerate(self.dynamic_neurons):
-            if not input_neurons_mask[i]:  # Skip input neurons
-                edges = [(in_neuron.rate, data['weight']) for in_neuron, _, data in self.in_edges(neuron, data=True)]
-                if edges:
-                    in_neurons, weights = zip(*edges)
-                    synaptic_inputs[i] = np.dot(in_neurons, weights)  # Use NumPy dot product
-                else:
-                    in_neurons, weights = [], []  # Set empty lists
-                    synaptic_inputs[i] = 0  # No input contribution
-                # in_neurons, weights = zip(*[(in_neuron.rate, data['weight'])
-                #                       for in_neuron, _, data in self.in_edges(neuron, data=True)])
-                # synaptic_inputs[i] = np.dot(in_neurons, weights)  # Matrix multiplication for efficiency
-                # synaptic_inputs[i] = sum(in_neuron.rate * data['weight'] for in_neuron, _, data in self.in_edges(neuron, data=True))
-
-        # synaptic_inputs = np.array([
-        #     sum(in_neuron.rate * data['weight'] for in_neuron, _, data in self.in_edges(neuron, data=True))
-        #     if not input_neurons_mask[i] else 0.0
-        #     for i, neuron in enumerate(self.dynamic_neurons)
-        # ], dtype=np.float32)
+        synaptic_inputs = self._dynamic_weight_matrix().T @ rates
+        synaptic_inputs[input_neurons_mask] = 0.0
         baselines = np.array([neuron.baseline for neuron in self.dynamic_neurons])
         total_input = synaptic_inputs + external_inputs + baselines
 
@@ -429,7 +491,6 @@ class RateModel(Model):
 
         time_constants = np.array([neuron.time_constant for neuron in self.dynamic_neurons])
         gains = np.array([neuron.gain for neuron in self.dynamic_neurons])
-        rates = np.array([neuron.rate for neuron in self.dynamic_neurons])
 
         if np.isnan(time_constants).any():
             logging.warning(f"NaN in time_constants at t={t}. Values: {time_constants}")
@@ -458,52 +519,400 @@ class RateModel(Model):
         Returns:
             list: The simulated rates at each time point.
         """
-        if time_points is not None:
-            self.time_points = time_points
-        if self.time_points is None:
-            raise ValueError("Time points must be set")
+        self._ensure_time_points(time_points)
         if initial_rates is None:
             initial_rates = np.zeros(len(self.dynamic_neurons))
         simulated_rates = np.zeros((len(self.time_points), len(self.dynamic_neurons)))
-        static_rates = np.zeros((len(self.time_points), len(self.static_neurons)))
-        
-        rates = {neuron: [] for neuron in self.static_neurons + self.dynamic_neurons}
+        static_rates = self._empty_static_rates()
         # ## Set inputs
         # assert all(isinstance(inp, Input) for inp in inputs)
         # self.set_inputs(inputs)
 
         ## Initial conditions
-        t = 0
-        static_rates[t]= [neuron.process_inputs(self.time_points[t]) for neuron in self.static_neurons]
-
-        simulated_rates[t] = initial_rates
+        simulated_rates[0] = initial_rates
+        self._initialize_static_rates(static_rates)
 
         for i, neuron in enumerate(self.dynamic_neurons):
-            neuron.rate = simulated_rates[t,i]
-        for i, neuron in enumerate(self.static_neurons):
-            neuron.rate = static_rates[t,i]
+            neuron.rate = simulated_rates[0, i]
 
         for t in range(len(self.time_points)-1):
             derivatives = self.rate_equations(self.time_points[t])
             simulated_rates[t+1] = simulated_rates[t] + derivatives * (self.time_points[t+1] - self.time_points[t])
-            static_rates[t+1,:] = [neuron.process_inputs(self.time_points[t+1]) for neuron in self.static_neurons]
+            self._advance_static_rates(static_rates, t)
 
             for i, neuron in enumerate(self.dynamic_neurons):
                 neuron.rate = simulated_rates[t+1,i]
-            for i, neuron in enumerate(self.static_neurons):
-                neuron.rate = static_rates[t+1,i]
-        
-        for i, neuron in enumerate(self.static_neurons):
-            rates[neuron] = static_rates[:,i]
-        for i, neuron in enumerate(self.dynamic_neurons):
-            rates[neuron] = simulated_rates[:,i]
-
-        # rates = np.concatenate((static_rates, simulated_rates), axis=1)
-        
-        return rates
+        return self._pack_observable_trajectories(simulated_rates, static_rates)
 
     def reinitialize(self):
         pass
+
+
+class LDSModel(Model):
+    """
+    Linear dynamical system over neural activity.
+
+    Dynamics:
+        x(t + dt) = x(t) + dt * (A x(t) + B u(t) + baseline)
+
+    This forward simulator evolves the neuron activity vector directly.
+    """
+
+    def __init__(
+        self,
+        graph,
+        input_neurons,
+        weights=None,
+        baseline=0.0,
+        input_weight=1.0,
+        static_neurons=None,
+        time_points=None,
+        inputs=None,
+    ) -> None:
+        def _coerce_node_param(value):
+            if isinstance(value, dict):
+                return value
+            return {node: value for node in graph.nodes}
+
+        super().__init__(
+            graph,
+            input_neurons,
+            neuron_parameters={
+                'gain': _coerce_node_param(1.0),
+                'baseline': _coerce_node_param(baseline),
+                'input_weight': _coerce_node_param(input_weight),
+            },
+            edge_parameters={'weight': weights},
+            static_neurons=static_neurons,
+            time_points=time_points,
+            inputs=inputs,
+        )
+
+    def lds_equations(self, t):
+        """
+        Compute linear state derivatives at time ``t``.
+        """
+        num_dynamic_neurons = len(self.dynamic_neurons)
+        external_inputs = np.zeros(num_dynamic_neurons, dtype=np.float32)
+        states = np.array([neuron.rate for neuron in self.dynamic_neurons], dtype=np.float32)
+
+        for i, neuron in enumerate(self.dynamic_neurons):
+            if neuron.name in self.input_neurons:
+                external_inputs[i] = neuron.input_weight * neuron.process_inputs(t)
+
+        recurrent_inputs = self._dynamic_weight_matrix().T @ states
+        baselines = np.array([neuron.baseline for neuron in self.dynamic_neurons], dtype=np.float32)
+        derivatives = recurrent_inputs + external_inputs + baselines
+        return derivatives
+
+    def simulate(self, time_points=None, initial_states=None):
+        """
+        Simulate the linear observable state over time.
+        """
+        self._ensure_time_points(time_points)
+        if initial_states is None:
+            initial_states = np.zeros(len(self.dynamic_neurons), dtype=np.float32)
+
+        simulated_states = np.zeros((len(self.time_points), len(self.dynamic_neurons)), dtype=np.float32)
+        static_rates = self._empty_static_rates()
+        simulated_states[0] = initial_states
+        self._initialize_static_rates(static_rates)
+
+        for i, neuron in enumerate(self.dynamic_neurons):
+            neuron.rate = simulated_states[0, i]
+
+        for t in range(len(self.time_points) - 1):
+            dt = self.time_points[t + 1] - self.time_points[t]
+            derivatives = self.lds_equations(self.time_points[t])
+            simulated_states[t + 1] = simulated_states[t] + derivatives * dt
+            self._advance_static_rates(static_rates, t)
+
+            for i, neuron in enumerate(self.dynamic_neurons):
+                neuron.rate = simulated_states[t + 1, i]
+
+        return self._pack_observable_trajectories(simulated_states, static_rates)
+
+    def reinitialize(self):
+        pass
+
+
+class CTRNNModel(Model):
+    """
+    Continuous-time recurrent neural network model.
+
+    Dynamics:
+        tau * dx/dt = -x + gain * activation(Wx + input + baseline)
+
+    This keeps the same graph/input/parameter plumbing as ``RateModel`` while
+    exposing a separate simulator family with explicit non-linear recurrent
+    dynamics.
+    """
+    def __init__(
+        self,
+        graph,
+        input_neurons,
+        weights=None,
+        tau=None,
+        gains=None,
+        baseline=0.,
+        activation='tanh',
+        static_neurons=None,
+        time_points=None,
+        inputs=None,
+    ) -> None:
+        neuron_activation = activation
+        if isinstance(activation, dict):
+            neuron_activation = activation
+        else:
+            neuron_activation = {
+                node: activation for node in graph.nodes
+            }
+        super().__init__(
+            graph,
+            input_neurons,
+            neuron_parameters={
+                'gain': gains,
+                'time_constant': tau,
+                'baseline': baseline,
+                'activation': neuron_activation,
+            },
+            edge_parameters={'weight': weights},
+            static_neurons=static_neurons,
+            time_points=time_points,
+            inputs=inputs,
+        )
+
+    def ctrnn_equations(self, t):
+        """
+        Compute the state derivatives at time ``t``.
+        """
+        num_dynamic_neurons = len(self.dynamic_neurons)
+        external_inputs = np.zeros(num_dynamic_neurons, dtype=np.float32)
+        states = np.array([neuron.rate for neuron in self.dynamic_neurons], dtype=np.float32)
+
+        input_neurons_mask = np.array(
+            [neuron.name in self.input_neurons for neuron in self.dynamic_neurons]
+        )
+        external_inputs[input_neurons_mask] = np.array(
+            [neuron.process_inputs(t) for neuron, mask in zip(self.dynamic_neurons, input_neurons_mask) if mask]
+        )
+
+        synaptic_inputs = self._dynamic_weight_matrix().T @ states
+        synaptic_inputs[input_neurons_mask] = 0.0
+
+        baselines = np.array([neuron.baseline for neuron in self.dynamic_neurons], dtype=np.float32)
+        total_input = synaptic_inputs + external_inputs + baselines
+        activations = np.array([neuron.activation(x) for neuron, x in zip(self.dynamic_neurons, total_input)], dtype=np.float32)
+        taus = np.array([neuron.time_constant for neuron in self.dynamic_neurons], dtype=np.float32)
+        gains = np.array([neuron.gain for neuron in self.dynamic_neurons], dtype=np.float32)
+
+        derivatives = (1 / taus) * (-states + gains * activations)
+        return derivatives
+
+    def simulate(self, time_points=None, initial_states=None):
+        """
+        Simulate the CTRNN states over time.
+        """
+        self._ensure_time_points(time_points)
+        if initial_states is None:
+            initial_states = np.zeros(len(self.dynamic_neurons), dtype=np.float32)
+
+        simulated_states = np.zeros((len(self.time_points), len(self.dynamic_neurons)), dtype=np.float32)
+        static_rates = self._empty_static_rates()
+        simulated_states[0] = initial_states
+        self._initialize_static_rates(static_rates)
+
+        for i, neuron in enumerate(self.dynamic_neurons):
+            neuron.rate = simulated_states[0, i]
+
+        for t in range(len(self.time_points) - 1):
+            derivatives = self.ctrnn_equations(self.time_points[t])
+            dt = self.time_points[t + 1] - self.time_points[t]
+            simulated_states[t + 1] = simulated_states[t] + derivatives * dt
+            self._advance_static_rates(static_rates, t)
+
+            for i, neuron in enumerate(self.dynamic_neurons):
+                neuron.rate = simulated_states[t + 1, i]
+        return self._pack_observable_trajectories(simulated_states, static_rates)
+
+    def reinitialize(self):
+        pass
+
+
+class DKBModel(Model):
+    """
+    Damped second-order network model.
+
+    Dynamics:
+        dx/dt = v
+        dv/dt = -damping * v - stiffness * (x - target)
+                + recurrent_weighted_input + input_weight * external_input
+                + baseline
+
+    The observable trajectory returned by ``simulate`` is the position-like
+    state ``x``. The auxiliary velocity state is retained on
+    ``self.last_velocities`` for downstream inspection.
+    """
+    def __init__(
+        self,
+        graph,
+        input_neurons,
+        weights=None,
+        damping=None,
+        stiffness=None,
+        baseline=0.,
+        input_weight=1.0,
+        target=0.0,
+        static_neurons=None,
+        time_points=None,
+        inputs=None,
+    ) -> None:
+        def _coerce_node_param(value):
+            if isinstance(value, dict):
+                return value
+            return {node: value for node in graph.nodes}
+
+        super().__init__(
+            graph,
+            input_neurons,
+            neuron_parameters={
+                'gain': _coerce_node_param(1.0),
+                'damping': _coerce_node_param(damping),
+                'stiffness': _coerce_node_param(stiffness),
+                'baseline': _coerce_node_param(baseline),
+                'input_weight': _coerce_node_param(input_weight),
+                'target': _coerce_node_param(target),
+            },
+            edge_parameters={'weight': weights},
+            static_neurons=static_neurons,
+            time_points=time_points,
+            inputs=inputs,
+        )
+        self.last_velocities = None
+
+    def dkb_equations(self, t, positions, velocities):
+        """
+        Compute the second-order dynamics at time ``t``.
+        """
+        num_dynamic_neurons = len(self.dynamic_neurons)
+        position_derivatives = velocities.copy()
+        velocity_derivatives = np.zeros(num_dynamic_neurons, dtype=np.float32)
+        external_inputs = np.zeros(num_dynamic_neurons, dtype=np.float32)
+
+        for i, neuron in enumerate(self.dynamic_neurons):
+            if neuron.name in self.input_neurons:
+                external_inputs[i] = neuron.input_weight * sum(
+                    inp.process_input(t) for inp in neuron.inputs
+                )
+
+        recurrent_inputs = self._dynamic_weight_matrix().T @ positions
+        damping = np.array([neuron.damping for neuron in self.dynamic_neurons], dtype=np.float32)
+        stiffness = np.array([neuron.stiffness for neuron in self.dynamic_neurons], dtype=np.float32)
+        baseline = np.array([neuron.baseline for neuron in self.dynamic_neurons], dtype=np.float32)
+        target = np.array([neuron.target for neuron in self.dynamic_neurons], dtype=np.float32)
+
+        velocity_derivatives = (
+            -damping * velocities
+            - stiffness * (positions - target)
+            + recurrent_inputs
+            + external_inputs
+            + baseline
+        )
+        return position_derivatives, velocity_derivatives
+
+    def simulate(self, time_points=None, initial_states=None, initial_velocities=None):
+        """
+        Simulate the observable ``x`` state over time.
+        """
+        self._ensure_time_points(time_points)
+        if initial_states is None:
+            initial_states = np.zeros(len(self.dynamic_neurons), dtype=np.float32)
+        if initial_velocities is None:
+            initial_velocities = np.zeros(len(self.dynamic_neurons), dtype=np.float32)
+
+        simulated_states = np.zeros((len(self.time_points), len(self.dynamic_neurons)), dtype=np.float32)
+        simulated_velocities = np.zeros((len(self.time_points), len(self.dynamic_neurons)), dtype=np.float32)
+        static_rates = self._empty_static_rates()
+        simulated_states[0] = initial_states
+        simulated_velocities[0] = initial_velocities
+        self._initialize_static_rates(static_rates)
+
+        for i, neuron in enumerate(self.dynamic_neurons):
+            neuron.rate = simulated_states[0, i]
+            neuron.velocity = simulated_velocities[0, i]
+
+        for t in range(len(self.time_points) - 1):
+            dt = self.time_points[t + 1] - self.time_points[t]
+            dx, dv = self.dkb_equations(
+                self.time_points[t],
+                simulated_states[t],
+                simulated_velocities[t],
+            )
+            simulated_states[t + 1] = simulated_states[t] + dx * dt
+            simulated_velocities[t + 1] = simulated_velocities[t] + dv * dt
+            self._advance_static_rates(static_rates, t)
+
+            for i, neuron in enumerate(self.dynamic_neurons):
+                neuron.rate = simulated_states[t + 1, i]
+                neuron.velocity = simulated_velocities[t + 1, i]
+
+        self.last_velocities = {
+            neuron: simulated_velocities[:, i]
+            for i, neuron in enumerate(self.dynamic_neurons)
+        }
+        return self._pack_observable_trajectories(simulated_states, static_rates)
+
+    def reinitialize(self):
+        self.last_velocities = None
+
+
+class CalciumObservation:
+    """
+    Simple calcium/fluorescence observation layer for latent neural activity.
+
+    This applies a first-order rise/decay filter to each trajectory and returns
+    a new dictionary keyed by the same neuron objects used in the latent traces.
+    """
+
+    def __init__(self, rise_tau=0.2, decay_tau=1.0, scale=1.0, baseline=0.0, rectify=True):
+        if rise_tau <= 0 or decay_tau <= 0:
+            raise ValueError("rise_tau and decay_tau must be positive")
+        self.rise_tau = float(rise_tau)
+        self.decay_tau = float(decay_tau)
+        self.scale = float(scale)
+        self.baseline = float(baseline)
+        self.rectify = bool(rectify)
+
+    def transform(self, trajectories, time_points):
+        time_points = np.asarray(time_points, dtype=np.float32)
+        if time_points.ndim != 1 or len(time_points) < 2:
+            raise ValueError("time_points must be a one-dimensional array with at least two entries")
+
+        calcium = {}
+        for neuron, values in trajectories.items():
+            latent = np.asarray(values, dtype=np.float32)
+            if latent.shape[0] != time_points.shape[0]:
+                raise ValueError("Each trajectory must match the length of time_points")
+            if self.rectify:
+                latent = np.maximum(latent, 0.0)
+
+            bound = np.zeros_like(latent, dtype=np.float32)
+            observed = np.zeros_like(latent, dtype=np.float32)
+            bound[0] = latent[0]
+            observed[0] = self.baseline + self.scale * bound[0]
+
+            for i in range(len(time_points) - 1):
+                dt = time_points[i + 1] - time_points[i]
+                rise_drive = (latent[i] - bound[i]) / self.rise_tau
+                bound[i + 1] = bound[i] + dt * rise_drive
+                decay_drive = (bound[i] - (observed[i] - self.baseline) / self.scale) / self.decay_tau
+                observed_signal = (observed[i] - self.baseline) / self.scale + dt * decay_drive
+                observed[i + 1] = self.baseline + self.scale * observed_signal
+
+            calcium[neuron] = observed
+
+        return calcium
+
 
 class JaxRateModel(eqx.Module):
     """

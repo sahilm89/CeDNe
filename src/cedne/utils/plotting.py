@@ -1286,3 +1286,74 @@ def compare_simulation_results(results1, results2, twinx=True):
     simpleaxis(ax)
     f.legend(loc='outside upper center', ncol=len(rates1), frameon=False)
     return f
+
+def plot_ciona_anatomical(nn, view='2d', save=False, figsize=(8, 12), title='Ciona Anatomical View', font_size=8, alpha_conn=0.1):
+    """
+    Generates an anatomical plot for the Ciona nervous system (2D or 3D).
+    """
+    nlabels = list(nn.neurons.keys())
+    pos = np.array([nn.neurons[n].position for n in nlabels])
+    
+    # Define colors based on annotation
+    annot_colors = {
+        'Sensory': '#3498db',      # Blue
+        'Interneuron': '#e67e22',  # Orange
+        'Motor neuron': '#e74c3c', # Red
+        'Accessory': '#2ecc71',    # Green
+        'Unknown': '#95a5a6'       # Gray
+    }
+    
+    colors = []
+    for n in nlabels:
+        annot = getattr(nn.neurons[n], 'annotation', 'Unknown')
+        colors.append(annot_colors.get(annot, '#95a5a6'))
+
+    fig = plt.figure(figsize=figsize)
+    if view == '3d':
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(pos[:, 0], pos[:, 1], pos[:, 2], c=colors, s=50, edgecolors='k', alpha=0.8, zorder=2)
+        
+        for (u, v, k), connection in nn.connections.items():
+            if hasattr(u, 'position') and hasattr(v, 'position'):
+                p1, p2 = u.position, v.position
+                ax.plot([p1[0], p2[0]], [p1[1], p2[1]], [p1[2], p2[2]], 
+                        color='gray', alpha=alpha_conn, lw=0.5, zorder=1)
+        
+        ax.set_zlabel('Z')
+    else:
+        ax = fig.add_subplot(111)
+        ax.scatter(pos[:, 0], pos[:, 1], c=colors, s=100, edgecolors='k', alpha=0.8, zorder=2)
+        
+        # Draw connections with arrows for 2D
+        for (u, v, k), connection in nn.connections.items():
+            if hasattr(u, 'position') and hasattr(v, 'position'):
+                p1, p2 = u.position, v.position
+                # Use annotate for arrows
+                ax.annotate("", xy=(p2[0], p2[1]), xytext=(p1[0], p1[1]),
+                            arrowprops=dict(arrowstyle="->", color='gray', alpha=alpha_conn, lw=0.5, shrinkA=5, shrinkB=5),
+                            zorder=1)
+
+        ax.set_aspect('equal')
+        simpleaxis(ax)
+
+    # Add labels (optional, can be cluttered)
+    # for i, label in enumerate(nlabels):
+    #     if view == '3d':
+    #         ax.text(pos[i, 0], pos[i, 1], pos[i, 2], label, fontsize=font_size-2, alpha=0.5)
+    #     else:
+            # ax.annotate(label, (pos[i, 0], pos[i, 1]), fontsize=font_size, alpha=0.5)
+    
+    ax.set_title(title)
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    
+    # Add legend
+    from matplotlib.lines import Line2D
+    legend_elements = [Line2D([0], [0], marker='o', color='w', label=k,
+                              markerfacecolor=v, markersize=10) for k, v in annot_colors.items()]
+    ax.legend(handles=legend_elements, loc='upper right', frameon=False, fontsize=font_size)
+
+    if save:
+        plt.savefig(save, bbox_inches='tight', transparent=True)
+    
+    return fig
