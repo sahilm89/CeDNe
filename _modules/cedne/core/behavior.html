@@ -273,39 +273,277 @@
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Behavioral context container for neural networks in CeDNe.</span>
 
-<span class="sd">This module defines the `Behavior` class, which associates a `Worm` object </span>
-<span class="sd">with a specific network (e.g., &quot;Neutral&quot;, &quot;Trained&quot;) in a behavioral context.</span>
+<span class="sd">This module defines the `Behavior` class, which associates behavioral</span>
+<span class="sd">time-series data with a neural network context. It serves as the bridge</span>
+<span class="sd">between recorded behavioral variables (e.g., speed, heading, curvature)</span>
+<span class="sd">and neural activity stored in `Trial`/`Session` objects.</span>
 
 <span class="sd">Key class:</span>
-<span class="sd">- `Behavior`: A lightweight wrapper used to annotate or tag a worm&#39;s network </span>
-<span class="sd">  with behavioral meaning. It serves as a placeholder for integrating future </span>
-<span class="sd">  behavioral analysis, but currently stores no trial data or time-series information.</span>
-
-<span class="sd">Intended Use:</span>
-<span class="sd">This class is useful for organizing multiple networks per worm, such as </span>
-<span class="sd">baseline vs. trained conditions, or different environmental contexts.</span>
+<span class="sd">- `Behavior`: Stores behavioral time series, supports alignment to</span>
+<span class="sd">  neural recordings, and links to `Session`/`Trial` for cross-referencing.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="n">__author__</span> <span class="o">=</span> <span class="s2">&quot;Sahil Moza&quot;</span>
 <span class="n">__date__</span> <span class="o">=</span> <span class="s2">&quot;2025-04-06&quot;</span>
 <span class="n">__license__</span> <span class="o">=</span> <span class="s2">&quot;MIT&quot;</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.animal</span><span class="w"> </span><span class="kn">import</span> <span class="n">Worm</span> 
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">NDArray</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">TYPE_CHECKING</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.animal</span><span class="w"> </span><span class="kn">import</span> <span class="n">Worm</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.recordings</span><span class="w"> </span><span class="kn">import</span> <span class="n">Trial</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.session</span><span class="w"> </span><span class="kn">import</span> <span class="n">Session</span>
+
+
 <div class="viewcode-block" id="Behavior">
 <a class="viewcode-back" href="../../../index.html#cedne.Behavior">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Behavior</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39; This is a behavior class for the organism&#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Behavioral data container for an organism.</span>
+<span class="sd">    </span>
+<span class="sd">    Stores named behavioral time series (e.g., speed, heading, body curvature)</span>
+<span class="sd">    with timestamps and metadata. Can be linked to `Session` and `Trial` objects</span>
+<span class="sd">    for alignment between behavioral and neural data.</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        worm: The worm object associated with this behavior.</span>
+<span class="sd">        variables: Dict mapping variable names to 1-D numpy arrays.</span>
+<span class="sd">        timestamps: Array of time points for the behavioral data.</span>
+<span class="sd">        metadata: Dict of metadata (sampling_rate, units, source, etc.).</span>
+<span class="sd">        session: Optional link to the experimental Session.</span>
+<span class="sd">        trials: List of Trial objects linked to this behavior.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">worm</span><span class="p">:</span> <span class="n">Worm</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">network</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Neutral&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initializes a Behavior object.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            worm (Worm, optional): The worm object associated with the behavior. Defaults to None.</span>
-<span class="sd">            network (str, optional): The network for the behavior. Defaults to &quot;Neutral&quot;.</span>
+<span class="sd">            worm: The worm object associated with the behavior.</span>
+<span class="sd">            network: The network context name (e.g., &quot;Neutral&quot;, &quot;Trained&quot;).</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">worm</span> <span class="o">=</span> <span class="n">worm</span> <span class="ow">or</span> <span class="n">Worm</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;sampling_rate&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s1">&#39;units&#39;</span><span class="p">:</span> <span class="p">{},</span>          <span class="c1"># {&quot;speed&quot;: &quot;mm/s&quot;, &quot;heading&quot;: &quot;rad&quot;}</span>
+            <span class="s1">&#39;source_file&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s1">&#39;Session&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trials</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="s1">&#39;Trial&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">worm</span><span class="o">.</span><span class="n">networks</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">network</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">worm</span><span class="o">.</span><span class="n">networks</span><span class="p">[</span><span class="n">network</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">worm</span><span class="o">.</span><span class="n">networks</span><span class="p">[</span><span class="n">network</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+
+    <span class="c1"># ── Variable management ──</span>
+
+<div class="viewcode-block" id="Behavior.add_variable">
+<a class="viewcode-back" href="../../../index.html#cedne.Behavior.add_variable">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_variable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span>
+                     <span class="n">timestamps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                     <span class="n">unit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add a named behavioral variable (1-D time series).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            name: Variable name (e.g., &quot;speed&quot;, &quot;heading&quot;).</span>
+<span class="sd">            data: 1-D array of values.</span>
+<span class="sd">            timestamps: Optional array of time points. If provided on the</span>
+<span class="sd">                first call, it sets the global timestamps for this Behavior.</span>
+<span class="sd">                Subsequent calls verify length consistency.</span>
+<span class="sd">            unit: Optional unit string (e.g., &quot;mm/s&quot;).</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If data is not 1-D or length doesn&#39;t match timestamps.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Behavioral variable &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; must be 1-D, got </span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">ndim</span><span class="si">}</span><span class="s2">-D&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Handle timestamps</span>
+        <span class="k">if</span> <span class="n">timestamps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">timestamps</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+                <span class="n">timestamps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">timestamps</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span> <span class="o">=</span> <span class="n">timestamps</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;sampling_rate&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">timestamps</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;sampling_rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">timestamps</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">timestamps</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Timestamps length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">timestamps</span><span class="p">)</span><span class="si">}</span><span class="s2">) doesn&#39;t match &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;existing (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+                <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Variable &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s2">) doesn&#39;t match &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;timestamps length (</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="k">if</span> <span class="n">unit</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;units&#39;</span><span class="p">][</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">unit</span></div>
+
+
+<div class="viewcode-block" id="Behavior.get_variable">
+<a class="viewcode-back" href="../../../index.html#cedne.Behavior.get_variable">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_variable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get a behavioral variable by name.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            name: Variable name.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The 1-D array for the named variable.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            KeyError: If variable doesn&#39;t exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Behavioral variable &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; not found. &quot;</span>
+                           <span class="sa">f</span><span class="s2">&quot;Available: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">[</span><span class="n">name</span><span class="p">]</span></div>
+
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">variable_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List of available behavioral variable names.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_timepoints</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Number of time points (0 if no data loaded).&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">values</span><span class="p">())))</span>
+        <span class="k">return</span> <span class="mi">0</span>
+
+    <span class="c1"># ── Alignment ──</span>
+
+<div class="viewcode-block" id="Behavior.align_to_neural">
+<a class="viewcode-back" href="../../../index.html#cedne.Behavior.align_to_neural">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">align_to_neural</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">:</span> <span class="s1">&#39;Trial&#39;</span><span class="p">,</span>
+                        <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;interpolate&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Align behavioral data to a neural recording&#39;s time base.</span>
+
+<span class="sd">        Resamples all behavioral variables to match the neural trial&#39;s timestamps.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            trial: A Trial object with recording data.</span>
+<span class="sd">            method: Alignment method.</span>
+<span class="sd">                - &quot;interpolate&quot;: Linear interpolation to neural time points.</span>
+<span class="sd">                - &quot;nearest&quot;: Nearest-neighbor matching.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dict mapping variable names to resampled arrays matching</span>
+<span class="sd">            the neural trial&#39;s time points.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: If behavioral timestamps are not set or trial has no data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Behavioral timestamps not set. Call add_variable with timestamps first.&quot;</span><span class="p">)</span>
+
+        <span class="n">neural_timestamps</span> <span class="o">=</span> <span class="n">trial</span><span class="o">.</span><span class="n">get_timestamps</span><span class="p">()</span>
+        <span class="n">aligned</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;interpolate&quot;</span><span class="p">:</span>
+                <span class="n">aligned</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">neural_timestamps</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;nearest&quot;</span><span class="p">:</span>
+                <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span><span class="p">,</span> <span class="n">neural_timestamps</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+                <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">aligned</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown alignment method: &#39;</span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">&#39;. &quot;</span>
+                                 <span class="sa">f</span><span class="s2">&quot;Use &#39;interpolate&#39; or &#39;nearest&#39;.&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">aligned</span></div>
+
+
+    <span class="c1"># ── Trial/Session linkage ──</span>
+
+<div class="viewcode-block" id="Behavior.link_trial">
+<a class="viewcode-back" href="../../../index.html#cedne.Behavior.link_trial">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">link_trial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">:</span> <span class="s1">&#39;Trial&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Link a Trial to this Behavior for cross-referencing.</span>
+
+<span class="sd">        Also sets the trial&#39;s behavior back-reference.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            trial: The Trial object to link.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">trial</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">trials</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trials</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">trial</span><span class="p">)</span>
+        <span class="n">trial</span><span class="o">.</span><span class="n">behavior</span> <span class="o">=</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="Behavior.link_session">
+<a class="viewcode-back" href="../../../index.html#cedne.Behavior.link_session">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">link_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session</span><span class="p">:</span> <span class="s1">&#39;Session&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Link a Session to this Behavior.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            session: The Session object to link.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">session</span></div>
+
+
+    <span class="c1"># ── I/O helpers ──</span>
+
+<div class="viewcode-block" id="Behavior.to_dict">
+<a class="viewcode-back" href="../../../index.html#cedne.Behavior.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Serialize behavior data to a dictionary.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dict with variables, timestamps, and metadata.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;variables&#39;</span><span class="p">:</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+            <span class="s1">&#39;metadata&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="Behavior.from_dict">
+<a class="viewcode-back" href="../../../index.html#cedne.Behavior.from_dict">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+                  <span class="n">worm</span><span class="p">:</span> <span class="n">Worm</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">network</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Neutral&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Behavior&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a Behavior from a dictionary.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data: Dict with &#39;variables&#39;, optional &#39;timestamps&#39;, and &#39;metadata&#39;.</span>
+<span class="sd">            worm: Optional Worm object.</span>
+<span class="sd">            network: Network context name.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            New Behavior instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">behavior</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">worm</span><span class="o">=</span><span class="n">worm</span><span class="p">,</span> <span class="n">network</span><span class="o">=</span><span class="n">network</span><span class="p">)</span>
+        <span class="n">timestamps</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="s1">&#39;timestamps&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">timestamps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s1">&#39;metadata&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+            <span class="n">behavior</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;metadata&#39;</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;variables&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">unit</span> <span class="o">=</span> <span class="n">behavior</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;units&#39;</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">behavior</span><span class="o">.</span><span class="n">add_variable</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+                                  <span class="n">timestamps</span><span class="o">=</span><span class="n">timestamps</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="n">unit</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">behavior</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Behavior(variables=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">variable_names</span><span class="si">}</span><span class="s2">, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;n_timepoints=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">n_timepoints</span><span class="si">}</span><span class="s2">, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;linked_trials=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trials</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span></div>
 
 </pre></div>
 

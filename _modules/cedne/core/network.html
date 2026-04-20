@@ -306,6 +306,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.connection</span><span class="w"> </span><span class="kn">import</span> <span class="n">Connection</span><span class="p">,</span> \
     <span class="n">ChemicalSynapse</span><span class="p">,</span> <span class="n">GapJunction</span><span class="p">,</span> <span class="n">ConnectionGroup</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.neuron</span><span class="w"> </span><span class="kn">import</span> <span class="n">Neuron</span><span class="p">,</span> <span class="n">NeuronGroup</span>
@@ -339,6 +340,8 @@
             <span class="c1"># dictionary of all neurons in the nervous system</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">connections</span> <span class="o">=</span> <span class="n">ConnectionGroup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">group_name</span><span class="o">=</span><span class="s1">&#39;all_connections&#39;</span><span class="p">)</span> \
               <span class="c1"># dictionary of all connections in the nervous system</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">visualization_metadata</span> <span class="o">=</span> <span class="p">{}</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_filtered_nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_filtered_edges</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
@@ -540,13 +543,13 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="n">NervousSystem</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;The network object must be a NervousSystem object&quot;</span><span class="p">)</span>
         
-        <span class="k">for</span> <span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">data</span> <span class="ow">in</span> <span class="n">network</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">keys</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="p">,</span><span class="n">k</span><span class="p">,</span><span class="n">edge_data</span> <span class="ow">in</span> <span class="n">network</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">keys</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
             <span class="n">n1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">u</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
             <span class="n">n2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">update</span><span class="p">({(</span><span class="n">n1</span><span class="p">,</span><span class="n">n2</span><span class="p">,</span><span class="n">k</span><span class="p">):</span><span class="n">Connection</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">k</span><span class="p">)})</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">update</span><span class="p">({(</span><span class="n">n1</span><span class="p">,</span><span class="n">n2</span><span class="p">,</span><span class="n">k</span><span class="p">):</span><span class="n">Connection</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">data</span><span class="p">)})</span></div>
+                <span class="bp">self</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">update</span><span class="p">({(</span><span class="n">n1</span><span class="p">,</span><span class="n">n2</span><span class="p">,</span><span class="n">k</span><span class="p">):</span><span class="n">Connection</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="o">**</span><span class="n">edge_data</span><span class="p">)})</span></div>
 
 
 <div class="viewcode-block" id="NervousSystem.update_neurons">
@@ -790,8 +793,8 @@
                 <span class="n">new_connections</span> <span class="o">=</span> <span class="p">[</span><span class="n">graph_copy</span><span class="o">.</span><span class="n">connections</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">_id</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">new_connections</span><span class="p">]</span>
                 <span class="n">subnet</span> <span class="o">=</span> <span class="n">graph_copy</span><span class="o">.</span><span class="n">edge_subgraph</span><span class="p">(</span><span class="n">new_connections</span><span class="p">)</span> <span class="c1"># That will put it through custom copy again.</span>
                 <span class="n">subgraph</span> <span class="o">=</span> <span class="n">NervousSystem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">worm</span><span class="p">,</span> <span class="n">network</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
-                <span class="n">subgraph</span><span class="o">.</span><span class="n">create_neurons_from</span><span class="p">(</span><span class="n">subnet</span><span class="p">)</span>
-                <span class="n">subgraph</span><span class="o">.</span><span class="n">create_connections_from</span><span class="p">(</span><span class="n">subnet</span><span class="p">)</span>
+                <span class="n">subgraph</span><span class="o">.</span><span class="n">create_neurons_from</span><span class="p">(</span><span class="n">subnet</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+                <span class="n">subgraph</span><span class="o">.</span><span class="n">create_connections_from</span><span class="p">(</span><span class="n">subnet</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
                 <span class="c1"># subgraph.connections = {key: value for key, value in graph_copy.connections.items()\</span>
                     <span class="c1">#  if key in new_connections}</span>
             <span class="k">else</span><span class="p">:</span>
@@ -941,12 +944,76 @@
     <span class="c1">#     self.update_neurons()</span>
 <div class="viewcode-block" id="NervousSystem.adjacency">
 <a class="viewcode-back" href="../../../index.html#cedne.NervousSystem.adjacency">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">adjacency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">adjacency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">weighted</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">connection_type</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Output the adjecency matrix for the network ordered by neurons</span>
+<span class="sd">        Output the adjacency matrix for the network ordered by neurons.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            order:</span>
+<span class="sd">                Optional ordered list of neuron names or neuron objects.</span>
+<span class="sd">                When omitted, neurons are ordered deterministically by name.</span>
+<span class="sd">            weighted (bool):</span>
+<span class="sd">                If ``True``, matrix entries are summed edge weights. Otherwise</span>
+<span class="sd">                returns a binary adjacency matrix.</span>
+<span class="sd">            connection_type:</span>
+<span class="sd">                Optional string or list of strings selecting which connection</span>
+<span class="sd">                types to include. Supports convenience aliases such as</span>
+<span class="sd">                ``&quot;chemical&quot;``, ``&quot;gap-junction&quot;``, and ``&quot;bulk&quot;`` in</span>
+<span class="sd">                addition to exact connection type names.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c1"># nx.adjacency_matrix(self, nodelist = )</span>
-        <span class="k">pass</span></div>
+        <span class="k">if</span> <span class="n">order</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ordered_neurons</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">neuron</span><span class="p">:</span> <span class="n">neuron</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ordered_neurons</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">order</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="n">Neuron</span><span class="p">):</span>
+                    <span class="n">ordered_neurons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">item</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Neuron &#39;</span><span class="si">{</span><span class="n">item</span><span class="si">}</span><span class="s2">&#39; not found in network&quot;</span><span class="p">)</span>
+                    <span class="n">ordered_neurons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">item</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;order entries must be neuron names or Neuron objects&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">connection_type</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">selected_types</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">include_bulk</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">selectors</span> <span class="o">=</span> <span class="p">[</span><span class="n">connection_type</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">connection_type</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">connection_type</span><span class="p">)</span>
+            <span class="n">selected_types</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="n">include_bulk</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">selector</span> <span class="ow">in</span> <span class="n">selectors</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">selector</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;connection_type entries must be strings&quot;</span><span class="p">)</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="n">selector</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;chemical&quot;</span><span class="p">,</span> <span class="s2">&quot;chemical-synapse&quot;</span><span class="p">,</span> <span class="s2">&quot;chemical_synapse&quot;</span><span class="p">}:</span>
+                    <span class="n">selected_types</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;chemical-synapse&quot;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;gap&quot;</span><span class="p">,</span> <span class="s2">&quot;gap-junction&quot;</span><span class="p">,</span> <span class="s2">&quot;gap_junction&quot;</span><span class="p">}:</span>
+                    <span class="n">selected_types</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;gap-junction&quot;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;bulk&quot;</span><span class="p">:</span>
+                    <span class="n">include_bulk</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">selected_types</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">selector</span><span class="p">)</span>
+
+        <span class="n">index_map</span> <span class="o">=</span> <span class="p">{</span><span class="n">neuron</span><span class="p">:</span> <span class="n">idx</span> <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">neuron</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ordered_neurons</span><span class="p">)}</span>
+        <span class="n">adjacency</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">ordered_neurons</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">ordered_neurons</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">pre</span><span class="p">,</span> <span class="n">post</span><span class="p">,</span> <span class="n">edge_data</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">pre</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">index_map</span> <span class="ow">or</span> <span class="n">post</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">index_map</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">edge_type</span> <span class="o">=</span> <span class="n">edge_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;connection_type&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">selected_types</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">is_bulk</span> <span class="o">=</span> <span class="n">edge_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;chemical-synapse&quot;</span><span class="p">,</span> <span class="s2">&quot;gap-junction&quot;</span><span class="p">}</span>
+                <span class="k">if</span> <span class="n">edge_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">selected_types</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">include_bulk</span> <span class="ow">and</span> <span class="n">is_bulk</span><span class="p">):</span>
+                    <span class="k">continue</span>
+
+            <span class="n">adjacency</span><span class="p">[</span><span class="n">index_map</span><span class="p">[</span><span class="n">pre</span><span class="p">],</span> <span class="n">index_map</span><span class="p">[</span><span class="n">post</span><span class="p">]]</span> <span class="o">+=</span> <span class="n">edge_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;weight&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span> <span class="k">if</span> <span class="n">weighted</span> <span class="k">else</span> <span class="mf">1.0</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">weighted</span><span class="p">:</span>
+            <span class="n">adjacency</span> <span class="o">=</span> <span class="p">(</span><span class="n">adjacency</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">adjacency</span></div>
 
     
 <div class="viewcode-block" id="NervousSystem.reassign_connections">
@@ -1210,11 +1277,13 @@
             <span class="n">deep_copy</span> <span class="o">=</span> <span class="n">NervousSystem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">worm</span><span class="p">,</span> <span class="n">network</span><span class="o">=</span><span class="n">name</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_copy&quot;</span><span class="p">)</span>
             <span class="n">deep_copy</span><span class="o">.</span><span class="n">create_neurons_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">deep_copy</span><span class="o">.</span><span class="n">create_connections_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">deep_copy</span><span class="o">.</span><span class="n">visualization_metadata</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">visualization_metadata</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">deep_copy</span>
         <span class="k">elif</span> <span class="n">copy_type</span> <span class="o">==</span> <span class="s1">&#39;deep_without_data&#39;</span><span class="p">:</span>
             <span class="n">deep_copy</span> <span class="o">=</span> <span class="n">NervousSystem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">worm</span><span class="p">,</span> <span class="n">network</span><span class="o">=</span><span class="n">name</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_copy&quot;</span><span class="p">)</span>
             <span class="n">deep_copy</span><span class="o">.</span><span class="n">create_neurons_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
             <span class="n">deep_copy</span><span class="o">.</span><span class="n">create_connections_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">deep_copy</span><span class="o">.</span><span class="n">visualization_metadata</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">visualization_metadata</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">deep_copy</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;copy_type must be &#39;deep&#39;, &#39;shallow&#39;&quot;</span><span class="p">)</span></div>
@@ -1258,6 +1327,24 @@
             <span class="n">members</span> <span class="o">=</span> <span class="p">{</span><span class="n">edge</span><span class="p">:(</span><span class="n">subgraph_inverse</span><span class="p">[</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">subgraph_inverse</span><span class="p">[</span><span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span> <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">motif</span><span class="o">.</span><span class="n">edges</span><span class="p">}</span>
             <span class="n">motif_graphs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">members</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">motif_graphs</span></div>
+
+    
+<div class="viewcode-block" id="NervousSystem.shortest_path">
+<a class="viewcode-back" href="../../../index.html#cedne.NervousSystem.shortest_path">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">shortest_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;dijkstra&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Finds a single shortest path between two neurons in the network.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">nx</span><span class="o">.</span><span class="n">shortest_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="n">weight</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="NervousSystem.shortest_paths">
+<a class="viewcode-back" href="../../../index.html#cedne.NervousSystem.shortest_paths">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">shortest_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;dijkstra&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Finds all shortest paths between two neurons in the network.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">nx</span><span class="o">.</span><span class="n">all_shortest_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="n">weight</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="NervousSystem.export_graph">

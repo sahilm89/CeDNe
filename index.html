@@ -251,9 +251,9 @@
 <h1>Welcome to CeDNe’s documentation!<a class="headerlink" href="#welcome-to-cedne-s-documentation" title="Link to this heading">#</a></h1>
 <div class="toctree-wrapper compound">
 </div>
-<p id="module-cedne">CeDNe: C. elegans Dynamic Network
+<p id="module-cedne">CeDNe: Connectome-embedded Dynamical Networks
 A composable framework for building, analyzing, and visualizing nervous systems.</p>
-<p>This top-level module exports the core components (e.g., Worm, Neuron, NervousSystem)
+<p>This top-level module exports the core components (e.g., Worm, Fly, Neuron, NervousSystem)
 and utility functions (e.g., graph motifs, loaders, visualization) from its submodules.</p>
 <p>Modules:
 - <cite>core</cite>: Core neuroscience data structures (neurons, networks, trials)
@@ -265,7 +265,7 @@ and utility functions (e.g., graph motifs, loaders, visualization) from its subm
 <p>This is a full animal class</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="cedne.Animal.save">
-<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pickle'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/animal.html#Animal.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Animal.save" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cedne'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/animal.html#Animal.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Animal.save" title="Link to this definition">#</a></dt>
 <dd><p>Saves the Organism object to a pickle file at the specified file path.</p>
 <dl class="simple">
 <dt>Args:</dt><dd><p>file_path (str): The path to the pickle file.</p>
@@ -565,6 +565,45 @@ value: Property value to match.</p>
 </dl>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.NeuronGroup.union">
+<span class="sig-name descname"><span class="pre">union</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.NeuronGroup" title="cedne.core.neuron.NeuronGroup"><span class="pre">NeuronGroup</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cedne.NeuronGroup" title="cedne.core.neuron.NeuronGroup"><span class="pre">NeuronGroup</span></a></span></span><a class="reference internal" href="_modules/cedne/core/neuron.html#NeuronGroup.union"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NeuronGroup.union" title="Link to this definition">#</a></dt>
+<dd><p>Return a new NeuronGroup containing neurons from both groups.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>other: Another NeuronGroup to union with.
+group_name: Optional name for the resulting group.</p>
+</dd>
+<dt>Returns:</dt><dd><p>A new NeuronGroup with the combined members.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.NeuronGroup.intersection">
+<span class="sig-name descname"><span class="pre">intersection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.NeuronGroup" title="cedne.core.neuron.NeuronGroup"><span class="pre">NeuronGroup</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cedne.NeuronGroup" title="cedne.core.neuron.NeuronGroup"><span class="pre">NeuronGroup</span></a></span></span><a class="reference internal" href="_modules/cedne/core/neuron.html#NeuronGroup.intersection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NeuronGroup.intersection" title="Link to this definition">#</a></dt>
+<dd><p>Return a new NeuronGroup containing only neurons present in both groups.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>other: Another NeuronGroup to intersect with.
+group_name: Optional name for the resulting group.</p>
+</dd>
+<dt>Returns:</dt><dd><p>A new NeuronGroup with the shared members.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.NeuronGroup.difference">
+<span class="sig-name descname"><span class="pre">difference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.NeuronGroup" title="cedne.core.neuron.NeuronGroup"><span class="pre">NeuronGroup</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cedne.NeuronGroup" title="cedne.core.neuron.NeuronGroup"><span class="pre">NeuronGroup</span></a></span></span><a class="reference internal" href="_modules/cedne/core/neuron.html#NeuronGroup.difference"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NeuronGroup.difference" title="Link to this definition">#</a></dt>
+<dd><p>Return a new NeuronGroup containing neurons in self but not in other.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>other: Another NeuronGroup to subtract.
+group_name: Optional name for the resulting group.</p>
+</dd>
+<dt>Returns:</dt><dd><p>A new NeuronGroup with the difference members.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -838,8 +877,24 @@ The neurons specified in exceptions will not be folded.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cedne.NervousSystem.adjacency">
-<span class="sig-name descname"><span class="pre">adjacency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/network.html#NervousSystem.adjacency"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NervousSystem.adjacency" title="Link to this definition">#</a></dt>
-<dd><p>Output the adjecency matrix for the network ordered by neurons</p>
+<span class="sig-name descname"><span class="pre">adjacency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weighted</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connection_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/network.html#NervousSystem.adjacency"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NervousSystem.adjacency" title="Link to this definition">#</a></dt>
+<dd><p>Output the adjacency matrix for the network ordered by neurons.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><dl class="simple">
+<dt>order:</dt><dd><p>Optional ordered list of neuron names or neuron objects.
+When omitted, neurons are ordered deterministically by name.</p>
+</dd>
+<dt>weighted (bool):</dt><dd><p>If <code class="docutils literal notranslate"><span class="pre">True</span></code>, matrix entries are summed edge weights. Otherwise
+returns a binary adjacency matrix.</p>
+</dd>
+<dt>connection_type:</dt><dd><p>Optional string or list of strings selecting which connection
+types to include. Supports convenience aliases such as
+<code class="docutils literal notranslate"><span class="pre">&quot;chemical&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;gap-junction&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">&quot;bulk&quot;</span></code> in
+addition to exact connection type names.</p>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -972,6 +1027,18 @@ Default is False.</p>
 <dt class="sig sig-object py" id="cedne.NervousSystem.search_motifs">
 <span class="sig-name descname"><span class="pre">search_motifs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">motif</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/network.html#NervousSystem.search_motifs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NervousSystem.search_motifs" title="Link to this definition">#</a></dt>
 <dd><p>Search for a motif in the network structure.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.NervousSystem.shortest_path">
+<span class="sig-name descname"><span class="pre">shortest_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weight</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'dijkstra'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/network.html#NervousSystem.shortest_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NervousSystem.shortest_path" title="Link to this definition">#</a></dt>
+<dd><p>Finds a single shortest path between two neurons in the network.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.NervousSystem.shortest_paths">
+<span class="sig-name descname"><span class="pre">shortest_paths</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weight</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'dijkstra'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/network.html#NervousSystem.shortest_paths"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NervousSystem.shortest_paths" title="Link to this definition">#</a></dt>
+<dd><p>Finds all shortest paths between two neurons in the network.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1242,6 +1309,45 @@ property_value: The value to match.</p>
 <dd><p>Returns statistics about the connections in the group.</p>
 <dl class="simple">
 <dt>Returns:</dt><dd><p>dict: A dictionary containing statistics about the connections.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.ConnectionGroup.union">
+<span class="sig-name descname"><span class="pre">union</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.ConnectionGroup" title="cedne.core.connection.ConnectionGroup"><span class="pre">ConnectionGroup</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cedne.ConnectionGroup" title="cedne.core.connection.ConnectionGroup"><span class="pre">ConnectionGroup</span></a></span></span><a class="reference internal" href="_modules/cedne/core/connection.html#ConnectionGroup.union"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.ConnectionGroup.union" title="Link to this definition">#</a></dt>
+<dd><p>Return a new ConnectionGroup containing connections from both groups.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>other: Another ConnectionGroup to union with.
+group_name: Optional name for the resulting group.</p>
+</dd>
+<dt>Returns:</dt><dd><p>A new ConnectionGroup with the combined members.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.ConnectionGroup.intersection">
+<span class="sig-name descname"><span class="pre">intersection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.ConnectionGroup" title="cedne.core.connection.ConnectionGroup"><span class="pre">ConnectionGroup</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cedne.ConnectionGroup" title="cedne.core.connection.ConnectionGroup"><span class="pre">ConnectionGroup</span></a></span></span><a class="reference internal" href="_modules/cedne/core/connection.html#ConnectionGroup.intersection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.ConnectionGroup.intersection" title="Link to this definition">#</a></dt>
+<dd><p>Return a new ConnectionGroup containing only connections present in both groups.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>other: Another ConnectionGroup to intersect with.
+group_name: Optional name for the resulting group.</p>
+</dd>
+<dt>Returns:</dt><dd><p>A new ConnectionGroup with the shared members.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.ConnectionGroup.difference">
+<span class="sig-name descname"><span class="pre">difference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.ConnectionGroup" title="cedne.core.connection.ConnectionGroup"><span class="pre">ConnectionGroup</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cedne.ConnectionGroup" title="cedne.core.connection.ConnectionGroup"><span class="pre">ConnectionGroup</span></a></span></span><a class="reference internal" href="_modules/cedne/core/connection.html#ConnectionGroup.difference"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.ConnectionGroup.difference" title="Link to this definition">#</a></dt>
+<dd><p>Return a new ConnectionGroup containing connections in self but not in other.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>other: Another ConnectionGroup to subtract.
+group_name: Optional name for the resulting group.</p>
+</dd>
+<dt>Returns:</dt><dd><p>A new ConnectionGroup with the difference members.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1709,7 +1815,132 @@ baseline (NDArray): Baseline signal before stimulus.</p>
 <dt class="sig sig-object py" id="cedne.Behavior">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">Behavior</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">worm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.Worm" title="cedne.core.animal.Worm"><span class="pre">Worm</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Neutral'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/behavior.html#Behavior"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Behavior" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>This is a behavior class for the organism</p>
+<p>Behavioral data container for an organism.</p>
+<p>Stores named behavioral time series (e.g., speed, heading, body curvature)
+with timestamps and metadata. Can be linked to <cite>Session</cite> and <cite>Trial</cite> objects
+for alignment between behavioral and neural data.</p>
+<dl class="simple">
+<dt>Attributes:</dt><dd><p>worm: The worm object associated with this behavior.
+variables: Dict mapping variable names to 1-D numpy arrays.
+timestamps: Array of time points for the behavioral data.
+metadata: Dict of metadata (sampling_rate, units, source, etc.).
+session: Optional link to the experimental Session.
+trials: List of Trial objects linked to this behavior.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Behavior.add_variable">
+<span class="sig-name descname"><span class="pre">add_variable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">_ScalarType_co</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timestamps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">_ScalarType_co</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/cedne/core/behavior.html#Behavior.add_variable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Behavior.add_variable" title="Link to this definition">#</a></dt>
+<dd><p>Add a named behavioral variable (1-D time series).</p>
+<dl>
+<dt>Args:</dt><dd><p>name: Variable name (e.g., “speed”, “heading”).
+data: 1-D array of values.
+timestamps: Optional array of time points. If provided on the</p>
+<blockquote>
+<div><p>first call, it sets the global timestamps for this Behavior.
+Subsequent calls verify length consistency.</p>
+</div></blockquote>
+<p>unit: Optional unit string (e.g., “mm/s”).</p>
+</dd>
+<dt>Raises:</dt><dd><p>ValueError: If data is not 1-D or length doesn’t match timestamps.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Behavior.get_variable">
+<span class="sig-name descname"><span class="pre">get_variable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">_ScalarType_co</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/cedne/core/behavior.html#Behavior.get_variable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Behavior.get_variable" title="Link to this definition">#</a></dt>
+<dd><p>Get a behavioral variable by name.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>name: Variable name.</p>
+</dd>
+<dt>Returns:</dt><dd><p>The 1-D array for the named variable.</p>
+</dd>
+<dt>Raises:</dt><dd><p>KeyError: If variable doesn’t exist.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cedne.Behavior.variable_names">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">variable_names</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#cedne.Behavior.variable_names" title="Link to this definition">#</a></dt>
+<dd><p>List of available behavioral variable names.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cedne.Behavior.n_timepoints">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">n_timepoints</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#cedne.Behavior.n_timepoints" title="Link to this definition">#</a></dt>
+<dd><p>Number of time points (0 if no data loaded).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Behavior.align_to_neural">
+<span class="sig-name descname"><span class="pre">align_to_neural</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trial</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.Trial" title="cedne.Trial"><span class="pre">Trial</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'interpolate'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">_ScalarType_co</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/cedne/core/behavior.html#Behavior.align_to_neural"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Behavior.align_to_neural" title="Link to this definition">#</a></dt>
+<dd><p>Align behavioral data to a neural recording’s time base.</p>
+<p>Resamples all behavioral variables to match the neural trial’s timestamps.</p>
+<dl>
+<dt>Args:</dt><dd><p>trial: A Trial object with recording data.
+method: Alignment method.</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>“interpolate”: Linear interpolation to neural time points.</p></li>
+<li><p>“nearest”: Nearest-neighbor matching.</p></li>
+</ul>
+</div></blockquote>
+</dd>
+<dt>Returns:</dt><dd><p>Dict mapping variable names to resampled arrays matching
+the neural trial’s time points.</p>
+</dd>
+<dt>Raises:</dt><dd><p>ValueError: If behavioral timestamps are not set or trial has no data.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Behavior.link_trial">
+<span class="sig-name descname"><span class="pre">link_trial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trial</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.Trial" title="cedne.Trial"><span class="pre">Trial</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/cedne/core/behavior.html#Behavior.link_trial"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Behavior.link_trial" title="Link to this definition">#</a></dt>
+<dd><p>Link a Trial to this Behavior for cross-referencing.</p>
+<p>Also sets the trial’s behavior back-reference.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>trial: The Trial object to link.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Behavior.link_session">
+<span class="sig-name descname"><span class="pre">link_session</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">session</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Session</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/cedne/core/behavior.html#Behavior.link_session"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Behavior.link_session" title="Link to this definition">#</a></dt>
+<dd><p>Link a Session to this Behavior.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>session: The Session object to link.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Behavior.to_dict">
+<span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/cedne/core/behavior.html#Behavior.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Behavior.to_dict" title="Link to this definition">#</a></dt>
+<dd><p>Serialize behavior data to a dictionary.</p>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>Dict with variables, timestamps, and metadata.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Behavior.from_dict">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">worm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.Worm" title="cedne.core.animal.Worm"><span class="pre">Worm</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Neutral'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cedne.Behavior" title="cedne.core.behavior.Behavior"><span class="pre">Behavior</span></a></span></span><a class="reference internal" href="_modules/cedne/core/behavior.html#Behavior.from_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Behavior.from_dict" title="Link to this definition">#</a></dt>
+<dd><p>Create a Behavior from a dictionary.</p>
+<dl class="simple">
+<dt>Args:</dt><dd><p>data: Dict with ‘variables’, optional ‘timestamps’, and ‘metadata’.
+worm: Optional Worm object.
+network: Network context name.</p>
+</dd>
+<dt>Returns:</dt><dd><p>New Behavior instance.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -1831,6 +2062,9 @@ baseline (NDArray): Baseline signal before stimulus.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NeuronGroup.remove_neuron"><code class="docutils literal notranslate"><span class="pre">NeuronGroup.remove_neuron()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NeuronGroup.get_neurons_by_type"><code class="docutils literal notranslate"><span class="pre">NeuronGroup.get_neurons_by_type()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NeuronGroup.get_neurons_by_property"><code class="docutils literal notranslate"><span class="pre">NeuronGroup.get_neurons_by_property()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NeuronGroup.union"><code class="docutils literal notranslate"><span class="pre">NeuronGroup.union()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NeuronGroup.intersection"><code class="docutils literal notranslate"><span class="pre">NeuronGroup.intersection()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NeuronGroup.difference"><code class="docutils literal notranslate"><span class="pre">NeuronGroup.difference()</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem"><code class="docutils literal notranslate"><span class="pre">NervousSystem</span></code></a><ul class="nav section-nav flex-column">
@@ -1868,6 +2102,8 @@ baseline (NDArray): Baseline signal before stimulus.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem.copy_neurons"><code class="docutils literal notranslate"><span class="pre">NervousSystem.copy_neurons()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem.subgraph_view"><code class="docutils literal notranslate"><span class="pre">NervousSystem.subgraph_view()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem.search_motifs"><code class="docutils literal notranslate"><span class="pre">NervousSystem.search_motifs()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem.shortest_path"><code class="docutils literal notranslate"><span class="pre">NervousSystem.shortest_path()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem.shortest_paths"><code class="docutils literal notranslate"><span class="pre">NervousSystem.shortest_paths()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem.export_graph"><code class="docutils literal notranslate"><span class="pre">NervousSystem.export_graph()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem.remove_unconnected_neurons"><code class="docutils literal notranslate"><span class="pre">NervousSystem.remove_unconnected_neurons()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem.make_neuron_group"><code class="docutils literal notranslate"><span class="pre">NervousSystem.make_neuron_group()</span></code></a></li>
@@ -1901,6 +2137,9 @@ baseline (NDArray): Baseline signal before stimulus.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.ConnectionGroup.filter_by_property"><code class="docutils literal notranslate"><span class="pre">ConnectionGroup.filter_by_property()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.ConnectionGroup.filter_by_function"><code class="docutils literal notranslate"><span class="pre">ConnectionGroup.filter_by_function()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.ConnectionGroup.get_statistics"><code class="docutils literal notranslate"><span class="pre">ConnectionGroup.get_statistics()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.ConnectionGroup.union"><code class="docutils literal notranslate"><span class="pre">ConnectionGroup.union()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.ConnectionGroup.intersection"><code class="docutils literal notranslate"><span class="pre">ConnectionGroup.intersection()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.ConnectionGroup.difference"><code class="docutils literal notranslate"><span class="pre">ConnectionGroup.difference()</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Path"><code class="docutils literal notranslate"><span class="pre">Path</span></code></a><ul class="nav section-nav flex-column">
@@ -1942,7 +2181,18 @@ baseline (NDArray): Baseline signal before stimulus.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.StimResponse.get_response_characteristics"><code class="docutils literal notranslate"><span class="pre">StimResponse.get_response_characteristics()</span></code></a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Behavior"><code class="docutils literal notranslate"><span class="pre">Behavior</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Behavior"><code class="docutils literal notranslate"><span class="pre">Behavior</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Behavior.add_variable"><code class="docutils literal notranslate"><span class="pre">Behavior.add_variable()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Behavior.get_variable"><code class="docutils literal notranslate"><span class="pre">Behavior.get_variable()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Behavior.variable_names"><code class="docutils literal notranslate"><span class="pre">Behavior.variable_names</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Behavior.n_timepoints"><code class="docutils literal notranslate"><span class="pre">Behavior.n_timepoints</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Behavior.align_to_neural"><code class="docutils literal notranslate"><span class="pre">Behavior.align_to_neural()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Behavior.link_trial"><code class="docutils literal notranslate"><span class="pre">Behavior.link_trial()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Behavior.link_session"><code class="docutils literal notranslate"><span class="pre">Behavior.link_session()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Behavior.to_dict"><code class="docutils literal notranslate"><span class="pre">Behavior.to_dict()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Behavior.from_dict"><code class="docutils literal notranslate"><span class="pre">Behavior.from_dict()</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.GraphMap"><code class="docutils literal notranslate"><span class="pre">GraphMap</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.load_pickle"><code class="docutils literal notranslate"><span class="pre">load_pickle()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.load_worm"><code class="docutils literal notranslate"><span class="pre">load_worm()</span></code></a></li>
