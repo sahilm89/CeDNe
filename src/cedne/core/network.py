@@ -747,17 +747,50 @@ class NervousSystem(nx.MultiDiGraph):
         for contraction, conns in contraction_dict.items():
             contraction_data = {}
             weight = 0
+            # Union semantic edge metadata across the constituent connections
+            # so folding / merging does not silently drop it. Order-preserving
+            # dedupe for list-valued properties; dict merge for receptors.
+            merged_ligands = []
+            merged_nts = []
+            merged_putative = []
+            merged_receptors = {}
+            lig_seen, nt_seen, put_seen = set(), set(), set()
             for conn in conns:
-                weight+=conn.weight
+                weight += conn.weight
                 contraction_data[conn._id] = conn
-                
-            #uid = empty_graph_copy.add_edge(contraction[0], contraction[1], weight=weight, connection_type=contraction[2])
-            #new_conn = Connection(contraction[0], contraction[1], uid=uid, connection_type=contraction[2], weight=weight)
+                for lig in getattr(conn, 'ligands', []) or []:
+                    key = lig if isinstance(lig, str) else repr(lig)
+                    if key not in lig_seen:
+                        lig_seen.add(key)
+                        merged_ligands.append(lig)
+                for nt in getattr(conn, 'neurotransmitters', []) or []:
+                    key = nt if isinstance(nt, str) else repr(nt)
+                    if key not in nt_seen:
+                        nt_seen.add(key)
+                        merged_nts.append(nt)
+                for pair in getattr(conn, 'putative_neurotrasmitter_receptors', []) or []:
+                    key = tuple(pair) if isinstance(pair, (list, tuple)) else pair
+                    if key not in put_seen:
+                        put_seen.add(key)
+                        merged_putative.append(pair)
+                receptors = getattr(conn, 'receptors', None)
+                if isinstance(receptors, dict):
+                    for rk, rv in receptors.items():
+                        if rk not in merged_receptors:
+                            merged_receptors[rk] = rv
+
             n1 = empty_graph_copy.neurons[contraction[0].name]
             n2 = empty_graph_copy.neurons[contraction[1].name]
             new_conn = Connection(n1, n2, connection_type=contraction[2], weight=weight)
             new_conn.set_property('contraction_data', copy.copy(contraction_data))
-            #_connections[(contraction[0], contraction[1], new_conn.uid)] = new_conn
+            if merged_ligands:
+                new_conn.set_property('ligands', merged_ligands)
+            if merged_nts:
+                new_conn.set_property('neurotransmitters', merged_nts)
+            if merged_putative:
+                new_conn.set_property('putative_neurotrasmitter_receptors', merged_putative)
+            if merged_receptors:
+                new_conn.set_property('receptors', merged_receptors)
             _connections[(n1,n2, new_conn.uid)] = new_conn
         empty_graph_copy.connections = _connections
 

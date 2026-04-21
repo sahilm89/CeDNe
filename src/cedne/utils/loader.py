@@ -361,6 +361,19 @@ def load_lineage(neural_network, sex='Hermaphrodite'):
 suffixes = ['', 'D', 'V', 'L', 'R', 'DL', 'DR', 'VL', 'VR', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13']
 present = False
 
+# Canonical NT names used throughout CeDNe payloads. Source tables use
+# abbreviations (Ach, Glu) that the rest of the system does not recognize.
+NT_CANONICAL = {
+    'Ach': 'Acetylcholine',
+    'ACh': 'Acetylcholine',
+    'Glu': 'Glutamate',
+}
+
+def canonicalizeNT(name):
+    if not isinstance(name, str):
+        return name
+    return NT_CANONICAL.get(name.strip(), name.strip())
+
 def getLigands(neuron, sex='Hermaphrodite'):
     ''' Returns ligand for each neuron'''
     lig_file = DOWNLOAD_DIR / prefix_NT / 'ligand-table.xlsx'
@@ -372,14 +385,16 @@ def getLigands(neuron, sex='Hermaphrodite'):
         raise ValueError("Sex must be 'Hermaphrodite' or 'Male'")
 
     a,b = ligtable['Neurotransmitter 1'][ligtable['Neuron']==neuron].to_list(), ligtable['Neurotransmitter 2'][ligtable['Neuron']==neuron].to_list()
-    
-    if len(a):
-        if len(b) and type(b[0])==str:
-            return [a[0],b[0]]
-        else:
-            return [a[0]]
-    else:
-        return []
+
+    # Only string entries are real transmitter names; NaN / empty cells mean
+    # "no known transmitter for this neuron" and must not leak into downstream
+    # edge metadata as a NaN float.
+    out = []
+    if len(a) and isinstance(a[0], str) and a[0].strip():
+        out.append(canonicalizeNT(a[0]))
+    if len(b) and isinstance(b[0], str) and b[0].strip():
+        out.append(canonicalizeNT(b[0]))
+    return out
 
 def getLigandsAndReceptors(npr, ligmap, col):
     ''' Returns ligand and receptor for each neuron'''
@@ -391,7 +406,7 @@ def getLigandsAndReceptors(npr, ligmap, col):
     for r in rec:
         ligands = ligmap['ligand'][ligmap['gene'] == r].to_list()
         if len(ligands)>0:
-            receptor_ligand.update ({r: ligands[0]})
+            receptor_ligand.update ({r: canonicalizeNT(ligands[0])})
         else:
             receptor_ligand.update ({r: ''})
     return receptor_ligand
@@ -399,7 +414,7 @@ def getLigandsAndReceptors(npr, ligmap, col):
 
 def loadNeurotransmitters(nn, sex='Hermaphrodite'):
     ''' Loads Neurotransmitters into neurons using Wang et al 2024'''
-    
+
     npr_file = DOWNLOAD_DIR / prefix_NT / 'GenesExpressing-BATCH-thrs4_use.xlsx'
     npr = pd.read_excel(npr_file, sheet_name='npr', true_values='TRUE', false_values='FALSE', engine='openpyxl')
     ligmap = pd.read_excel(npr_file, sheet_name='ligmap', engine='openpyxl')
@@ -407,26 +422,47 @@ def loadNeurotransmitters(nn, sex='Hermaphrodite'):
     for n in nn.neurons:
         neuron = nn.neurons[n]
         if not hasattr(neuron, '_preSynapse'):
-            nn.neurons[n]._preSynapse = []
+            neuron.set_property('_preSynapse', [])
         if not hasattr(neuron, '_postSynapse'):
-            nn.neurons[n]._postSynapse = {}
+            neuron.set_property('_postSynapse', {})
 
     for col in npr.columns:
         for suffix in suffixes:
             if col + suffix in nn.neurons:
-                nn.neurons[col + suffix]._postSynapse.update(getLigandsAndReceptors(npr, ligmap, col))
-                #present = True
+                neuron = nn.neurons[col + suffix]
+                merged_post = dict(neuron._postSynapse)
+                merged_post.update(getLigandsAndReceptors(npr, ligmap, col))
+                neuron.set_property('_postSynapse', merged_post)
     for n in nn.neurons:
-        nn.neurons[n]._preSynapse += getLigands(n, sex=sex)
-    
+        neuron = nn.neurons[n]
+        neuron.set_property('_preSynapse', list(neuron._preSynapse) + getLigands(n, sex=sex))
+
     for e,conn in nn.connections.items():
         if e[0].name in nn.neurons and e[1].name in nn.neurons and conn.connection_type == 'chemical-synapse':
             conn.set_property('ligands', nn.neurons[e[0].name]._preSynapse)
             conn.set_property('receptors', nn.neurons[e[1].name]._postSynapse)
-            conn.set_property('putative_neurotrasmitter_receptors', []) 
+            conn.set_property('putative_neurotrasmitter_receptors', [])
             for rec, lig in conn.receptors.items():
                 if lig in conn.ligands:
                     conn.putative_neurotrasmitter_receptors.append((lig, rec))
+
+            # Authoritative per-edge neurotransmitter set: receptor-matched
+            # ligands (deduped, canonical names). Falls back to the full
+            # presynaptic ligand list when the postsynaptic neuron has no
+            # receptor data, so we don't erase transmitters just because the
+            # NPR table is sparse.
+            matched = []
+            seen = set()
+            for lig, _rec in conn.putative_neurotrasmitter_receptors:
+                if lig and lig not in seen:
+                    matched.append(lig)
+                    seen.add(lig)
+            if not matched:
+                for lig in conn.ligands:
+                    if lig and lig not in seen:
+                        matched.append(lig)
+                        seen.add(lig)
+            conn.set_property('neurotransmitters', matched)
     nn.worm.citations.update({'neurotransmitter_atlas':citations['neurotransmitter_atlas']})
 
 ## Neuropeptides tables
