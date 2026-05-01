@@ -291,6 +291,7 @@
 <span class="n">__date__</span> <span class="o">=</span> <span class="s2">&quot;2025-04-06&quot;</span>
 <span class="n">__license__</span> <span class="o">=</span> <span class="s2">&quot;MIT&quot;</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">generate_random_string</span>
@@ -300,6 +301,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">F_SAMPLE</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.recordings</span><span class="w"> </span><span class="kn">import</span> <span class="n">Trial</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.connection</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.source</span><span class="w"> </span><span class="kn">import</span> <span class="n">Citable</span><span class="p">,</span> <span class="n">serialize_citations</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">.network</span><span class="w"> </span><span class="kn">import</span> <span class="n">NervousSystem</span>
@@ -360,28 +362,35 @@
     
 <div class="viewcode-block" id="Neuron">
 <a class="viewcode-back" href="../../../index.html#cedne.Neuron">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">Neuron</span><span class="p">(</span><span class="n">Cell</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Neuron</span><span class="p">(</span><span class="n">Cell</span><span class="p">,</span> <span class="n">Citable</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39; Models a biological neuron&#39;&#39;&#39;</span>
+
+    <span class="c1"># Attributes excluded from automatic scalar introspection in to_dict()</span>
+    <span class="n">_SERIALIZE_SKIP</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+        <span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;network&#39;</span><span class="p">,</span> <span class="s1">&#39;in_connections&#39;</span><span class="p">,</span> <span class="s1">&#39;out_connections&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;trial&#39;</span><span class="p">,</span> <span class="s1">&#39;features&#39;</span><span class="p">,</span> <span class="s1">&#39;spatial_mask&#39;</span><span class="p">,</span> <span class="s1">&#39;_data&#39;</span><span class="p">,</span> <span class="s1">&#39;loadings&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;position&#39;</span><span class="p">,</span> <span class="s1">&#39;transcript&#39;</span><span class="p">,</span> <span class="s1">&#39;group_id&#39;</span><span class="p">,</span> <span class="s1">&#39;citations&#39;</span><span class="p">,</span>
+    <span class="p">})</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">network</span><span class="p">:</span> <span class="s1">&#39;NervousSystem&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initializes a new instance of the Neuron class.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            name (str): </span>
+<span class="sd">            name (str):</span>
 <span class="sd">                The name of the neuron.</span>
-<span class="sd">            network (NervousSystem): </span>
+<span class="sd">            network (NervousSystem):</span>
 <span class="sd">                The neuronal network to which the neuron belongs.</span>
-<span class="sd">            type (str, optional): </span>
+<span class="sd">            type (str, optional):</span>
 <span class="sd">                The type of the neuron. Defaults to &#39;&#39;.</span>
-<span class="sd">            category (str, optional): </span>
+<span class="sd">            category (str, optional):</span>
 <span class="sd">                The category of the neuron. Defaults to &#39;&#39;.</span>
-<span class="sd">            modality (str, optional): </span>
+<span class="sd">            modality (str, optional):</span>
 <span class="sd">                The modality of the neuron. Defaults to &#39;&#39;.</span>
-<span class="sd">            position (dict, optional): </span>
+<span class="sd">            position (dict, optional):</span>
 <span class="sd">                The position of the neuron. Defaults to None.</span>
-<span class="sd">            presynapses (list, optional): </span>
+<span class="sd">            presynapses (list, optional):</span>
 <span class="sd">                The list of presynaptic components. Defaults to None.</span>
-<span class="sd">            postsynapses (dict, optional): </span>
+<span class="sd">            postsynapses (dict, optional):</span>
 <span class="sd">                The dictionary of postsynaptic components. Defaults to None.</span>
 
 <span class="sd">        Raises:</span>
@@ -389,7 +398,8 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">network</span><span class="o">.</span><span class="n">neurons</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Neuron with name &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; already exists in the network&quot;</span><span class="p">)</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">network</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span><span class="c1">#cell_type=neuron_type, category=category, modality=modality,\ position=position)</span>
+        <span class="n">Cell</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">network</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">Citable</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>  <span class="c1"># provides self.citations = {}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
         <span class="c1"># self.name = name</span>
         <span class="c1"># self.group_id = 0</span>
@@ -418,7 +428,80 @@
         <span class="c1"># self.postsynapse = postsynapse or {}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">spatial_mask</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;spatial_mask&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="c1">#self.cable_length = kwargs.pop(&#39;cable_length&#39;, 1)</span>
-        
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_parent_citables</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Walk citations up through containing NeuronGroups and the NervousSystem.&quot;&quot;&quot;</span>
+        <span class="n">parents</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="c1"># O(1) membership via the name-&gt;Neuron dict each NeuronGroup maintains</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">NeuronGroup</span><span class="p">)</span> <span class="ow">and</span> <span class="n">group</span><span class="o">.</span><span class="n">neurons</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">self</span><span class="p">:</span>
+                    <span class="n">parents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+            <span class="n">parents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">parents</span>
+
+<div class="viewcode-block" id="Neuron.to_dict">
+<a class="viewcode-back" href="../../../index.html#cedne.Neuron.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Serialize neuron to a plain Python dictionary.</span>
+
+<span class="sd">        Returns a dict with guaranteed keys: ``id``, ``type``, ``group_id``,</span>
+<span class="sd">        ``degree``, ``has_recordings``.  Optionally includes ``position``,</span>
+<span class="sd">        ``scalars`` (auto-discovered numeric attributes), and ``loadings``</span>
+<span class="sd">        (dimensionality-reduction weights).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dict[str, Any]: A JSON-compatible dictionary representation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">d</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="s1">&#39;Unknown&#39;</span><span class="p">),</span>
+            <span class="s2">&quot;group_id&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;group_id&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+            <span class="s2">&quot;degree&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_connections</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_connections</span><span class="p">),</span>
+            <span class="s2">&quot;has_recordings&quot;</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trial</span><span class="p">),</span>
+        <span class="p">}</span>
+
+        <span class="c1"># Position — serialize as-is (no LR string normalization)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;position&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="n">d</span><span class="p">[</span><span class="s1">&#39;position&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">)</span>
+
+        <span class="c1"># Numeric scalar attributes (dynamic introspection)</span>
+        <span class="n">scalars</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">attr</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">attr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_SERIALIZE_SKIP</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">val</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span> <span class="ow">and</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+                    <span class="n">scalars</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+                <span class="k">elif</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="ow">and</span> <span class="n">val</span>
+                      <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">val</span><span class="p">)):</span>
+                    <span class="n">scalars</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">pass</span>
+        <span class="k">if</span> <span class="n">scalars</span><span class="p">:</span>
+            <span class="n">d</span><span class="p">[</span><span class="s1">&#39;scalars&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scalars</span>
+
+        <span class="c1"># Loadings from dimensionality reduction</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;loadings&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadings</span><span class="p">:</span>
+            <span class="n">clean_loadings</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">loadings</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">fv</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">math</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">fv</span><span class="p">):</span>
+                        <span class="n">clean_loadings</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">fv</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+                    <span class="k">pass</span>
+            <span class="k">if</span> <span class="n">clean_loadings</span><span class="p">:</span>
+                <span class="n">d</span><span class="p">[</span><span class="s1">&#39;loadings&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">clean_loadings</span>
+
+        <span class="c1"># Citations attached directly to this neuron (not the inherited chain)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;citations&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">citations</span><span class="p">:</span>
+            <span class="n">d</span><span class="p">[</span><span class="s1">&#39;citations&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">serialize_citations</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">citations</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">d</span></div>
+
 
     <span class="c1"># def set_presynapse(self, presynapse):</span>
     <span class="c1">#     &quot;&quot;&quot;</span>
@@ -461,13 +544,42 @@
 <span class="sd">        Returns:</span>
 <span class="sd">            Trial: The newly added trial object.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">trial</span><span class="p">[</span><span class="n">trial_num</span><span class="p">]</span> <span class="o">=</span> <span class="n">Trial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial_num</span><span class="p">)</span>
         <span class="c1"># B4: Sync to node attributes so **data works in subnetwork/copy</span>
         <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="p">,</span> <span class="p">{</span><span class="bp">self</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;trial&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">trial</span><span class="p">}})</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">trial</span><span class="p">[</span><span class="n">trial_num</span><span class="p">]</span></div>
 
-    
+
+<div class="viewcode-block" id="Neuron.load_recording">
+<a class="viewcode-back" href="../../../index.html#cedne.Neuron.load_recording">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_recording</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">trial_num</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sampling_rate</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Attach a 1D time-series recording to this neuron as a new Trial.</span>
+
+<span class="sd">        Thin convenience over `add_trial()` + setting `trial.recording`; use it</span>
+<span class="sd">        when you already have a per-neuron trace in memory (ndarray, list,</span>
+<span class="sd">        pandas Series) and don&#39;t want to manage Trial objects by hand.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data: 1D array-like of samples (calcium trace, voltage, etc.).</span>
+<span class="sd">            trial_num: Trial index (default 0). Overwrites any existing trial</span>
+<span class="sd">                at this index for this neuron.</span>
+<span class="sd">            sampling_rate: Sampling rate in Hz; written to ``trial.metadata``.</span>
+<span class="sd">                Leave as None to keep the module default (F_SAMPLE).</span>
+<span class="sd">            metadata: Extra metadata dict merged into ``trial.metadata``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Trial: The trial object holding the recording.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">trial</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_trial</span><span class="p">(</span><span class="n">trial_num</span><span class="p">)</span>
+        <span class="n">trial</span><span class="o">.</span><span class="n">recording</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sampling_rate</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">trial</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;sampling_rate&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">sampling_rate</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">metadata</span><span class="p">:</span>
+            <span class="n">trial</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">metadata</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">trial</span></div>
+
+
 <div class="viewcode-block" id="Neuron.remove_trial">
 <a class="viewcode-back" href="../../../index.html#cedne.Neuron.remove_trial">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">remove_trial</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial_num</span><span class="p">):</span>
@@ -687,23 +799,24 @@
 
 <div class="viewcode-block" id="NeuronGroup">
 <a class="viewcode-back" href="../../../index.html#cedne.NeuronGroup">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">NeuronGroup</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">NeuronGroup</span><span class="p">(</span><span class="n">Citable</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39; This contains a group of neurons in the network&#39;&#39;&#39;</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">network</span><span class="p">,</span> <span class="n">members</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">group_name</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initializes a new instance of the NeuronGroup class.</span>
 
 <span class="sd">        Parameters:</span>
-<span class="sd">            groupname (str): </span>
+<span class="sd">            groupname (str):</span>
 <span class="sd">                The name of the neuron group.</span>
-<span class="sd">            members (List[str]): </span>
+<span class="sd">            members (List[str]):</span>
 <span class="sd">                The list of members in the neuron group.</span>
-<span class="sd">            group_id (int, optional): </span>
+<span class="sd">            group_id (int, optional):</span>
 <span class="sd">                The ID of the neuron group. Defaults to 0.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            None</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Citable</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>  <span class="c1"># provides self.citations = {}</span>
         <span class="k">if</span> <span class="n">group_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">group_name</span> <span class="o">=</span> <span class="s1">&#39;Group-&#39;</span><span class="o">+</span> <span class="n">generate_random_string</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -720,6 +833,10 @@
         <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">group_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">groups</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Group name </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">group_name</span><span class="si">}</span><span class="se">\</span>
 <span class="s2">            already exists in the network&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="bp">self</span><span class="o">.</span><span class="n">group_name</span><span class="p">:</span> <span class="bp">self</span><span class="p">})</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_parent_citables</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Walk citations up to the containing NervousSystem.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="p">,)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>

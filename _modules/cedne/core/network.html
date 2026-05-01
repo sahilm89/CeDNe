@@ -311,10 +311,11 @@
     <span class="n">ChemicalSynapse</span><span class="p">,</span> <span class="n">GapJunction</span><span class="p">,</span> <span class="n">ConnectionGroup</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.neuron</span><span class="w"> </span><span class="kn">import</span> <span class="n">Neuron</span><span class="p">,</span> <span class="n">NeuronGroup</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.animal</span><span class="w"> </span><span class="kn">import</span> <span class="n">Worm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.source</span><span class="w"> </span><span class="kn">import</span> <span class="n">Citable</span>
 
 <div class="viewcode-block" id="NervousSystem">
 <a class="viewcode-back" href="../../../index.html#cedne.NervousSystem">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">NervousSystem</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">NervousSystem</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">,</span> <span class="n">Citable</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    This is the Nervous System class. This inherits from networkx.MultiDiGraph</span>
 <span class="sd">      and is the main high level class for the nervous system. &#39;&#39;&#39;</span>
@@ -329,7 +330,8 @@
 <span class="sd">            conditions or network types.</span>
 <span class="sd">            Defaults to &quot;Neutral&quot;.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">Citable</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>  <span class="c1"># provides self.citations = {}</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">worm</span> <span class="o">=</span> <span class="n">worm</span> <span class="ow">or</span> <span class="n">Worm</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">network</span>
@@ -348,6 +350,10 @@
 
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_property</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_parent_citables</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Walk citation resolution up to the owning Animal/Worm.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">worm</span><span class="p">,)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">worm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">()</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">num_groups</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -783,22 +789,34 @@
             <span class="s2">&quot;Specify either neuron_names or connections, not both.&quot;</span>
 
             <span class="k">if</span> <span class="n">neuron_names</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">subgraph_nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">graph_copy</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">neuron_names</span><span class="p">]</span>
-                <span class="n">subgraph</span> <span class="o">=</span> <span class="n">graph_copy</span><span class="o">.</span><span class="n">subgraph</span><span class="p">(</span><span class="n">subgraph_nodes</span><span class="p">)</span>
-                <span class="n">subgraph</span><span class="o">.</span><span class="n">connections</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">graph_copy</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>\
-                                         <span class="k">if</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">subgraph_nodes</span> <span class="ow">and</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">subgraph_nodes</span><span class="p">}</span>
+                <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">neuron_names</span> <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph_copy</span><span class="o">.</span><span class="n">neurons</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Neurons not found in network: </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                <span class="n">selected_names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">neuron_names</span><span class="p">)</span>
+                <span class="n">nodes_to_remove</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">node</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">graph_copy</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">selected_names</span>
+                <span class="p">]</span>
+                <span class="n">graph_copy</span><span class="o">.</span><span class="n">remove_nodes_from</span><span class="p">(</span><span class="n">nodes_to_remove</span><span class="p">)</span>
+                <span class="n">subgraph</span> <span class="o">=</span> <span class="n">graph_copy</span>
+
+                <span class="c1"># subgraph_nodes = [graph_copy.neurons[name] for name in neuron_names]</span>
+                <span class="c1"># subgraph = graph_copy.subgraph(subgraph_nodes)</span>
+                <span class="c1"># subgraph.connections = {key: value for key, value in graph_copy.connections.items()\</span>
+                <span class="c1">#                          if key[0] in subgraph_nodes and key[1] in subgraph_nodes}</span>
             <span class="k">elif</span> <span class="n">connections</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">new_connections</span> <span class="o">=</span> <span class="p">[(</span><span class="n">graph_copy</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">conn</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="n">graph_copy</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">conn</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="n">conn</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>\
                                  <span class="k">for</span> <span class="n">conn</span> <span class="ow">in</span> <span class="n">connections</span><span class="p">]</span>
                 <span class="n">new_connections</span> <span class="o">=</span> <span class="p">[</span><span class="n">graph_copy</span><span class="o">.</span><span class="n">connections</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">_id</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">new_connections</span><span class="p">]</span>
                 <span class="n">subnet</span> <span class="o">=</span> <span class="n">graph_copy</span><span class="o">.</span><span class="n">edge_subgraph</span><span class="p">(</span><span class="n">new_connections</span><span class="p">)</span> <span class="c1"># That will put it through custom copy again.</span>
-                <span class="n">subgraph</span> <span class="o">=</span> <span class="n">NervousSystem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">worm</span><span class="p">,</span> <span class="n">network</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+                <span class="n">subgraph</span> <span class="o">=</span> <span class="n">NervousSystem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">worm</span><span class="p">,</span> <span class="n">network</span><span class="o">=</span><span class="n">name</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_subnetwork&quot;</span><span class="p">)</span>
                 <span class="n">subgraph</span><span class="o">.</span><span class="n">create_neurons_from</span><span class="p">(</span><span class="n">subnet</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
                 <span class="n">subgraph</span><span class="o">.</span><span class="n">create_connections_from</span><span class="p">(</span><span class="n">subnet</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
                 <span class="c1"># subgraph.connections = {key: value for key, value in graph_copy.connections.items()\</span>
                     <span class="c1">#  if key in new_connections}</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">subgraph</span> <span class="o">=</span> <span class="bp">self</span>
+                <span class="n">subgraph</span> <span class="o">=</span> <span class="n">graph_copy</span>
             <span class="n">subgraph</span><span class="o">.</span><span class="n">update_network</span><span class="p">()</span>
             <span class="n">subgraph</span><span class="o">.</span><span class="n">update_neurons</span><span class="p">()</span>
             <span class="n">subgraph</span><span class="o">.</span><span class="n">update_connections</span><span class="p">()</span>
@@ -1409,6 +1427,95 @@
             <span class="n">nx</span><span class="o">.</span><span class="n">write_graphml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;format must be &#39;dot&#39;, &#39;graphviz&#39;, &#39;nx&#39;, &#39;json&#39;, &#39;gml&#39;, or &#39;graphml&#39;&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="NervousSystem.to_dict">
+<a class="viewcode-back" href="../../../index.html#cedne.NervousSystem.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Serialize the full network to a plain Python dictionary.</span>
+
+<span class="sd">        Composes ``Neuron.to_dict()`` and ``Connection.to_dict()`` for each</span>
+<span class="sd">        node and edge, then attaches group membership, group summaries,</span>
+<span class="sd">        network-level metadata, and visualization hints.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: A JSON-compatible dictionary with keys:</span>
+<span class="sd">                - ``name``: Network name.</span>
+<span class="sd">                - ``organism``: Organism name (from worm), if available.</span>
+<span class="sd">                - ``nodes``: List of neuron dicts.</span>
+<span class="sd">                - ``links``: List of connection dicts.</span>
+<span class="sd">                - ``groups``: List of group summary dicts.</span>
+<span class="sd">                - ``visualization_metadata``: Arbitrary viz hints.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># -- Group membership lookups --</span>
+        <span class="n">node_groups</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">link_groups</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">gname</span><span class="p">,</span> <span class="n">group</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="s1">&#39;neurons&#39;</span><span class="p">):</span>  <span class="c1"># NeuronGroup</span>
+                <span class="k">for</span> <span class="n">nname</span> <span class="ow">in</span> <span class="n">group</span><span class="o">.</span><span class="n">neurons</span><span class="p">:</span>
+                    <span class="n">node_groups</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">nname</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gname</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="s1">&#39;connections&#39;</span><span class="p">):</span>  <span class="c1"># ConnectionGroup</span>
+                <span class="k">for</span> <span class="n">conn_id</span> <span class="ow">in</span> <span class="n">group</span><span class="o">.</span><span class="n">connections</span><span class="p">:</span>
+                    <span class="n">key</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">conn_id</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">conn_id</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">conn_id</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">conn_id</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">conn_id</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;name&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="n">conn_id</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                        <span class="n">conn_id</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+                    <span class="p">)</span>
+                    <span class="n">link_groups</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gname</span><span class="p">)</span>
+
+        <span class="c1"># -- Nodes --</span>
+        <span class="n">nodes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">nname</span><span class="p">,</span> <span class="n">neuron</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">nd</span> <span class="o">=</span> <span class="n">neuron</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">nname</span> <span class="ow">in</span> <span class="n">node_groups</span><span class="p">:</span>
+                <span class="n">nd</span><span class="p">[</span><span class="s1">&#39;groups&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">node_groups</span><span class="p">[</span><span class="n">nname</span><span class="p">]</span>
+            <span class="n">nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nd</span><span class="p">)</span>
+
+        <span class="c1"># -- Links --</span>
+        <span class="n">links</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">k</span><span class="p">),</span> <span class="n">conn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">ld</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+            <span class="n">lk</span> <span class="o">=</span> <span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">lk</span> <span class="ow">in</span> <span class="n">link_groups</span><span class="p">:</span>
+                <span class="n">ld</span><span class="p">[</span><span class="s1">&#39;groups&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">link_groups</span><span class="p">[</span><span class="n">lk</span><span class="p">]</span>
+            <span class="n">links</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ld</span><span class="p">)</span>
+
+        <span class="c1"># -- Groups summary --</span>
+        <span class="n">groups_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">.neuron</span><span class="w"> </span><span class="kn">import</span> <span class="n">NeuronGroup</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">.connection</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConnectionGroup</span>
+        <span class="k">for</span> <span class="n">gname</span><span class="p">,</span> <span class="n">g</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">NeuronGroup</span><span class="p">):</span>
+                <span class="n">groups_list</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">gname</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;neuron&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">),</span>
+                    <span class="s2">&quot;members&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">neurons</span><span class="p">),</span>
+                <span class="p">})</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">ConnectionGroup</span><span class="p">):</span>
+                <span class="n">groups_list</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">gname</span><span class="p">,</span> <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;connection&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">),</span>
+                    <span class="s2">&quot;members&quot;</span><span class="p">:</span> <span class="p">[</span>
+                        <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">pre</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-&gt;</span><span class="si">{</span><span class="n">c</span><span class="o">.</span><span class="n">post</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">members</span>
+                    <span class="p">],</span>
+                <span class="p">})</span>
+
+        <span class="c1"># -- Assemble result with network-level attributes --</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;nodes&quot;</span><span class="p">:</span> <span class="n">nodes</span><span class="p">,</span>
+            <span class="s2">&quot;links&quot;</span><span class="p">:</span> <span class="n">links</span><span class="p">,</span>
+            <span class="s2">&quot;groups&quot;</span><span class="p">:</span> <span class="n">groups_list</span><span class="p">,</span>
+            <span class="s2">&quot;visualization_metadata&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span>
+                <span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;visualization_metadata&#39;</span><span class="p">,</span> <span class="p">{}</span>
+            <span class="p">),</span>
+        <span class="p">}</span>
+
+        <span class="c1"># Include organism metadata if present</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;worm&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">worm</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="s2">&quot;organism&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">worm</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result</span></div>
 
 
 <div class="viewcode-block" id="NervousSystem.remove_unconnected_neurons">

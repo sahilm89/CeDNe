@@ -295,6 +295,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">generate_random_string</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.source</span><span class="w"> </span><span class="kn">import</span> <span class="n">Citable</span><span class="p">,</span> <span class="n">serialize_citations</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">TYPE_CHECKING</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">numbers</span><span class="w"> </span><span class="kn">import</span> <span class="n">Number</span>
 
@@ -304,7 +305,7 @@
 
 <div class="viewcode-block" id="Connection">
 <a class="viewcode-back" href="../../../index.html#cedne.Connection">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">Connection</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Connection</span><span class="p">(</span><span class="n">Citable</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39; This class represents a connection between two cells. &#39;&#39;&#39;</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pre</span><span class="p">:</span> <span class="s1">&#39;Neuron&#39;</span><span class="p">,</span> <span class="n">post</span><span class="p">:</span> <span class="s1">&#39;Neuron&#39;</span><span class="p">,</span> <span class="n">uid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">connection_type</span><span class="o">=</span><span class="s1">&#39;chemical-synapse&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -325,10 +326,11 @@
 <span class="sd">            ValueError: If weight is not a numeric value.</span>
 <span class="sd">            AssertionError: If pre and post neurons are from different networks.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Citable</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>  <span class="c1"># provides self.citations = {}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pre</span> <span class="o">=</span> <span class="n">pre</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">post</span> <span class="o">=</span> <span class="n">post</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">network</span> <span class="o">=</span> <span class="n">post</span><span class="o">.</span><span class="n">network</span>
-        
+
         <span class="c1"># Validate weight</span>
         <span class="n">weight</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;weight&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">weight</span><span class="p">,</span> <span class="n">Number</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">weight</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">)):</span>
@@ -353,6 +355,17 @@
 
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_property</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_parent_citables</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Walk citations up through containing ConnectionGroups and the NervousSystem.&quot;&quot;&quot;</span>
+        <span class="n">parents</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="c1"># O(1) membership via the _id-&gt;Connection dict each ConnectionGroup maintains</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">group</span><span class="p">,</span> <span class="n">ConnectionGroup</span><span class="p">)</span> <span class="ow">and</span> <span class="n">group</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_id</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">self</span><span class="p">:</span>
+                    <span class="n">parents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">group</span><span class="p">)</span>
+            <span class="n">parents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">parents</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">by_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -384,6 +397,41 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">get_property</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39; Gets an attribute for the class&#39;&#39;&#39;</span>
         <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Connection.to_dict">
+<a class="viewcode-back" href="../../../index.html#cedne.Connection.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Serialize connection to a plain Python dictionary.</span>
+
+<span class="sd">        Returns a dict with guaranteed keys: ``source``, ``target``,</span>
+<span class="sd">        ``weight``, ``type``.  Optionally includes ``ligands``,</span>
+<span class="sd">        ``neurotransmitters``, and ``receptors`` if present.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: A JSON-compatible dictionary representation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">pre</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">post</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;weight&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">,</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">connection_type</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="c1"># Semantic edge metadata</span>
+        <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;ligands&#39;</span><span class="p">,</span> <span class="s1">&#39;neurotransmitters&#39;</span><span class="p">):</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">val</span><span class="p">:</span>
+                <span class="n">d</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;receptors&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">receptors</span><span class="p">:</span>
+            <span class="n">d</span><span class="p">[</span><span class="s1">&#39;receptors&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">receptors</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">receptors</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
+                <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">receptors</span>
+            <span class="p">)</span>
+        <span class="c1"># Citations attached directly to this connection (not the inherited chain)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;citations&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">citations</span><span class="p">:</span>
+            <span class="n">d</span><span class="p">[</span><span class="s1">&#39;citations&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">serialize_citations</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">citations</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">d</span></div>
 </div>
 
 
@@ -415,23 +463,24 @@
 
 <div class="viewcode-block" id="ConnectionGroup">
 <a class="viewcode-back" href="../../../index.html#cedne.ConnectionGroup">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">ConnectionGroup</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ConnectionGroup</span><span class="p">(</span><span class="n">Citable</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&#39;&#39;&#39; This is a group of connections in the network&#39;&#39;&#39;</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">network</span><span class="p">,</span> <span class="n">members</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">group_name</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initializes a new instance of the ConnectionGroup class.</span>
 
 <span class="sd">        Parameters:</span>
-<span class="sd">            groupname (str): </span>
+<span class="sd">            groupname (str):</span>
 <span class="sd">                The name of the connection group.</span>
-<span class="sd">            members (List[str]): </span>
+<span class="sd">            members (List[str]):</span>
 <span class="sd">                The list of members in the connection group.</span>
-<span class="sd">            group_id (int, optional): </span>
+<span class="sd">            group_id (int, optional):</span>
 <span class="sd">                The ID of the neuron group. Defaults to 0.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            None</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Citable</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>  <span class="c1"># provides self.citations = {}</span>
         <span class="k">if</span> <span class="n">group_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">group_name</span> <span class="o">=</span> <span class="s1">&#39;Group-&#39;</span><span class="o">+</span> <span class="n">generate_random_string</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -449,6 +498,10 @@
         <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">group_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">groups</span><span class="p">,</span> \
         <span class="sa">f</span><span class="s2">&quot;Group name </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">group_name</span><span class="si">}</span><span class="s2"> already exists in the network&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="o">.</span><span class="n">groups</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="bp">self</span><span class="o">.</span><span class="n">group_name</span><span class="p">:</span> <span class="bp">self</span><span class="p">})</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_parent_citables</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Walk citations up to the containing NervousSystem.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">network</span><span class="p">,)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">network</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>

@@ -424,32 +424,27 @@
             <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">json_data</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">generate_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">w</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate a JSON-compatible dictionary from a Worm object.</span>
+
+<span class="sd">        Delegates per-network serialization to ``NervousSystem.to_dict()``</span>
+<span class="sd">        so that this writer stays in sync with the canonical serialization.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            w: A Worm object with a ``networks`` dict of NervousSystem instances.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: JSON-serializable representation of the worm and its networks.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">json_data</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;model_name&quot;</span><span class="p">:</span> <span class="n">w</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">w</span><span class="o">.</span><span class="n">version</span><span class="p">,</span>
-            <span class="s2">&quot;created_by&quot;</span><span class="p">:</span> <span class="n">w</span><span class="o">.</span><span class="n">author</span><span class="p">,</span>
-            <span class="s2">&quot;date_created&quot;</span><span class="p">:</span> <span class="s2">&quot;2025-02-10&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="s1">&#39;version&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">&quot;created_by&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="s1">&#39;author&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
             <span class="s2">&quot;networks&quot;</span><span class="p">:</span> <span class="p">{},</span>
-            <span class="s2">&quot;neurons&quot;</span><span class="p">:</span> <span class="p">{},</span>
-            <span class="s2">&quot;connections&quot;</span><span class="p">:</span> <span class="p">[],</span>
-            <span class="s2">&quot;neo4j_query&quot;</span><span class="p">:</span> <span class="s2">&quot;MATCH (n:Neuron)-[r:SYNAPSE]-&gt;(m:Neuron) WHERE n.type = &#39;Sensory&#39; RETURN n, r, m&quot;</span>
         <span class="p">}</span>
 
-        <span class="c1"># Store neurons and their properties</span>
-        <span class="k">for</span> <span class="n">nn</span> <span class="ow">in</span> <span class="n">w</span><span class="o">.</span><span class="n">networks</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">nn</span><span class="o">.</span><span class="n">neurons</span><span class="p">:</span>
-                <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;neurons&quot;</span><span class="p">][</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-                    <span class="c1">#&quot;data&quot;:  </span>
-                    <span class="p">}</span>
-
-            <span class="c1"># Store edges (synapses)</span>
-            <span class="k">for</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">nn</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-                <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;connections&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
-                    <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="n">u</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-                    <span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-                    <span class="s2">&quot;weight&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;weight&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
-                    <span class="c1">#&quot;neurotransmitters&quot;: data.get(&quot;neurotransmitters&quot;, [])</span>
-                <span class="p">})</span>
+        <span class="k">for</span> <span class="n">net_name</span><span class="p">,</span> <span class="n">network</span> <span class="ow">in</span> <span class="n">w</span><span class="o">.</span><span class="n">networks</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="s1">&#39;to_dict&#39;</span><span class="p">):</span>
+                <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;networks&quot;</span><span class="p">][</span><span class="n">net_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">network</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="n">json_data</span>
 </pre></div>

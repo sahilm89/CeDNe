@@ -261,7 +261,7 @@ and utility functions (e.g., graph motifs, loaders, visualization) from its subm
 <dl class="py class">
 <dt class="sig sig-object py" id="cedne.Animal">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">Animal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sex</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genotype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/animal.html#Animal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Animal" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></p>
 <p>This is a full animal class</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="cedne.Animal.save">
@@ -359,8 +359,22 @@ data: Optional data to associate with the context.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="cedne.Neuron">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">Neuron</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.NervousSystem" title="cedne.NervousSystem"><span class="pre">NervousSystem</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/neuron.html#Neuron"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Neuron" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#cedne.Cell" title="cedne.core.neuron.Cell"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cell</span></code></a></p>
+<dd><p>Bases: <a class="reference internal" href="#cedne.Cell" title="cedne.core.neuron.Cell"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cell</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></p>
 <p>Models a biological neuron</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Neuron.to_dict">
+<span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/cedne/core/neuron.html#Neuron.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Neuron.to_dict" title="Link to this definition">#</a></dt>
+<dd><p>Serialize neuron to a plain Python dictionary.</p>
+<p>Returns a dict with guaranteed keys: <code class="docutils literal notranslate"><span class="pre">id</span></code>, <code class="docutils literal notranslate"><span class="pre">type</span></code>, <code class="docutils literal notranslate"><span class="pre">group_id</span></code>,
+<code class="docutils literal notranslate"><span class="pre">degree</span></code>, <code class="docutils literal notranslate"><span class="pre">has_recordings</span></code>.  Optionally includes <code class="docutils literal notranslate"><span class="pre">position</span></code>,
+<code class="docutils literal notranslate"><span class="pre">scalars</span></code> (auto-discovered numeric attributes), and <code class="docutils literal notranslate"><span class="pre">loadings</span></code>
+(dimensionality-reduction weights).</p>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>Dict[str, Any]: A JSON-compatible dictionary representation.</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="cedne.Neuron.add_trial">
 <span class="sig-name descname"><span class="pre">add_trial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trial_num</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/neuron.html#Neuron.add_trial"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Neuron.add_trial" title="Link to this definition">#</a></dt>
@@ -368,6 +382,30 @@ data: Optional data to associate with the context.</p>
 If <cite>trial_num</cite> is not provided, it defaults to 0.</p>
 <dl class="simple">
 <dt>Returns:</dt><dd><p>Trial: The newly added trial object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Neuron.load_recording">
+<span class="sig-name descname"><span class="pre">load_recording</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trial_num</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/neuron.html#Neuron.load_recording"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Neuron.load_recording" title="Link to this definition">#</a></dt>
+<dd><p>Attach a 1D time-series recording to this neuron as a new Trial.</p>
+<p>Thin convenience over <cite>add_trial()</cite> + setting <cite>trial.recording</cite>; use it
+when you already have a per-neuron trace in memory (ndarray, list,
+pandas Series) and don’t want to manage Trial objects by hand.</p>
+<dl>
+<dt>Args:</dt><dd><p>data: 1D array-like of samples (calcium trace, voltage, etc.).
+trial_num: Trial index (default 0). Overwrites any existing trial</p>
+<blockquote>
+<div><p>at this index for this neuron.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>sampling_rate: Sampling rate in Hz; written to <code class="docutils literal notranslate"><span class="pre">trial.metadata</span></code>.</dt><dd><p>Leave as None to keep the module default (F_SAMPLE).</p>
+</dd>
+</dl>
+<p>metadata: Extra metadata dict merged into <code class="docutils literal notranslate"><span class="pre">trial.metadata</span></code>.</p>
+</dd>
+<dt>Returns:</dt><dd><p>Trial: The trial object holding the recording.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -464,7 +502,7 @@ property_value: The value of the property.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="cedne.NeuronGroup">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">NeuronGroup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">network</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">members</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/neuron.html#NeuronGroup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NeuronGroup" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></p>
 <p>This contains a group of neurons in the network</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="cedne.NeuronGroup.items">
@@ -609,7 +647,7 @@ group_name: Optional name for the resulting group.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="cedne.NervousSystem">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">NervousSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">worm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.Worm" title="cedne.core.animal.Worm"><span class="pre">Worm</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Neutral'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/network.html#NervousSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NervousSystem" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MultiDiGraph</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MultiDiGraph</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></p>
 <dl class="simple">
 <dt>This is the Nervous System class. This inherits from networkx.MultiDiGraph</dt><dd><p>and is the main high level class for the nervous system.</p>
 </dd>
@@ -1057,6 +1095,29 @@ Default is False.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="cedne.NervousSystem.to_dict">
+<span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/cedne/core/network.html#NervousSystem.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NervousSystem.to_dict" title="Link to this definition">#</a></dt>
+<dd><p>Serialize the full network to a plain Python dictionary.</p>
+<p>Composes <code class="docutils literal notranslate"><span class="pre">Neuron.to_dict()</span></code> and <code class="docutils literal notranslate"><span class="pre">Connection.to_dict()</span></code> for each
+node and edge, then attaches group membership, group summaries,
+network-level metadata, and visualization hints.</p>
+<dl class="simple">
+<dt>Returns:</dt><dd><dl class="simple">
+<dt>dict: A JSON-compatible dictionary with keys:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: Network name.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">organism</span></code>: Organism name (from worm), if available.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nodes</span></code>: List of neuron dicts.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">links</span></code>: List of connection dicts.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">groups</span></code>: List of group summary dicts.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">visualization_metadata</span></code>: Arbitrary viz hints.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="cedne.NervousSystem.remove_unconnected_neurons">
 <span class="sig-name descname"><span class="pre">remove_unconnected_neurons</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/network.html#NervousSystem.remove_unconnected_neurons"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NervousSystem.remove_unconnected_neurons" title="Link to this definition">#</a></dt>
 <dd><p>Removes neurons that are not connected to any other neurons.</p>
@@ -1133,7 +1194,7 @@ Default is False.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="cedne.Connection">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">Connection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pre</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.Neuron" title="cedne.Neuron"><span class="pre">Neuron</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">post</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.Neuron" title="cedne.Neuron"><span class="pre">Neuron</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">uid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connection_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'chemical-synapse'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/connection.html#Connection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Connection" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></p>
 <p>This class represents a connection between two cells.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="cedne.Connection.by_name">
@@ -1157,6 +1218,19 @@ Default is False.</p>
 <dt class="sig sig-object py" id="cedne.Connection.get_property">
 <span class="sig-name descname"><span class="pre">get_property</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/connection.html#Connection.get_property"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Connection.get_property" title="Link to this definition">#</a></dt>
 <dd><p>Gets an attribute for the class</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Connection.to_dict">
+<span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="reference internal" href="_modules/cedne/core/connection.html#Connection.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Connection.to_dict" title="Link to this definition">#</a></dt>
+<dd><p>Serialize connection to a plain Python dictionary.</p>
+<p>Returns a dict with guaranteed keys: <code class="docutils literal notranslate"><span class="pre">source</span></code>, <code class="docutils literal notranslate"><span class="pre">target</span></code>,
+<code class="docutils literal notranslate"><span class="pre">weight</span></code>, <code class="docutils literal notranslate"><span class="pre">type</span></code>.  Optionally includes <code class="docutils literal notranslate"><span class="pre">ligands</span></code>,
+<code class="docutils literal notranslate"><span class="pre">neurotransmitters</span></code>, and <code class="docutils literal notranslate"><span class="pre">receptors</span></code> if present.</p>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>dict: A JSON-compatible dictionary representation.</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -1185,7 +1259,7 @@ Default is False.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="cedne.ConnectionGroup">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">ConnectionGroup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">network</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">members</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/connection.html#ConnectionGroup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.ConnectionGroup" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></p>
 <p>This is a group of connections in the network</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="cedne.ConnectionGroup.clear">
@@ -2034,7 +2108,9 @@ network: Network context name.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Fly"><code class="docutils literal notranslate"><span class="pre">Fly</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Cell"><code class="docutils literal notranslate"><span class="pre">Cell</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Neuron"><code class="docutils literal notranslate"><span class="pre">Neuron</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Neuron.to_dict"><code class="docutils literal notranslate"><span class="pre">Neuron.to_dict()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Neuron.add_trial"><code class="docutils literal notranslate"><span class="pre">Neuron.add_trial()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Neuron.load_recording"><code class="docutils literal notranslate"><span class="pre">Neuron.load_recording()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Neuron.remove_trial"><code class="docutils literal notranslate"><span class="pre">Neuron.remove_trial()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Neuron.get_connections"><code class="docutils literal notranslate"><span class="pre">Neuron.get_connections()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Neuron.get_connected_neurons"><code class="docutils literal notranslate"><span class="pre">Neuron.get_connected_neurons()</span></code></a></li>
@@ -2105,6 +2181,7 @@ network: Network context name.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem.shortest_path"><code class="docutils literal notranslate"><span class="pre">NervousSystem.shortest_path()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem.shortest_paths"><code class="docutils literal notranslate"><span class="pre">NervousSystem.shortest_paths()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem.export_graph"><code class="docutils literal notranslate"><span class="pre">NervousSystem.export_graph()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem.to_dict"><code class="docutils literal notranslate"><span class="pre">NervousSystem.to_dict()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem.remove_unconnected_neurons"><code class="docutils literal notranslate"><span class="pre">NervousSystem.remove_unconnected_neurons()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem.make_neuron_group"><code class="docutils literal notranslate"><span class="pre">NervousSystem.make_neuron_group()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.NervousSystem.delete_neuron_group"><code class="docutils literal notranslate"><span class="pre">NervousSystem.delete_neuron_group()</span></code></a></li>
@@ -2117,6 +2194,7 @@ network: Network context name.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Connection.update_weight"><code class="docutils literal notranslate"><span class="pre">Connection.update_weight()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Connection.set_property"><code class="docutils literal notranslate"><span class="pre">Connection.set_property()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Connection.get_property"><code class="docutils literal notranslate"><span class="pre">Connection.get_property()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Connection.to_dict"><code class="docutils literal notranslate"><span class="pre">Connection.to_dict()</span></code></a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.ChemicalSynapse"><code class="docutils literal notranslate"><span class="pre">ChemicalSynapse</span></code></a></li>
