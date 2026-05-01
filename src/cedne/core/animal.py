@@ -5,6 +5,7 @@ __date__ = "2025-04-06"
 __license__ = "MIT"
 
 import pickle
+from pathlib import Path
 from .io import generate_random_string, load_pickle
 from .source import Citable
 
@@ -34,9 +35,10 @@ class Animal(Citable):
             file_path (str): The path to the pickle file.
         """
         if file_format == 'cedne':
-            if not file_path.endswith('.cedne'):
-                file_path += '.cedne'
-            with open(file_path, 'wb') as pickle_file:
+            output_path = Path(file_path)
+            if not output_path.suffix:
+                output_path = output_path.with_suffix('.cedne')
+            with open(output_path, 'wb') as pickle_file:
                 pickle.dump(self, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
         elif file_format == 'full':
             pass

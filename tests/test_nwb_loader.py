@@ -47,8 +47,8 @@ def test_load_nwb_basic(tmp_path):
     
     # Verify Session
     assert isinstance(session, Session)
-    assert session.experimenter == ('Sahil Moza',) # pynwb might return a tuple
-    assert session.lab == 'Moza Lab'
+    assert session.experimenter == ('Sydney Brenner',) # pynwb might return a tuple
+    assert session.lab == 'Brenner Lab'
     
     # Verify Neurons and Trials
     assert "Unit_0" in nn.neurons
