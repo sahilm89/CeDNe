@@ -64,6 +64,9 @@ veraszto_connectome = DOWNLOAD_DIR / 'Veraszto_2025'
 # Brittin et al. 2018 C. elegans nerve-ring contactome (adult + L4)
 brittin_contactome = DOWNLOAD_DIR / 'Brittin_2018'
 
+# Skuhersky et al. 2022 NeuroPAL-derived C. elegans 3D anatomical atlas
+skuhersky_neuropal = DOWNLOAD_DIR / 'Skuhersky_2022'
+
 #Download Links
 #CENGEN
 cengen_links = ['https://cengen.org/storage/021821_liberal_threshold1.csv',
@@ -124,6 +127,10 @@ citations = {
     'neuropeptide_atlas': ['https://doi.org/10.1016/j.neuron.2023.09.043'],
     'neurotransmitter_atlas': ['https://doi.org/10.7554/eLife.95402.3'],
     'atanas_whole_brain': ['https://doi.org/10.1016/j.cell.2023.07.035'],
+    'neuropal_positions': [
+        'https://doi.org/10.1186/s12859-022-04738-3',
+        'https://doi.org/10.1016/j.cell.2020.12.012',
+    ],
     'altun_neurotrasmitters_receptors': ['https://doi.org/10.3908/wormatlas.5.202'],
     'worm_lineage': ['https://doi.org/10.1016/0012-1606(77)90158-0'],
     'winding_connectome': ['https://doi.org/10.1126/science.add9330'], 
@@ -201,7 +208,7 @@ organism_datasets = [
          'connectome': True,
          'neurotransmitters': True,   # Wang 2024 ligand-table.xlsx has a Male sheet
          'neuropeptides': False,      # Ripoll-Sanchez 2023 is hermaphrodite-only
-         'transcriptome': False,      # CeNGEN is hermaphrodite-only
+         'transcriptome': False,      # CeNGEN is hermaphrodite-only here, but new version has been updated with other datasets.
          'contactome': False,         # Brittin 2018 sampled hermaphrodites only
          'lineage': None,             # Altun workbook may have a Male sheet — please verify
          'position': False}},         # cook loader only populates position for hermaphrodite
@@ -244,4 +251,3 @@ organism_datasets = [
          'transcriptome': False, 'contactome': False, 'lineage': False,
          'position': False}},
 ]
-

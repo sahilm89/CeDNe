@@ -13,6 +13,7 @@ from calendar import c
 import warnings
 import pickle
 import re
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import requests
@@ -20,6 +21,7 @@ from cedne import Worm, Fly, NervousSystem
 from cedne.core import Neuron, Behavior, Session
 from cedne.core.context import Context, ExperimentalContext
 from cedne.core.animal import Animal
+from cedne.core.source import Citation
 from .config import *
 warnings.filterwarnings("ignore", category=UserWarning, module='openpyxl')
 
@@ -37,6 +39,55 @@ _COOK_MALE_TYPE_NORM = {
     'INTERNEURON':     SIM_INTERNEURON,'INTERNEURONS':     SIM_INTERNEURON,
     'MOTOR NEURON':    SIM_MOTORNEURON,'MOTOR NEURONS':    SIM_MOTORNEURON,
 }
+
+
+def _neuropal_position_citations():
+    """Structured citations for the bundled NeuroPAL-derived position atlas."""
+    return [
+        Citation(
+            key='Skuhersky2022',
+            title='Toward a more accurate 3D atlas of C. elegans neurons',
+            authors=['Skuhersky et al.'],
+            year=2022,
+            doi='10.1186/s12859-022-04738-3',
+            notes='Source of CeDNe bundled C. elegans anatomical neuron positions.',
+        ),
+        Citation(
+            key='Yemini2020',
+            title='NeuroPAL: A Multicolor Atlas for Whole-Brain Neuronal Identification in C. elegans',
+            authors=['Yemini et al.'],
+            year=2020,
+            doi='10.1016/j.cell.2020.12.012',
+            notes='Original NeuroPAL atlas and neuron-identification reference.',
+        ),
+    ]
+
+
+def _is_default_neuropal_positions_path(path):
+    """True when ``path`` is the bundled NeuroPAL-derived position pickle."""
+    try:
+        return Path(path).resolve() == Path(neuronPositions).resolve()
+    except TypeError:
+        return False
+
+
+def _attach_neuropal_position_citations(nn):
+    """Attach NeuroPAL position provenance only to neurons with coordinates."""
+    for neuron in nn.neurons.values():
+        if getattr(neuron, 'position', None) is not None:
+            for citation in _neuropal_position_citations():
+                neuron.add_citation(citation)
+
+
+def _atanas_recording_citation():
+    """Structured citation for Atanas et al. whole-brain recordings."""
+    return Citation(
+        key='Atanas2023',
+        authors=['Atanas et al.'],
+        year=2023,
+        doi='10.1016/j.cell.2023.07.035',
+        notes='Whole-brain calcium imaging recordings loaded from atanas_whole_brain.',
+    )
 
 
 def _celegans_canonical_types():
@@ -851,6 +902,8 @@ def build_nervous_system(nn, neuron_data, chem_synapses, elec_synapses, position
                                                     neuron_info.iloc[:,3].to_list()
             #meaning, lineage, description = neuron_info.iloc[:,4].to_list(), neuron_info.iloc[:,5].to_list(), neuron_info.iloc[:,6].to_list()
             nn.create_neurons(labels, type=neuron_types, category=categories, modality=modalities, position=locations) #meaning=meaning, lineage=lineage, description=description)
+            if _is_default_neuropal_positions_path(positions):
+                _attach_neuropal_position_citations(nn)
             assert not all([gapjn_only, chem_only]), "Select at most one of gapjn_only or chem_only attributes to be True."
             if not gapjn_only:
                 nn.setup_chemical_connections(chem_adjacency)
@@ -1674,6 +1727,7 @@ def load_atanas(condition='Control', max_files=None, network=None):
                 neuron = nn.neurons[matched_name]
                 trial = neuron.add_trial(trial_num)
                 trial.recording = np.array(trace, dtype=np.float64)
+                neuron.add_citation(_atanas_recording_citation())
                 trial.metadata.update({
                     'condition': condition,
                     'source_file': json_path.name,

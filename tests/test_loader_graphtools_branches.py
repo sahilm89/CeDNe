@@ -167,6 +167,47 @@ def test_build_nervous_system_respects_connection_flags(
     assert {conn.connection_type for conn in nn.connections.values()} == expected_types
 
 
+def test_build_nervous_system_cites_default_neuropal_positions(tmp_path, monkeypatch):
+    neuron_data = tmp_path / "neurons.pkl"
+    chem_synapses = tmp_path / "chemical.pkl"
+    elec_synapses = tmp_path / "gap.pkl"
+    positions = tmp_path / "positions.pkl"
+
+    write_pickle(
+        neuron_data,
+        pd.DataFrame(
+            [
+                ["AVAL", "sensory", "head", "chemosensory"],
+                ["AVBL", "interneuron", "head", "integrative"],
+            ]
+        ),
+    )
+    write_pickle(chem_synapses, {})
+    write_pickle(elec_synapses, {})
+    write_pickle(positions, {"AVAL": np.array([0.0, 0.0, 0.0])})
+    monkeypatch.setattr(loader, "neuronPositions", positions)
+
+    nn = NervousSystem(Worm("test-worm"), network="TestNetwork")
+    loader.build_nervous_system(
+        nn,
+        neuron_data=neuron_data,
+        chem_synapses=chem_synapses,
+        elec_synapses=elec_synapses,
+        positions=positions,
+    )
+
+    assert set(nn.neurons["AVAL"].citations) == {"Skuhersky2022", "Yemini2020"}
+    assert (
+        nn.neurons["AVAL"].citations["Skuhersky2022"].doi
+        == "10.1186/s12859-022-04738-3"
+    )
+    assert (
+        nn.neurons["AVAL"].citations["Yemini2020"].doi
+        == "10.1016/j.cell.2020.12.012"
+    )
+    assert nn.neurons["AVBL"].citations == {}
+
+
 def test_build_nervous_system_rejects_conflicting_connection_modes(tmp_path):
     neuron_data = tmp_path / "neurons.pkl"
     chem_synapses = tmp_path / "chemical.pkl"
@@ -648,7 +689,7 @@ def test_load_atanas_populates_trials_and_behavior_with_existing_network(tmp_pat
     )
 
     nn = NervousSystem(Worm("atanas"), network="Neutral")
-    nn.create_neurons(["AVAL", "AVBL"])
+    nn.create_neurons(["AVAL", "AVBL", "AVCL"])
 
     result = loader.load_atanas(condition="Control", max_files=1, network=nn)
 
@@ -668,6 +709,13 @@ def test_load_atanas_populates_trials_and_behavior_with_existing_network(tmp_pat
     assert np.array_equal(aval_trial.recording, np.array([1.0, 2.0]))
     assert aval_trial.behavior is session.behavior
     assert aval_trial.metadata["source_file"] == "recording.json"
+    assert set(nn.neurons["AVAL"].citations) == {"Atanas2023"}
+    assert set(nn.neurons["AVBL"].citations) == {"Atanas2023"}
+    assert (
+        nn.neurons["AVAL"].citations["Atanas2023"].doi
+        == "10.1016/j.cell.2023.07.035"
+    )
+    assert nn.neurons["AVCL"].citations == {}
 
 
 def test_loadNeurotransmitters_populates_edges_and_preserves_gap_junctions(monkeypatch):
