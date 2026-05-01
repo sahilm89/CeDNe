@@ -155,3 +155,6 @@ examples/notebooks/*.tex
 examples/notebooks/benchmarking_results.csv
 examples/notebooks/cross_species_motifs.ipynb
 examples/notebooks/benchmarking.ipynb
+examples/python/tool_comparison_audit_2026_build.py
+examples/python/*.csv
+examples/python/*.md
