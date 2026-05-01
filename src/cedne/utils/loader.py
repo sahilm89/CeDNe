@@ -483,44 +483,58 @@ def make_ciona():
 def make_pristionchus(name='', dataset_ind=1):
     """Load the Pristionchus pacificus pharyngeal connectome (Bumbarger et al. 2013).
 
-    Uses the paper's consensus network (mmc3.xlsx: the 78 directed edges
-    supported by both specimens) with the chosen weight column.
+    Uses the paper's specimen-specific pharyngeal adjacency table.
 
-        dataset_ind=1  -> 'Average weight' across specimens  (default)
-        dataset_ind=2  -> 'weight 107' (specimen 107 only)
-        dataset_ind=3  -> 'weight 148' (specimen 148 only)
+        dataset_ind=1  -> specimen 107 (default)
+        dataset_ind=2  -> specimen 148
 
     The paper does not assign SIM (sensory / interneuron / motorneuron)
     classes to pharyngeal cells, so neuron `type` is left unset.
 
     Args:
         name (str): Animal name. Auto-generated if empty.
-        dataset_ind (int): 1 (average, default), 2 (specimen 107), or 3 (specimen 148).
+        dataset_ind (int): 1 (specimen 107, default) or 2 (specimen 148).
 
     Returns:
         Animal: A Pristionchus pacificus Animal with a single 'pharynx'
         NervousSystem containing chemical synapses.
     """
-    weight_col_map = {
-        1: 'Average weight',
-        2: 'weight 107',
-        3: 'weight 148',
+    specimen_map = {
+        1: ('107', 'weight 107'),
+        2: ('148', 'weight 148'),
     }
-    assert dataset_ind in weight_col_map, \
-        f"dataset_ind must be one of {list(weight_col_map)}; got {dataset_ind!r}"
-    weight_col = weight_col_map[dataset_ind]
+    assert dataset_ind in specimen_map, \
+        f"dataset_ind must be one of {list(specimen_map)}; got {dataset_ind!r}"
+    specimen, weight_col = specimen_map[dataset_ind]
 
     df = pd.read_excel(pristionchus_pharynx / 'mmc3.xlsx', sheet_name='Sheet1',
                        header=1, engine='openpyxl')
-    df = df.dropna(subset=['presynaptic', 'postsynaptic']).copy()
-
     adjacency = {}
-    for _, row in df.iterrows():
-        pre = str(row['presynaptic']).strip()
-        post = str(row['postsynaptic']).strip()
-        if pre in ('nan', '') or post in ('nan', ''):
-            continue
-        adjacency.setdefault(pre, {})[post] = {'weight': float(row[weight_col])}
+    if {'presynaptic', 'postsynaptic', weight_col}.issubset(df.columns):
+        df = df.dropna(subset=['presynaptic', 'postsynaptic']).copy()
+        for _, row in df.iterrows():
+            pre = str(row['presynaptic']).strip()
+            post = str(row['postsynaptic']).strip()
+            if pre in ('nan', '') or post in ('nan', ''):
+                continue
+            adjacency.setdefault(pre, {})[post] = {'weight': float(row[weight_col])}
+    else:
+        col_offset = 0 if dataset_ind == 1 else 3
+        pre_col = col_offset + 1
+        post_col = col_offset + 2
+        edge_counts = {}
+        for _, row in df.iterrows():
+            pre = row.get(pre_col)
+            post = row.get(post_col)
+            if pd.isna(pre) or pd.isna(post):
+                continue
+            pre = str(pre).strip()
+            post = str(post).strip()
+            if not pre or not post:
+                continue
+            edge_counts[(pre, post)] = edge_counts.get((pre, post), 0) + 1
+        for (pre, post), weight in edge_counts.items():
+            adjacency.setdefault(pre, {})[post] = {'weight': float(weight)}
 
     cells = set(adjacency.keys())
     for partners in adjacency.values():
@@ -530,7 +544,7 @@ def make_pristionchus(name='', dataset_ind=1):
     if not name:
         name = f'Pristionchus-consensus-{weight_col.replace(" ", "_")}'
     a = Animal(species='Pristionchus pacificus', name=name, stage='Adult',
-               weight_source=weight_col)
+               specimen=specimen, weight_source=weight_col)
     a.citations.update({'bumbarger_pharynx': citations['bumbarger_pharynx']})
     nn = NervousSystem(a, network='pharynx')
     nn.create_neurons(cells)
@@ -689,9 +703,6 @@ def make_platynereis(name=''):
         }
 
     # Merge all sources into one record per celltype.
-    # Convention (shared with the Cook loaders): `type` holds the canonical
-    # SIM class (sensory / interneuron / motorneuron); the fine-grained
-    # celltype name (e.g. 'MC', 'PNS1') lives on `cell_type`.
     celltype_attrs = {}
     for nm in set(fig3_sim) | set(fig3_nonneu_kind) | set(ct_meta) | grouped_names:
         meta = ct_meta.get(nm, {})
@@ -701,7 +712,8 @@ def make_platynereis(name=''):
         if cell_kind is None:
             cell_kind = meta.get('cell_kind')
         celltype_attrs[nm] = {
-            'type':             fig3_sim.get(nm) if is_neuron else None,
+            'type':             nm if is_neuron else None,
+            'category':         fig3_sim.get(nm) if is_neuron else None,
             'cell_type':        nm,
             'modality':         ann.get('modality'),
             'neurotransmitter': meta.get('neurotransmitter'),
@@ -734,7 +746,7 @@ def make_platynereis(name=''):
                common_name='ragworm', phylum='Annelida')
     a.citations.update({'veraszto_connectome': citations['veraszto_connectome']})
 
-    std_keys = ('type', 'cell_type', 'modality', 'neurotransmitter',
+    std_keys = ('type', 'category', 'cell_type', 'modality', 'neurotransmitter',
                 'soma_position', 'region', 'is_neuron')
     extra_keys = ('n_cells', 'cell_kind', 'body_segments', 'region_tags',
                   'projection_tags', 'nt_tags', 'markers', 'tags')
@@ -749,11 +761,9 @@ def make_platynereis(name=''):
         meta = celltype_attrs.get(ct, {}) if ct else {}
         for k in all_keys:
             attr_by_neuron[k][n] = meta.get(k)
-        # `cell_type` is the group name; `type` is the SIM class, backfilled
-        # per-neuron from fig1 when the celltype lookup doesn't resolve.
         attr_by_neuron['cell_type'][n] = ct
-        if attr_by_neuron['type'][n] is None and n in fig1_sim:
-            attr_by_neuron['type'][n] = fig1_sim[n]
+        if attr_by_neuron['category'][n] is None and n in fig1_sim:
+            attr_by_neuron['category'][n] = fig1_sim[n]
     nn_fine.create_neurons(full_cells, **attr_by_neuron)
 
     adj_dict = {}
@@ -977,7 +987,10 @@ def loadNeurotransmitters(nn, sex='Hermaphrodite'):
     npr_file = DOWNLOAD_DIR / prefix_NT / 'GenesExpressing-BATCH-thrs4_use.xlsx'
     npr = pd.read_excel(npr_file, sheet_name='npr', true_values='TRUE', false_values='FALSE', engine='openpyxl')
     ligmap = pd.read_excel(npr_file, sheet_name='ligmap', engine='openpyxl')
-    ligtable = _readLigandTable(sex=sex)
+    try:
+        ligtable = _readLigandTable(sex=sex)
+    except (FileNotFoundError, StopIteration):
+        ligtable = None
 
     for n in nn.neurons:
         neuron = nn.neurons[n]
@@ -995,7 +1008,11 @@ def loadNeurotransmitters(nn, sex='Hermaphrodite'):
                 neuron.set_property('_postSynapse', merged_post)
     for n in nn.neurons:
         neuron = nn.neurons[n]
-        neuron.set_property('_preSynapse', list(neuron._preSynapse) + getLigands(n, sex=sex, ligtable=ligtable))
+        if ligtable is None:
+            ligands = getLigands(n, sex=sex)
+        else:
+            ligands = getLigands(n, sex=sex, ligtable=ligtable)
+        neuron.set_property('_preSynapse', list(neuron._preSynapse) + ligands)
 
     for e,conn in nn.connections.items():
         if e[0].name in nn.neurons and e[1].name in nn.neurons and conn.connection_type == 'chemical-synapse':
