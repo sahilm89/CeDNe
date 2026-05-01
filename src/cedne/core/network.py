@@ -39,8 +39,9 @@ from .connection import Connection, \
     ChemicalSynapse, GapJunction, ConnectionGroup
 from .neuron import Neuron, NeuronGroup
 from .animal import Worm
+from .source import Citable
 
-class NervousSystem(nx.MultiDiGraph):
+class NervousSystem(nx.MultiDiGraph, Citable):
     '''
     This is the Nervous System class. This inherits from networkx.MultiDiGraph
       and is the main high level class for the nervous system. '''
@@ -55,7 +56,8 @@ class NervousSystem(nx.MultiDiGraph):
             conditions or network types.
             Defaults to "Neutral".
         """
-        super().__init__()
+        nx.MultiDiGraph.__init__(self)
+        Citable.__init__(self)  # provides self.citations = {}
 
         self.worm = worm or Worm()
         self.name = network
@@ -74,6 +76,10 @@ class NervousSystem(nx.MultiDiGraph):
 
         for key, value in kwargs.items():
             self.set_property(key, value)
+
+    def _parent_citables(self):
+        """Walk citation resolution up to the owning Animal/Worm."""
+        return (self.worm,) if self.worm is not None else ()
 
     @property
     def num_groups(self):
@@ -456,22 +462,34 @@ class NervousSystem(nx.MultiDiGraph):
             "Specify either neuron_names or connections, not both."
 
             if neuron_names is not None:
-                subgraph_nodes = [graph_copy.neurons[name] for name in neuron_names]
-                subgraph = graph_copy.subgraph(subgraph_nodes)
-                subgraph.connections = {key: value for key, value in graph_copy.connections.items()\
-                                         if key[0] in subgraph_nodes and key[1] in subgraph_nodes}
+                missing = [n for n in neuron_names if n not in graph_copy.neurons]
+                if missing:
+                    raise KeyError(f"Neurons not found in network: {missing}")
+
+                selected_names = set(neuron_names)
+                nodes_to_remove = [
+                    node for node in list(graph_copy.nodes)
+                    if node.name not in selected_names
+                ]
+                graph_copy.remove_nodes_from(nodes_to_remove)
+                subgraph = graph_copy
+
+                # subgraph_nodes = [graph_copy.neurons[name] for name in neuron_names]
+                # subgraph = graph_copy.subgraph(subgraph_nodes)
+                # subgraph.connections = {key: value for key, value in graph_copy.connections.items()\
+                #                          if key[0] in subgraph_nodes and key[1] in subgraph_nodes}
             elif connections is not None:
                 new_connections = [(graph_copy.neurons[conn[0].name], graph_copy.neurons[conn[1].name], conn[2])\
                                  for conn in connections]
                 new_connections = [graph_copy.connections[key]._id for key in new_connections]
                 subnet = graph_copy.edge_subgraph(new_connections) # That will put it through custom copy again.
-                subgraph = NervousSystem(self.worm, network=name)
+                subgraph = NervousSystem(self.worm, network=name or self.name + "_subnetwork")
                 subgraph.create_neurons_from(subnet, data=data)
                 subgraph.create_connections_from(subnet, data=data)
                 # subgraph.connections = {key: value for key, value in graph_copy.connections.items()\
                     #  if key in new_connections}
             else:
-                subgraph = self
+                subgraph = graph_copy
             subgraph.update_network()
             subgraph.update_neurons()
             subgraph.update_connections()
@@ -1028,6 +1046,92 @@ class NervousSystem(nx.MultiDiGraph):
             nx.write_graphml(self, path)
         else:
             raise ValueError("format must be 'dot', 'graphviz', 'nx', 'json', 'gml', or 'graphml'")
+
+    def to_dict(self) -> dict:
+        """Serialize the full network to a plain Python dictionary.
+
+        Composes ``Neuron.to_dict()`` and ``Connection.to_dict()`` for each
+        node and edge, then attaches group membership, group summaries,
+        network-level metadata, and visualization hints.
+
+        Returns:
+            dict: A JSON-compatible dictionary with keys:
+                - ``name``: Network name.
+                - ``organism``: Organism name (from worm), if available.
+                - ``nodes``: List of neuron dicts.
+                - ``links``: List of connection dicts.
+                - ``groups``: List of group summary dicts.
+                - ``visualization_metadata``: Arbitrary viz hints.
+        """
+        # -- Group membership lookups --
+        node_groups = {}
+        link_groups = {}
+        for gname, group in self.groups.items():
+            if hasattr(group, 'neurons'):  # NeuronGroup
+                for nname in group.neurons:
+                    node_groups.setdefault(nname, []).append(gname)
+            if hasattr(group, 'connections'):  # ConnectionGroup
+                for conn_id in group.connections:
+                    key = (
+                        conn_id[0].name if hasattr(conn_id[0], 'name') else conn_id[0],
+                        conn_id[1].name if hasattr(conn_id[1], 'name') else conn_id[1],
+                        conn_id[2],
+                    )
+                    link_groups.setdefault(key, []).append(gname)
+
+        # -- Nodes --
+        nodes = []
+        for nname, neuron in self.neurons.items():
+            nd = neuron.to_dict()
+            if nname in node_groups:
+                nd['groups'] = node_groups[nname]
+            nodes.append(nd)
+
+        # -- Links --
+        links = []
+        for (u, v, k), conn in self.connections.items():
+            ld = conn.to_dict()
+            lk = (u.name, v.name, k)
+            if lk in link_groups:
+                ld['groups'] = link_groups[lk]
+            links.append(ld)
+
+        # -- Groups summary --
+        groups_list = []
+        from .neuron import NeuronGroup
+        from .connection import ConnectionGroup
+        for gname, g in self.groups.items():
+            if isinstance(g, NeuronGroup):
+                groups_list.append({
+                    "name": gname, "type": "neuron",
+                    "count": len(g),
+                    "members": list(g.neurons),
+                })
+            elif isinstance(g, ConnectionGroup):
+                groups_list.append({
+                    "name": gname, "type": "connection",
+                    "count": len(g),
+                    "members": [
+                        f"{c.pre.name}->{c.post.name}" for c in g.members
+                    ],
+                })
+
+        # -- Assemble result with network-level attributes --
+        result = {
+            "name": self.name,
+            "nodes": nodes,
+            "links": links,
+            "groups": groups_list,
+            "visualization_metadata": getattr(
+                self, 'visualization_metadata', {}
+            ),
+        }
+
+        # Include organism metadata if present
+        if hasattr(self, 'worm') and self.worm:
+            result["organism"] = getattr(self.worm, 'name', None)
+
+        return result
 
     def remove_unconnected_neurons(self):
         """

@@ -143,31 +143,26 @@ class NetworkWriter:
             json.dump(json_data, f, indent=4)
 
     def generate_json(self, w):
+        """Generate a JSON-compatible dictionary from a Worm object.
+
+        Delegates per-network serialization to ``NervousSystem.to_dict()``
+        so that this writer stays in sync with the canonical serialization.
+
+        Args:
+            w: A Worm object with a ``networks`` dict of NervousSystem instances.
+
+        Returns:
+            dict: JSON-serializable representation of the worm and its networks.
+        """
         json_data = {
             "model_name": w.name,
-            "version": w.version,
-            "created_by": w.author,
-            "date_created": "2025-02-10",
+            "version": getattr(w, 'version', None),
+            "created_by": getattr(w, 'author', None),
             "networks": {},
-            "neurons": {},
-            "connections": [],
-            "neo4j_query": "MATCH (n:Neuron)-[r:SYNAPSE]->(m:Neuron) WHERE n.type = 'Sensory' RETURN n, r, m"
         }
 
-        # Store neurons and their properties
-        for nn in w.networks:
-            for n in nn.neurons:
-                json_data["neurons"][n] = {
-                    #"data":  
-                    }
-
-            # Store edges (synapses)
-            for u, v, data in nn.edges(data=True):
-                json_data["connections"].append({
-                    "source": u.name,
-                    "target": v.name,
-                    "weight": data.get("weight", 1.0),
-                    #"neurotransmitters": data.get("neurotransmitters", [])
-                })
+        for net_name, network in w.networks.items():
+            if hasattr(network, 'to_dict'):
+                json_data["networks"][net_name] = network.to_dict()
 
         return json_data

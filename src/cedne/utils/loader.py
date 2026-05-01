@@ -23,6 +23,43 @@ from cedne.core.animal import Animal
 from .config import *
 warnings.filterwarnings("ignore", category=UserWarning, module='openpyxl')
 
+
+# Canonical SIM vocabulary used throughout CeDNe for the sensory / interneuron /
+# motorneuron axis. Every C. elegans loader (cook, witvliet, white_1986) and
+# the comparative loaders (platynereis, ciona) normalize to these exact strings
+# so downstream analyses don't need per-species mappings.
+SIM_SENSORY     = 'sensory'
+SIM_INTERNEURON = 'interneuron'
+SIM_MOTORNEURON = 'motorneuron'
+
+_COOK_MALE_TYPE_NORM = {
+    'SENSORY NEURON':  SIM_SENSORY,    'SENSORY NEURONS':  SIM_SENSORY,
+    'INTERNEURON':     SIM_INTERNEURON,'INTERNEURONS':     SIM_INTERNEURON,
+    'MOTOR NEURON':    SIM_MOTORNEURON,'MOTOR NEURONS':    SIM_MOTORNEURON,
+}
+
+
+def _celegans_canonical_types():
+    """Return {neuron_name: canonical_SIM_type} from the Cook hermaphrodite
+    Cell_list reference (sensory / interneuron / motorneuron only; pharyngeal
+    and other non-SIM entries are dropped).
+
+    Used by loaders whose source data does not carry SIM labels per neuron
+    (Witvliet) or uses non-canonical labels that can be backfilled by name
+    (Cook male PHARYNX bucket).
+    """
+    with open(cell_list, 'rb') as f:
+        df = pickle.load(f)
+    name_col = df.columns[0]
+    type_col = df.columns[1]
+    canonical = {SIM_SENSORY, SIM_INTERNEURON, SIM_MOTORNEURON}
+    return {
+        str(row[name_col]).strip(): str(row[type_col]).strip()
+        for _, row in df.iterrows()
+        if str(row[type_col]).strip() in canonical
+    }
+
+
 def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False):
     ''' Utility function to make a Worm based on import parameters.'''
     if import_parameters is None or (import_parameters['style'] == 'cook' and import_parameters['sex'] == 'hermaphrodite'):
@@ -39,69 +76,95 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
         w = Worm(name)
         w.citations.update({'cook_connectome':citations['cook_connectome']})
         nn = NervousSystem(w)
-        input_file = 'SI 5 Connectome adjacency matrices, corrected July 2020.xlsx'
 
-        ## Chemical synapses
-        cook_chem = pd.read_excel(cook_connectome / input_file, sheet_name='male chemical', engine='openpyxl')
-        colnames = cook_chem.iloc[1, 3:-1].astype(str).tolist()
-        labels = cook_chem.loc[2:383]['Unnamed: 2'].tolist()
+        if cook_male_cache.exists():
+            with open(cook_male_cache, 'rb') as cache_file:
+                cache = pickle.load(cache_file)
+            labels = cache['labels']
+            ntype = cache['ntype']
+            l1 = cache['l1']
+            adj_chem = cache['adj_chem']
+            adj_gapjn = cache['adj_gapjn']
+        else:
+            input_file = 'SI 5 Connectome adjacency matrices, corrected July 2020.xlsx'
 
-        ccl = cook_chem.iloc[2:,:2].copy().ffill()
+            ## Chemical synapses
+            cook_chem = pd.read_excel(cook_connectome / input_file, sheet_name='male chemical', engine='openpyxl')
+            colnames = cook_chem.iloc[1, 3:-1].astype(str).tolist()
+            labels = cook_chem.loc[2:383]['Unnamed: 2'].tolist()
 
-        list_1 = ccl.iloc[:,0].to_list() #.to_csv('temp_filled.csv', index=False)
-        list_2 = ccl.iloc[:,1].to_list()
+            ccl = cook_chem.iloc[2:,:2].copy().ffill()
 
+            list_1 = ccl.iloc[:,0].to_list()
+            list_2 = ccl.iloc[:,1].to_list()
 
-        ## Correcting SEX_SPECIFIC NEURONS
-        ntype = {}
-        l1 = {}
-        for j, n in enumerate(labels):
-            if list_1[j] == 'SEX SPECIFIC':
-                if not list_2[j] == 'HEAD':
-                    ntype[n] = list_2[j]
+            ## Correcting SEX_SPECIFIC NEURONS
+            ntype = {}
+            l1 = {}
+            for j, n in enumerate(labels):
+                if list_1[j] == 'SEX SPECIFIC':
+                    if not list_2[j] == 'HEAD':
+                        ntype[n] = list_2[j]
+                    else:
+                        if n.startswith('CEM'):
+                            ntype[n] = 'SENSORY NEURON'
+                        elif n.startswith('MCM'):
+                            ntype[n] = 'INTERNEURON'
+                    l1[n] = 'SEX SPECIFIC'
                 else:
-                    if n.startswith('CEM'):
-                        ntype[n] = 'SENSORY NEURON'
-                    elif n.startswith('MCM'):
-                        ntype[n] = 'INTERNEURON'
-                l1[n] = 'SEX SPECIFIC'
-            else:
-                ntype[n] = list_1[j]
-                l1[n] = list_2[j]
+                    ntype[n] = list_1[j]
+                    l1[n] = list_2[j]
 
-        # cook_chem.ffill().to_csv('temp_filled.csv', index=False)
-        
-        cook_chem = cook_chem.drop(columns=cook_chem.columns[:3], index=cook_chem.index[:2])
-        cook_chem = cook_chem.drop(columns=cook_chem.columns[-1], index=cook_chem.index[-1])
-        cook_chem.reset_index(drop=True, inplace=True)
-        cook_chem.columns = colnames
-        cols = cook_chem.columns.to_list()
-        chem_adj = cook_chem.to_numpy()
-        adj_chem = {}
-        for i, row in enumerate(labels):
-            # idx = cook_chem.columns.get_loc()
-            adj_chem[row] = {col1: {"weight": chem_adj[i,j]} for j,col1 in enumerate(cols) if col1 in labels}
+            labels_set = set(labels)
 
-        ## Gap junctions
-        cook_gapjn = pd.read_excel(cook_connectome / input_file, sheet_name='male gap jn symmetric', engine='openpyxl')
-        colnames = cook_gapjn.iloc[1][3:-1].astype(str).tolist()
+            cook_chem = cook_chem.drop(columns=cook_chem.columns[:3], index=cook_chem.index[:2])
+            cook_chem = cook_chem.drop(columns=cook_chem.columns[-1], index=cook_chem.index[-1])
+            cook_chem.reset_index(drop=True, inplace=True)
+            cook_chem.columns = colnames
+            cols = cook_chem.columns.to_list()
+            chem_adj = cook_chem.to_numpy()
+            adj_chem = {}
+            for i, row in enumerate(labels):
+                adj_chem[row] = {col1: {"weight": chem_adj[i, j]}
+                                 for j, col1 in enumerate(cols)
+                                 if col1 in labels_set and chem_adj[i, j] != 0}
 
-        row_labels = cook_gapjn.loc[2:383]['Unnamed: 2'].tolist()
+            ## Gap junctions
+            cook_gapjn = pd.read_excel(cook_connectome / input_file, sheet_name='male gap jn symmetric', engine='openpyxl')
+            colnames = cook_gapjn.iloc[1][3:-1].astype(str).tolist()
 
-        cook_gapjn = cook_gapjn.drop(columns=cook_gapjn.columns[:3], index=cook_gapjn.index[:2])
-        cook_gapjn = cook_gapjn.drop(columns=cook_gapjn.columns[-1], index=cook_gapjn.index[-1])
-        cook_gapjn.reset_index(drop=True, inplace=True)
-        cook_gapjn.columns = colnames
-        cols = cook_gapjn.columns.to_list()
-        gapjn_adj = cook_gapjn.to_numpy()
-        adj_gapjn = {}
-        
-        for i,row in enumerate(row_labels):
-            # idx = cook_gapjn.columns.get_loc(col)
-            if row in labels:
-                adj_gapjn[row] = {col1: {"weight":gapjn_adj[i,j]} for j,col1 in enumerate(cols) if col1 in labels}
+            row_labels = cook_gapjn.loc[2:383]['Unnamed: 2'].tolist()
 
-        nn.create_neurons(labels=labels, type=ntype, category=l1)
+            cook_gapjn = cook_gapjn.drop(columns=cook_gapjn.columns[:3], index=cook_gapjn.index[:2])
+            cook_gapjn = cook_gapjn.drop(columns=cook_gapjn.columns[-1], index=cook_gapjn.index[-1])
+            cook_gapjn.reset_index(drop=True, inplace=True)
+            cook_gapjn.columns = colnames
+            cols = cook_gapjn.columns.to_list()
+            gapjn_adj = cook_gapjn.to_numpy()
+            adj_gapjn = {}
+            for i, row in enumerate(row_labels):
+                if row in labels_set:
+                    adj_gapjn[row] = {col1: {"weight": gapjn_adj[i, j]}
+                                      for j, col1 in enumerate(cols)
+                                      if col1 in labels_set and gapjn_adj[i, j] != 0}
+
+            with open(cook_male_cache, 'wb') as cache_file:
+                pickle.dump({'labels': labels, 'ntype': ntype, 'l1': l1,
+                             'adj_chem': adj_chem, 'adj_gapjn': adj_gapjn},
+                            cache_file, protocol=pickle.HIGHEST_PROTOCOL)
+
+        # Canonicalize per-cell SIM labels. Source strings are uppercase/plural
+        # ('SENSORY NEURONS', 'MOTOR NEURON', ...) and a 'PHARYNX' bucket that
+        # doesn't encode SIM; backfill that bucket from the Cook hermaphrodite
+        # reference which tags the 20 pharyngeal neurons individually.
+        cook_h_sim = _celegans_canonical_types()
+        canon_type = {}
+        for n, raw in ntype.items():
+            canon = _COOK_MALE_TYPE_NORM.get(str(raw).strip())
+            if canon is None:
+                canon = cook_h_sim.get(n)
+            canon_type[n] = canon
+        nn.create_neurons(labels=labels, type=canon_type, category=l1)
         if not gapjn_only:
             nn.setup_chemical_connections(adj_chem)
         if not chem_only:
@@ -119,12 +182,69 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
         w = Worm(name=name, stage=import_parameters['stage'])
         w.citations.update({'witvliet_connectome':citations['witvliet_connectome']})
         nn = NervousSystem(w, network='_'.join([import_parameters['style'], import_parameters['stage'], import_parameters['dataset_ind']]))
-        nn.create_neurons(labels=labels)
+        # Witvliet's source does not carry per-neuron SIM labels; backfill from
+        # the Cook hermaphrodite reference (same naming convention).
+        cook_h_sim = _celegans_canonical_types()
+        witvliet_types = {lab: cook_h_sim.get(lab) for lab in labels}
+        nn.create_neurons(labels=labels, type=witvliet_types)
         witvliet_input.rename(columns={'synapses': 'weight'}, inplace=True)
         fin_input = witvliet_input[witvliet_input['pre'].isin(labels)]
         fin_input = fin_input[fin_input['post'].isin(labels)]
         for _, conn in fin_input.iterrows():
             nn.setup_connections(conn, conn['type'], input_type='edge')
+    elif import_parameters['style'] == 'white_1986':
+        # Historical/comparison loader. For modern analyses prefer style='cook',
+        # which supersedes White 1986 with more neurons (302 vs 279; includes
+        # pharynx) and updated synapse counts after re-scoring.
+        #
+        # The source NeuronConnect.xls encodes each synapse from both sides as
+        # S/Sp (send) and R/Rp (receive). We keep S/Sp for chemical synapses
+        # to avoid double-counting. EJ is symmetric and mirrored on both
+        # directions to match the Cook gap-junction convention. NMJ is skipped
+        # (no muscles in the network).
+        w = Worm(name=name, stage='Day-1 Adult', sex='Hermaphrodite', genotype='N2')
+        w.citations.update({'white_connectome': citations['white_connectome']})
+        nn = NervousSystem(w, network='white_1986')
+
+        nt = pd.read_excel(white_connectome / 'NeuronType.xls')
+        nt.columns = [c.strip() for c in nt.columns]
+        soma_position = {str(r['Neuron']).strip(): float(r['Soma Position'])
+                         for _, r in nt.iterrows() if pd.notna(r['Soma Position'])}
+        soma_region = {str(r['Neuron']).strip(): str(r['Soma Region']).strip()
+                       for _, r in nt.iterrows() if pd.notna(r['Soma Region'])}
+        labels = sorted(soma_position)
+        # NeuronType.xls has no SIM column; backfill from the Cook hermaphrodite
+        # reference (same neuron naming convention).
+        cook_h_sim = _celegans_canonical_types()
+        white_types = {lab: cook_h_sim.get(lab) for lab in labels}
+        nn.create_neurons(labels, type=white_types,
+                          soma_position=soma_position, soma_region=soma_region)
+
+        # Source has lowercase 'avfl'/'avfr' in place of AVFL/AVFR; normalize.
+        name_fixups = {'avfl': 'AVFL', 'avfr': 'AVFR'}
+        def _canon(x):
+            s = str(x).strip()
+            return name_fixups.get(s, s)
+
+        edges = pd.read_excel(white_connectome / 'NeuronConnect.xls')
+        chem_adj = {}
+        for _, row in edges[edges['Type'].isin(['S', 'Sp'])].iterrows():
+            pre, post = _canon(row['Neuron 1']), _canon(row['Neuron 2'])
+            if pre not in nn.neurons or post not in nn.neurons:
+                continue
+            chem_adj.setdefault(pre, {}).setdefault(post, {'weight': 0})
+            chem_adj[pre][post]['weight'] += int(row['Nbr'])
+        nn.setup_chemical_connections(chem_adj)
+
+        gap_adj = {}
+        for _, row in edges[edges['Type'] == 'EJ'].iterrows():
+            a, b = _canon(row['Neuron 1']), _canon(row['Neuron 2'])
+            if a not in nn.neurons or b not in nn.neurons:
+                continue
+            w_ij = int(row['Nbr'])
+            gap_adj.setdefault(a, {})[b] = {'weight': w_ij}
+            gap_adj.setdefault(b, {})[a] = {'weight': w_ij}
+        nn.setup_gap_junctions(gap_adj)
     else:
         raise ValueError("Unsupported connectome style")
     return w
@@ -252,7 +372,9 @@ def make_ciona():
     # Build final node mapping
     neuron_dict = names_df.set_index('index')['name'].to_dict()
     
-    # Fallback to nodes.csv 2D positions if 3D not found
+    # Only keep anatomical coordinates from Fig 3. The nodes.csv `_pos` values are
+    # a compact layout, not anatomical coordinates, so using them here produces a
+    # misleading mixed view.
     pos_dict = {}
     for _, row in names_df.iterrows():
         idx = str(row['index'])
@@ -261,36 +383,43 @@ def make_ciona():
             pos_dict[name] = pos3d_dict[idx]
         elif name in pos3d_dict:
             pos_dict[name] = pos3d_dict[name]
-        else:
-            # Parse 2D array from nodes.csv
-            try:
-                # nodes.csv has 2D projection
-                p2d = np.array([float(x) for x in row['_pos'].split('[')[-1].split(']')[0].split(',')])
-                pos_dict[name] = np.array([p2d[0], p2d[1], 0.0]) # Add dummy Z
-            except:
-                pos_dict[name] = np.array([0.0, 0.0, 0.0])
 
     node_colors = {row['name']: "#" + row['color'][-6:] for _, row in names_df.iterrows()}
     
     neuron_indices = sorted(names_df['index'].tolist())    
     
+    # Map fig1 'Annotation' column to canonical SIM vocabulary. Annotation
+    # values that don't map cleanly ('Sensory/Interneuron', 'Accessory',
+    # 'Ambiguous') leave `type` unset so downstream SIM-axis analyses exclude
+    # those cells rather than miscount them.
+    ciona_annot_norm = {
+        'Sensory':             SIM_SENSORY,
+        'Interneuron':         SIM_INTERNEURON,
+        'Ciliated Interneuron': SIM_INTERNEURON,
+        'Motor neuron':        SIM_MOTORNEURON,
+    }
+
     # Enrichment attributes
-    type_dict = {}
+    cell_type_dict = {}
     annot_dict = {}
+    type_dict = {}
     for nidx in neuron_indices:
         name = neuron_dict[nidx]
         info = bio_mapping.get(name) or bio_mapping.get(str(nidx))
         if info:
-            type_dict[name] = info['cell_type']
+            cell_type_dict[name] = info['cell_type']
             annot_dict[name] = info['annotation']
+            type_dict[name] = ciona_annot_norm.get(str(info['annotation']).strip())
         else:
-            type_dict[name] = 'Other'
+            cell_type_dict[name] = 'Other'
             annot_dict[name] = 'Unknown'
+            type_dict[name] = None
 
-    nn.create_neurons([neuron_dict[n] for n in neuron_indices], 
+    nn.create_neurons([neuron_dict[n] for n in neuron_indices],
                       position=pos_dict,
                       color=node_colors,
-                      cell_type=type_dict,
+                      type=type_dict,
+                      cell_type=cell_type_dict,
                       annotation=annot_dict)
 
     ## Connections
@@ -300,8 +429,382 @@ def make_ciona():
 
     return a
 
-def make_platynereis():
-    pass
+def make_pristionchus(name='', dataset_ind=1):
+    """Load the Pristionchus pacificus pharyngeal connectome (Bumbarger et al. 2013).
+
+    Uses the paper's consensus network (mmc3.xlsx: the 78 directed edges
+    supported by both specimens) with the chosen weight column.
+
+        dataset_ind=1  -> 'Average weight' across specimens  (default)
+        dataset_ind=2  -> 'weight 107' (specimen 107 only)
+        dataset_ind=3  -> 'weight 148' (specimen 148 only)
+
+    The paper does not assign SIM (sensory / interneuron / motorneuron)
+    classes to pharyngeal cells, so neuron `type` is left unset.
+
+    Args:
+        name (str): Animal name. Auto-generated if empty.
+        dataset_ind (int): 1 (average, default), 2 (specimen 107), or 3 (specimen 148).
+
+    Returns:
+        Animal: A Pristionchus pacificus Animal with a single 'pharynx'
+        NervousSystem containing chemical synapses.
+    """
+    weight_col_map = {
+        1: 'Average weight',
+        2: 'weight 107',
+        3: 'weight 148',
+    }
+    assert dataset_ind in weight_col_map, \
+        f"dataset_ind must be one of {list(weight_col_map)}; got {dataset_ind!r}"
+    weight_col = weight_col_map[dataset_ind]
+
+    df = pd.read_excel(pristionchus_pharynx / 'mmc3.xlsx', sheet_name='Sheet1',
+                       header=1, engine='openpyxl')
+    df = df.dropna(subset=['presynaptic', 'postsynaptic']).copy()
+
+    adjacency = {}
+    for _, row in df.iterrows():
+        pre = str(row['presynaptic']).strip()
+        post = str(row['postsynaptic']).strip()
+        if pre in ('nan', '') or post in ('nan', ''):
+            continue
+        adjacency.setdefault(pre, {})[post] = {'weight': float(row[weight_col])}
+
+    cells = set(adjacency.keys())
+    for partners in adjacency.values():
+        cells.update(partners.keys())
+    cells = sorted(cells)
+
+    if not name:
+        name = f'Pristionchus-consensus-{weight_col.replace(" ", "_")}'
+    a = Animal(species='Pristionchus pacificus', name=name, stage='Adult',
+               weight_source=weight_col)
+    a.citations.update({'bumbarger_pharynx': citations['bumbarger_pharynx']})
+    nn = NervousSystem(a, network='pharynx')
+    nn.create_neurons(cells)
+    nn.setup_chemical_connections(adjacency)
+    return a
+
+
+def make_platynereis(name=''):
+    """Load the Platynereis dumerilii whole-body connectome (Verásztó 2025).
+
+    The 3-day-old larva (~72 hpf nectochaete) whole-body synaptic connectome,
+    covering 202 neuronal cell types plus 92 non-neuronal effector types
+    (muscles, glands, ciliated / follicle / pigment cells).
+
+    Two `NervousSystem` networks are attached to the returned Animal:
+
+        - 'neurons'    -- fine-grained per-cell network from the 1720-row
+                          adjacency matrix, minus unassigned 'fragment' /
+                          'SHORTfrg' / 'SHORTfragment' placeholder rows
+                          (1624 cells, ~7.5k chemical connections).
+        - 'celltypes'  -- grouped cell-type network (294 nodes: 202 + 92,
+                          ~2.5k connections).
+
+    Every node carries CeDNe-standard attributes (`type`, `category`,
+    `modality`, `neurotransmitter`, `soma_position`, `region`) plus
+    domain-specific extras (`is_neuron`, `n_cells`, `cell_kind`,
+    `body_segments`, `region_tags`, `projection_tags`, `nt_tags`, `markers`,
+    `tags`). `category` is SN/IN/MN for the 202 neuronal types (from
+    elife-97964-fig3-data1.txt); `cell_kind` on effectors is the paper-
+    authoritative kind from elife-97964-fig3-data2-v1.txt.
+
+    For orphan cells in the fine network (no named celltype in either
+    reference), `category` is still filled from the per-neuron SN/IN/MN
+    class in elife-97964-fig1-data1.txt.
+
+    Args:
+        name (str): Animal name. Defaults to 'Platynereis'.
+
+    Returns:
+        Animal: A Platynereis dumerilii Animal with 'neurons' and
+        'celltypes' networks attached.
+    """
+    import itertools
+
+    src = veraszto_connectome
+
+    celltypes    = pd.read_csv(src / 'neuronal_celltypes_table.csv')
+    fig1         = pd.read_csv(src / 'elife-97964-fig1-data1.txt', sep='\t')
+    fig3         = pd.read_csv(src / 'elife-97964-fig3-data1.txt', sep='\t')
+    fig3_nonneu  = pd.read_csv(src / 'elife-97964-fig3-data2-v1.txt', sep='\t')
+    annot_matrix = pd.read_csv(src / 'elife-97964-fig3-figsupp2-data1.txt',
+                               sep='\t', index_col=0)
+    full_adj     = pd.read_csv(src / 'full_connectome_adjacency_matrix.csv', index_col=0)
+    grouped_adj  = pd.read_csv(src / 'all_celltypes_synapse_matrix.csv',
+                               sep=';', index_col=0)
+
+    # Drop unassigned EM fragments from the fine-grained adjacency. The source
+    # has rows labeled 'fragment', 'SHORTfrg', 'SHORTFRG *', 'SHORTfragment *',
+    # and 'fragment PDF *' (short-fragment / unassigned neurites that could not
+    # be matched to a named cell). These carry no metadata and their
+    # connectivity is reconstruction noise.
+    frag_pat = re.compile(r'(^|\s)fragment(\s|$)|SHORTfrg|SHORTFRG|SHORTfragment',
+                          re.IGNORECASE)
+    frag_mask = full_adj.index.astype(str).map(lambda s: bool(frag_pat.search(s)))
+    full_adj = full_adj.loc[~frag_mask]
+    frag_cols = [c for c in full_adj.columns if frag_pat.search(str(c))]
+    if frag_cols:
+        full_adj = full_adj.drop(columns=frag_cols)
+
+    def _clean(x):
+        if pd.isna(x):
+            return None
+        return ' '.join(str(x).split())
+
+    # fig3 -> SN/IN/MN class per neuronal celltype (CeDNe canonical `type`).
+    category_norm = {
+        'Sensory neuron': SIM_SENSORY,
+        'interneuron':    SIM_INTERNEURON,
+        'motorneuron':    SIM_MOTORNEURON,
+    }
+    fig3_sim = {
+        _clean(ct_name): category_norm.get(_clean(sub['SN_MN_IN'].iloc[0]))
+        for ct_name, sub in fig3.groupby('celltype')
+    }
+
+    # fig3_nonneu -> authoritative effector kind for the 92 non-neuronal types.
+    # One alias: fig3_nonneu has 'meso'; grouped_adj has 'meso 1592020'.
+    grouped_names = set(grouped_adj.index)
+    nonneu_aliases = {'meso': 'meso 1592020'}
+    fig3_nonneu_kind = {}
+    for ct_name, sub in fig3_nonneu.groupby('celltype'):
+        nm = nonneu_aliases.get(_clean(ct_name), _clean(ct_name))
+        fig3_nonneu_kind[nm] = _clean(sub['ANNOT'].iloc[0])
+
+    # celltypes table -> text metadata (incomplete coverage).
+    ct_meta = {}
+    for _, row in celltypes.iterrows():
+        nm = _clean(row['name of cell type'])
+        if not nm:
+            continue
+        ct_meta[nm] = {
+            'soma_position':    _clean(row['soma position']),
+            'region':           _clean(row['region']),
+            'neurotransmitter': _clean(row['transmitter phenotype']),
+            'n_cells':          int(row['number of cells']) if pd.notna(row['number of cells']) else None,
+            'cell_kind':        _clean(row['Sensory/inter/motor neuron']),
+        }
+
+    # annot_matrix -> resolve column names to grouped_adj celltype names.
+    # R mangles '-' and '/' to '.' in column names; try all combinations.
+    def _resolve_annot_col(col, names):
+        if col in names:
+            return col
+        dot_pos = [i for i, ch in enumerate(col) if ch == '.']
+        if not dot_pos:
+            return None
+        for subs in itertools.product(['-', '/', '.'], repeat=len(dot_pos)):
+            arr = list(col)
+            for p, ch in zip(dot_pos, subs):
+                arr[p] = ch
+            cand = ''.join(arr)
+            if cand in names:
+                return cand
+        return None
+
+    annot_col_to_ct = {c: _resolve_annot_col(c, grouped_names) for c in annot_matrix.columns}
+
+    BODY_SEGMENTS = {'ectoderm', 'episphere', 'segment_0', 'segment_1', 'segment_2',
+                     'segment_3', 'torso', 'pygidium', 'neurosecretory_plexus'}
+    REGION_TAGS   = {'mushroom body', 'Apical_organ', 'Dorsal_sensory_organ',
+                     'Dorsolateral_sense_organs', 'antenna', 'eyespot',
+                     'mechanosensory_girdle', 'nuchal organ'}
+    MODALITY_TAGS = {'rhabdomeric photoreceptor', 'ciliary photoreceptor', 'sensory_cilia',
+                     'Uniciliated_penetrating_cell', 'Biciliated_penetrating_cell',
+                     'Uniciliated_nonpenetrating_cell', 'Biciliated_nonpenetrating_cell',
+                     'Multiciliated_penetrating_cell'}
+    PROJECTION_TAGS = {'asymmetric neuron', 'biaxonal', 'decussating', 'commissural',
+                       'ipsilateral', 'contralateral', 'pseudounipolar', 'descending',
+                       'ascending', 'global_reach', 'head_trunk'}
+    NT_TAGS       = {'glutamatergic', 'serotonergic', 'cholinergic', 'adrenergic', 'dopaminergic'}
+    MARKER_TAGS   = {'dense cored vesicles', 'siGOLD'}
+
+    annot_per_ct = {}
+    for col, ct in annot_col_to_ct.items():
+        if not ct:
+            continue
+        active = [feat for feat, v in annot_matrix[col].items() if v == 1]
+        annot_per_ct[ct] = {
+            'body_segments':   [f for f in active if f in BODY_SEGMENTS],
+            'region_tags':     [f for f in active if f in REGION_TAGS],
+            'modality':        next((f for f in active if f in MODALITY_TAGS), None),
+            'projection_tags': [f for f in active if f in PROJECTION_TAGS],
+            'nt_tags':         [f for f in active if f in NT_TAGS],
+            'markers':         [f for f in active if f in MARKER_TAGS],
+            'tags':            active,
+        }
+
+    # Merge all sources into one record per celltype.
+    # Convention (shared with the Cook loaders): `type` holds the canonical
+    # SIM class (sensory / interneuron / motorneuron); the fine-grained
+    # celltype name (e.g. 'MC', 'PNS1') lives on `cell_type`.
+    celltype_attrs = {}
+    for nm in set(fig3_sim) | set(fig3_nonneu_kind) | set(ct_meta) | grouped_names:
+        meta = ct_meta.get(nm, {})
+        ann  = annot_per_ct.get(nm, {})
+        is_neuron = nm in fig3_sim
+        cell_kind = fig3_nonneu_kind.get(nm) if not is_neuron else None
+        if cell_kind is None:
+            cell_kind = meta.get('cell_kind')
+        celltype_attrs[nm] = {
+            'type':             fig3_sim.get(nm) if is_neuron else None,
+            'cell_type':        nm,
+            'modality':         ann.get('modality'),
+            'neurotransmitter': meta.get('neurotransmitter'),
+            'soma_position':    meta.get('soma_position'),
+            'region':           meta.get('region'),
+            'is_neuron':        is_neuron,
+            'n_cells':          meta.get('n_cells'),
+            'cell_kind':        cell_kind,
+            'body_segments':    ann.get('body_segments', []),
+            'region_tags':      ann.get('region_tags', []),
+            'projection_tags':  ann.get('projection_tags', []),
+            'nt_tags':          ann.get('nt_tags', []),
+            'markers':          ann.get('markers', []),
+            'tags':             ann.get('tags', []),
+        }
+
+    # fig1 -> per-neuron SN/IN/MN class (closes `type` for orphan cells).
+    fig1_norm = {'SN': SIM_SENSORY, 'IN': SIM_INTERNEURON, 'MN': SIM_MOTORNEURON}
+    fig1_sim = {n: fig1_norm.get(c)
+                for n, c in zip(fig1['neuron'], fig1['neuron_type'])}
+
+    def _neuron_to_celltype(n):
+        base = n.split('_')[0]
+        return base if base in celltype_attrs else None
+
+    # Build the Animal and both networks.
+    if not name:
+        name = 'Platynereis'
+    a = Animal(species='Platynereis dumerilii', name=name, stage='3-day larva',
+               common_name='ragworm', phylum='Annelida')
+    a.citations.update({'veraszto_connectome': citations['veraszto_connectome']})
+
+    std_keys = ('type', 'cell_type', 'modality', 'neurotransmitter',
+                'soma_position', 'region', 'is_neuron')
+    extra_keys = ('n_cells', 'cell_kind', 'body_segments', 'region_tags',
+                  'projection_tags', 'nt_tags', 'markers', 'tags')
+    all_keys = std_keys + extra_keys
+
+    # Fine-grained (per-cell) network.
+    nn_fine = NervousSystem(a, network='neurons')
+    full_cells = list(full_adj.index)
+    attr_by_neuron = {k: {} for k in all_keys}
+    for n in full_cells:
+        ct = _neuron_to_celltype(n)
+        meta = celltype_attrs.get(ct, {}) if ct else {}
+        for k in all_keys:
+            attr_by_neuron[k][n] = meta.get(k)
+        # `cell_type` is the group name; `type` is the SIM class, backfilled
+        # per-neuron from fig1 when the celltype lookup doesn't resolve.
+        attr_by_neuron['cell_type'][n] = ct
+        if attr_by_neuron['type'][n] is None and n in fig1_sim:
+            attr_by_neuron['type'][n] = fig1_sim[n]
+    nn_fine.create_neurons(full_cells, **attr_by_neuron)
+
+    adj_dict = {}
+    for pre in full_adj.index:
+        posts = full_adj.loc[pre]
+        posts = posts[posts > 0]
+        if len(posts):
+            adj_dict[pre] = {post: {'weight': float(w)} for post, w in posts.items()}
+    nn_fine.setup_connections(adj_dict, connection_type='chemical-synapse',
+                              input_type='adjacency')
+
+    # Grouped (celltype-level) network.
+    nn_ct = NervousSystem(a, network='celltypes')
+    ct_labels = list(grouped_adj.index)
+    ct_kwargs = {k: {} for k in all_keys}
+    for ct in ct_labels:
+        meta = celltype_attrs.get(ct, {})
+        for k in all_keys:
+            ct_kwargs[k][ct] = meta.get(k)
+        # grouped_adj entries not in fig3 are non-neuronal per the paper's 202+92 split
+        if ct_kwargs['is_neuron'][ct] is None:
+            ct_kwargs['is_neuron'][ct] = False
+    nn_ct.create_neurons(ct_labels, **ct_kwargs)
+
+    ct_adj = {}
+    label_set = set(ct_labels)
+    for pre in grouped_adj.index:
+        posts = grouped_adj.loc[pre]
+        posts = posts[posts > 0]
+        if len(posts):
+            ct_adj[pre] = {post: {'weight': float(w)}
+                           for post, w in posts.items() if post in label_set}
+    nn_ct.setup_connections(ct_adj, connection_type='chemical-synapse',
+                            input_type='adjacency')
+
+    return a
+
+
+def load_contactome(nn, stage='adult', matrix_path=None):
+    """Layer Brittin 2018 nerve-ring contactome edges onto an existing NervousSystem.
+
+    Contact area (nm^2) is symmetric: we mirror every (a, b) pair to both
+    (a, b) and (b, a) with `connection_type='contact'`, matching the
+    gap-junction convention. Only neurons already present in `nn` are used;
+    the number of cells skipped is returned alongside the edge count.
+
+    Parameters
+    ----------
+    nn : NervousSystem
+        Target network. Typically a nerve-ring subnetwork of a Cook adult
+        hermaphrodite for `stage='adult'`, or a bare L4 NervousSystem whose
+        neurons were just created from the Brittin label set for
+        `stage='L4'`.
+    stage : {'adult', 'L4'}
+        Selects the sheet inside the Brittin source workbook.
+    matrix_path : str or Path, optional
+        Override for the default Brittin spreadsheet location.
+
+    Returns
+    -------
+    (added, skipped) : tuple[int, int]
+        Directed edges added (each undirected pair counted twice) and the
+        number of matrix cells not present in `nn`.
+    """
+    src = matrix_path or (brittin_contactome /
+                          'Adult and L4 nerve ring neighbors.xlsx')
+    sheet = {'adult': 'adult nerve ring neighbors',
+             'L4':    'L4 nerve ring neighbors'}[stage]
+
+    mat = pd.read_excel(src, sheet_name=sheet, index_col=0)
+    mat = mat.loc[:, ~mat.columns.astype(str).str.startswith('Unnamed')]
+    mat = mat.loc[~mat.index.astype(str).isin(['nan'])]
+    mat = mat.loc[~mat.index.astype(str).str.startswith('Unnamed')]
+    mat = mat.dropna(how='all', axis=0).dropna(how='all', axis=1)
+    cells = sorted(set(mat.index) | set(mat.columns))
+    mat = mat.reindex(index=cells, columns=cells)
+
+    adj = {}
+    for i, a in enumerate(cells):
+        for b in cells[i + 1:]:
+            v1 = mat.at[a, b]
+            v2 = mat.at[b, a]
+            vs = [v for v in (v1, v2) if pd.notna(v) and v > 0]
+            if not vs:
+                continue
+            w = float(max(vs))
+            adj.setdefault(a, {})[b] = {'weight': w}
+            adj.setdefault(b, {})[a] = {'weight': w}
+
+    present = set(nn.neurons)
+    filtered = {p: {q: v for q, v in qs.items() if q in present}
+                for p, qs in adj.items() if p in present}
+    skipped = len(set(adj) - present)
+
+    nn.setup_connections(filtered, connection_type='contact',
+                         input_type='adjacency')
+    nn.set_property('weight_units', 'nm^2')
+
+    added = sum(len(v) for v in filtered.values())
+    nn.worm.citations.update({'brittin_contactome':
+                              citations['brittin_contactome']})
+    return added, skipped
 
 
 def build_nervous_system(nn, neuron_data, chem_synapses, elec_synapses, positions, chem_only=False, gapjn_only=False):
@@ -374,15 +877,18 @@ def canonicalizeNT(name):
         return name
     return NT_CANONICAL.get(name.strip(), name.strip())
 
-def getLigands(neuron, sex='Hermaphrodite'):
-    ''' Returns ligand for each neuron'''
+def _readLigandTable(sex='Hermaphrodite'):
     lig_file = DOWNLOAD_DIR / prefix_NT / 'ligand-table.xlsx'
     if sex in ['Hermaphrodite', 'hermaphrodite']:
-        ligtable = pd.read_excel(lig_file, sheet_name='Hermaphrodite, sorted by neuron', skiprows=7, engine='openpyxl')
-    elif sex in ['Male', 'male']:
-        ligtable = pd.read_excel(lig_file, sheet_name='Male neurons, sorted by neuron', skiprows=7, engine='openpyxl')
-    else:
-        raise ValueError("Sex must be 'Hermaphrodite' or 'Male'")
+        return pd.read_excel(lig_file, sheet_name='Hermaphrodite, sorted by neuron', skiprows=7, engine='openpyxl')
+    if sex in ['Male', 'male']:
+        return pd.read_excel(lig_file, sheet_name='Male neurons, sorted by neuron', skiprows=7, engine='openpyxl')
+    raise ValueError("Sex must be 'Hermaphrodite' or 'Male'")
+
+def getLigands(neuron, sex='Hermaphrodite', ligtable=None):
+    ''' Returns ligand for each neuron'''
+    if ligtable is None:
+        ligtable = _readLigandTable(sex=sex)
 
     a,b = ligtable['Neurotransmitter 1'][ligtable['Neuron']==neuron].to_list(), ligtable['Neurotransmitter 2'][ligtable['Neuron']==neuron].to_list()
 
@@ -418,6 +924,7 @@ def loadNeurotransmitters(nn, sex='Hermaphrodite'):
     npr_file = DOWNLOAD_DIR / prefix_NT / 'GenesExpressing-BATCH-thrs4_use.xlsx'
     npr = pd.read_excel(npr_file, sheet_name='npr', true_values='TRUE', false_values='FALSE', engine='openpyxl')
     ligmap = pd.read_excel(npr_file, sheet_name='ligmap', engine='openpyxl')
+    ligtable = _readLigandTable(sex=sex)
 
     for n in nn.neurons:
         neuron = nn.neurons[n]
@@ -435,7 +942,7 @@ def loadNeurotransmitters(nn, sex='Hermaphrodite'):
                 neuron.set_property('_postSynapse', merged_post)
     for n in nn.neurons:
         neuron = nn.neurons[n]
-        neuron.set_property('_preSynapse', list(neuron._preSynapse) + getLigands(n, sex=sex))
+        neuron.set_property('_preSynapse', list(neuron._preSynapse) + getLigands(n, sex=sex, ligtable=ligtable))
 
     for e,conn in nn.connections.items():
         if e[0].name in nn.neurons and e[1].name in nn.neurons and conn.connection_type == 'chemical-synapse':
@@ -781,6 +1288,83 @@ def download_datasets(key=''):
     # elif key == 'neuropeptide_atlas':
     else:
         print("Not yet supported. Download manually into the directory.")
+
+
+def load_recordings(animal, source, network=None, trial_num=0, time_col=0,
+                    metadata=None, on_missing='skip'):
+    """Attach per-neuron recordings to ``animal`` from a tidy CSV or DataFrame.
+
+    Expected wide layout: first column is time (seconds), every remaining
+    column is a 1D trace whose header is the neuron name. Each matched
+    column becomes a Trial on that neuron via ``Neuron.load_recording``.
+    Sampling rate is inferred from the median inter-sample interval of the
+    time column and written to every trial's metadata.
+
+    Args:
+        animal: Target ``Animal`` / ``Worm`` / ``Fly``. Must already have at
+            least one NervousSystem attached.
+        source: CSV path (str / Path) or pandas DataFrame in the layout above.
+        network: Name of the target NervousSystem in ``animal.networks``.
+            Defaults to the first network (insertion order).
+        trial_num: Trial index to create on each matched neuron.
+        time_col: Index or column name of the time column (default 0).
+        metadata: Extra metadata dict merged into every trial.
+        on_missing: 'skip' (default) silently drops columns whose header does
+            not match a neuron; 'raise' raises ``KeyError`` instead.
+
+    Returns:
+        dict: ``{'matched': [names], 'missing': [names],
+                 'sampling_rate': Hz, 'trial_num': trial_num,
+                 'network': <NervousSystem>}``
+    """
+    if isinstance(source, pd.DataFrame):
+        df = source.copy()
+    else:
+        df = pd.read_csv(source)
+
+    if isinstance(time_col, int):
+        time_series = df.iloc[:, time_col]
+        neuron_cols = [c for i, c in enumerate(df.columns) if i != time_col]
+    else:
+        time_series = df[time_col]
+        neuron_cols = [c for c in df.columns if c != time_col]
+
+    t = np.asarray(time_series, dtype=np.float64)
+    dts = np.diff(t)
+    if len(dts) == 0 or not np.all(np.isfinite(dts)) or np.median(dts) <= 0:
+        raise ValueError("time column must be monotonic and have at least two samples")
+    sampling_rate = float(1.0 / np.median(dts))
+
+    if not animal.networks:
+        raise ValueError("animal has no networks; load a connectome first")
+    if network is None:
+        network = next(iter(animal.networks))
+    nn = animal.networks[network]
+
+    matched, missing = [], []
+    base_meta = {'sampling_rate': sampling_rate}
+    if metadata:
+        base_meta.update(metadata)
+
+    for col in neuron_cols:
+        col_name = str(col)
+        if col_name not in nn.neurons:
+            missing.append(col_name)
+            if on_missing == 'raise':
+                raise KeyError(f"column {col_name!r} not found in network {network!r}")
+            continue
+        trace = np.asarray(df[col], dtype=np.float64)
+        nn.neurons[col_name].load_recording(
+            trace, trial_num=trial_num, metadata=dict(base_meta))
+        matched.append(col_name)
+
+    return {
+        'matched': matched,
+        'missing': missing,
+        'sampling_rate': sampling_rate,
+        'trial_num': trial_num,
+        'network': nn,
+    }
 
 
 """ This is experimental, not yet tested """

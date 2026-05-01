@@ -147,3 +147,11 @@ examples/fits/
 
 examples/notebooks/dynamics_March31_2026.ipynb
 examples/notebooks/dynamics_figures/
+examples/notebooks/cross_species_summary.ipynb
+examples/notebooks/cross_species_summary.csv
+examples/notebooks/tool_comparison.ipynb
+examples/notebooks/tool_comparison.csv
+examples/notebooks/*.tex
+examples/notebooks/benchmarking_results.csv
+examples/notebooks/cross_species_motifs.ipynb
+examples/notebooks/benchmarking.ipynb

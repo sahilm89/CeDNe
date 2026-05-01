@@ -23,6 +23,7 @@ import networkx as nx
 from collections import Counter
 import numpy as np
 from .io import generate_random_string
+from .source import Citable, serialize_citations
 from typing import Optional, List, Dict, Any, Union, TYPE_CHECKING
 from numbers import Number
 
@@ -30,7 +31,7 @@ if TYPE_CHECKING:
     from .neuron import Neuron
     from .network import NervousSystem
 
-class Connection:
+class Connection(Citable):
     ''' This class represents a connection between two cells. '''
     def __init__(self, pre: 'Neuron', post: 'Neuron', uid=None, connection_type='chemical-synapse', **kwargs):
         """
@@ -51,10 +52,11 @@ class Connection:
             ValueError: If weight is not a numeric value.
             AssertionError: If pre and post neurons are from different networks.
         """
+        Citable.__init__(self)  # provides self.citations = {}
         self.pre = pre
         self.post = post
         self.network = post.network
-        
+
         # Validate weight
         weight = kwargs.pop('weight', 1)
         if not (isinstance(weight, Number) or isinstance(weight, np.number)):
@@ -80,6 +82,17 @@ class Connection:
         for key, value in kwargs.items():
             self.set_property(key, value)
 
+    def _parent_citables(self):
+        """Walk citations up through containing ConnectionGroups and the NervousSystem."""
+        parents = []
+        if self.network is not None:
+            for group in self.network.groups.values():
+                # O(1) membership via the _id->Connection dict each ConnectionGroup maintains
+                if isinstance(group, ConnectionGroup) and group.connections.get(self._id) is self:
+                    parents.append(group)
+            parents.append(self.network)
+        return parents
+
     @property
     def by_name(self):
         """
@@ -103,6 +116,38 @@ class Connection:
         ''' Gets an attribute for the class'''
         return getattr(self, key)
 
+    def to_dict(self) -> dict:
+        """Serialize connection to a plain Python dictionary.
+
+        Returns a dict with guaranteed keys: ``source``, ``target``,
+        ``weight``, ``type``.  Optionally includes ``ligands``,
+        ``neurotransmitters``, and ``receptors`` if present.
+
+        Returns:
+            dict: A JSON-compatible dictionary representation.
+        """
+        d = {
+            "source": self.pre.name,
+            "target": self.post.name,
+            "weight": self.weight,
+            "type": self.connection_type,
+        }
+        # Semantic edge metadata
+        for attr in ('ligands', 'neurotransmitters'):
+            val = getattr(self, attr, None)
+            if val:
+                d[attr] = val
+        if hasattr(self, 'receptors') and self.receptors:
+            d['receptors'] = (
+                list(self.receptors.keys())
+                if isinstance(self.receptors, dict)
+                else self.receptors
+            )
+        # Citations attached directly to this connection (not the inherited chain)
+        if hasattr(self, 'citations') and self.citations:
+            d['citations'] = serialize_citations(self.citations)
+        return d
+
 class ChemicalSynapse(Connection):
     ''' This is a convenience class that represents connections of type chemical synapses.'''
     def __init__(self, pre, post, uid=0, connection_type='chemical-synapse', weight=1, **kwargs):
@@ -120,23 +165,24 @@ class BulkConnection(Connection):
     def __init__(self, pre, post, uid, connection_type, weight=1, **kwargs):
         super().__init__(pre, post, uid=uid, connection_type=connection_type, weight=weight, **kwargs)
 
-class ConnectionGroup:
+class ConnectionGroup(Citable):
     ''' This is a group of connections in the network'''
     def __init__(self, network, members=None, group_name=None) -> None:
         """
         Initializes a new instance of the ConnectionGroup class.
 
         Parameters:
-            groupname (str): 
+            groupname (str):
                 The name of the connection group.
-            members (List[str]): 
+            members (List[str]):
                 The list of members in the connection group.
-            group_id (int, optional): 
+            group_id (int, optional):
                 The ID of the neuron group. Defaults to 0.
 
         Returns:
             None
         """
+        Citable.__init__(self)  # provides self.citations = {}
         if group_name is None:
             self.group_name = 'Group-'+ generate_random_string(8)
         else:
@@ -154,6 +200,10 @@ class ConnectionGroup:
         assert self.group_name not in self.network.groups, \
         f"Group name {self.group_name} already exists in the network"
         self.network.groups.update({self.group_name: self})
+
+    def _parent_citables(self):
+        """Walk citations up to the containing NervousSystem."""
+        return (self.network,) if self.network is not None else ()
 
     def __iter__(self):
         """

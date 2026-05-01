@@ -15,6 +15,37 @@ import numpy as np
 
 suffixes = ['', 'D', 'V', 'L', 'R', 'DL', 'DR', 'VL', 'VR', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13']
 
+
+def getNeuronClass(name):
+    """
+    Return the neuron class name for a single neuron, by stripping the longest
+    matching positional suffix (L/R/D/V/DL/DR/VL/VR or 01..13).
+
+    Mirrors the suffix-matching used by foldByNeuronType so per-neuron class
+    lookups stay consistent with how the network as a whole folds.
+
+    Examples:
+        ADAL -> ADA, AVAR -> AVA, RMDDL -> RMD, IL2DR -> IL2,
+        DA01 -> DA, M2L -> M2, MCL -> MC, AVL -> AVL (unstripped — unpaired).
+    """
+    _suffs, _clsname = [], []
+    for s in suffixes:
+        if not s or not name.endswith(s):
+            continue
+        n0 = name[:-len(s)]
+        if len(n0) > 2:
+            _suffs.append(s)
+            _clsname.append(n0)
+        elif len(n0) > 1:
+            if n0[-1] in '0123456789' or s[0] in '0123456789' or n0 in ['MC']:
+                _suffs.append(s)
+                _clsname.append(n0)
+    if _suffs:
+        j = max(range(len(_suffs)), key=lambda i: len(_suffs[i]))
+        return _clsname[j]
+    return name
+
+
 ## Graph contraction functions
 def joinLRNodes(nn_old):
     """

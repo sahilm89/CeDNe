@@ -27,6 +27,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import textalloc as ta
 
 import os
+import warnings
 from pathlib import Path
 from cedne import Neuron 
 
@@ -1291,8 +1292,22 @@ def plot_ciona_anatomical(nn, view='2d', save=False, figsize=(8, 12), title='Cio
     """
     Generates an anatomical plot for the Ciona nervous system (2D or 3D).
     """
+    def _normalize_position(position):
+        if position is None:
+            return None
+        try:
+            coords = np.asarray(position, dtype=float).reshape(-1)
+        except (TypeError, ValueError):
+            return None
+        if coords.size < 2 or not np.all(np.isfinite(coords[:2])):
+            return None
+        if coords.size == 2:
+            coords = np.append(coords, 0.0)
+        if not np.all(np.isfinite(coords[:3])):
+            return None
+        return coords[:3]
+
     nlabels = list(nn.neurons.keys())
-    pos = np.array([nn.neurons[n].position for n in nlabels])
     
     # Define colors based on annotation
     annot_colors = {
@@ -1303,10 +1318,28 @@ def plot_ciona_anatomical(nn, view='2d', save=False, figsize=(8, 12), title='Cio
         'Unknown': '#95a5a6'       # Gray
     }
     
-    colors = []
+    plotted_neurons = []
     for n in nlabels:
+        position = _normalize_position(getattr(nn.neurons[n], 'position', None))
+        if position is None:
+            continue
         annot = getattr(nn.neurons[n], 'annotation', 'Unknown')
-        colors.append(annot_colors.get(annot, '#95a5a6'))
+        plotted_neurons.append((n, position, annot_colors.get(annot, '#95a5a6')))
+
+    if not plotted_neurons:
+        raise ValueError("No neurons have anatomical coordinates to plot.")
+
+    skipped = len(nlabels) - len(plotted_neurons)
+    if skipped:
+        warnings.warn(
+            f"Skipping {skipped} neurons without anatomical coordinates.",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    nlabels = [label for label, _, _ in plotted_neurons]
+    pos = np.vstack([position for _, position, _ in plotted_neurons])
+    colors = [color for _, _, color in plotted_neurons]
 
     fig = plt.figure(figsize=figsize)
     if view == '3d':
@@ -1314,8 +1347,9 @@ def plot_ciona_anatomical(nn, view='2d', save=False, figsize=(8, 12), title='Cio
         ax.scatter(pos[:, 0], pos[:, 1], pos[:, 2], c=colors, s=50, edgecolors='k', alpha=0.8, zorder=2)
         
         for (u, v, k), connection in nn.connections.items():
-            if hasattr(u, 'position') and hasattr(v, 'position'):
-                p1, p2 = u.position, v.position
+            p1 = _normalize_position(getattr(u, 'position', None))
+            p2 = _normalize_position(getattr(v, 'position', None))
+            if p1 is not None and p2 is not None:
                 ax.plot([p1[0], p2[0]], [p1[1], p2[1]], [p1[2], p2[2]], 
                         color='gray', alpha=alpha_conn, lw=0.5, zorder=1)
         
@@ -1326,8 +1360,9 @@ def plot_ciona_anatomical(nn, view='2d', save=False, figsize=(8, 12), title='Cio
         
         # Draw connections with arrows for 2D
         for (u, v, k), connection in nn.connections.items():
-            if hasattr(u, 'position') and hasattr(v, 'position'):
-                p1, p2 = u.position, v.position
+            p1 = _normalize_position(getattr(u, 'position', None))
+            p2 = _normalize_position(getattr(v, 'position', None))
+            if p1 is not None and p2 is not None:
                 # Use annotate for arrows
                 ax.annotate("", xy=(p2[0], p2[1]), xytext=(p1[0], p1[1]),
                             arrowprops=dict(arrowstyle="->", color='gray', alpha=alpha_conn, lw=0.5, shrinkA=5, shrinkB=5),

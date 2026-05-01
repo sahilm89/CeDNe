@@ -6,11 +6,13 @@ __license__ = "MIT"
 
 import pickle
 from .io import generate_random_string, load_pickle
+from .source import Citable
 
-class Animal:
+class Animal(Citable):
     ''' This is a full animal class'''
     def __init__(self, species = '', name='', stage='', sex='', genotype='', **kwargs):
         ''' Initializes an Organism class'''
+        Citable.__init__(self)  # provides self.citations = {}
         self.species = species
         self.name = name
         self.stage = stage
@@ -18,7 +20,6 @@ class Animal:
         self.genotype = genotype
         self.networks = {}
         self.contexts = {}  # Dict[str, Context]
-        self.citations = {}
         self.active_context = None
         self.active_network = None
         for key, value in kwargs.items():

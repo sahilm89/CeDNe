@@ -19,6 +19,7 @@ __author__ = "Sahil Moza"
 __date__ = "2025-04-06"
 __license__ = "MIT"
 
+import math
 import networkx as nx
 import copy
 from .io import generate_random_string
@@ -28,6 +29,7 @@ import numpy as np
 from .config import F_SAMPLE
 from .recordings import Trial
 from .connection import Path
+from .source import Citable, serialize_citations
 
 if TYPE_CHECKING:
     from .network import NervousSystem
@@ -83,28 +85,35 @@ class Cell:
         
         self.network.add_node(self, **kwargs)#type=self.type, category=self.category, modality=self.modality)
     
-class Neuron(Cell):
+class Neuron(Cell, Citable):
     ''' Models a biological neuron'''
+
+    # Attributes excluded from automatic scalar introspection in to_dict()
+    _SERIALIZE_SKIP = frozenset({
+        'name', 'network', 'in_connections', 'out_connections',
+        'trial', 'features', 'spatial_mask', '_data', 'loadings',
+        'position', 'transcript', 'group_id', 'citations',
+    })
     def __init__(self, name: str, network: 'NervousSystem', **kwargs):
         """
         Initializes a new instance of the Neuron class.
 
         Args:
-            name (str): 
+            name (str):
                 The name of the neuron.
-            network (NervousSystem): 
+            network (NervousSystem):
                 The neuronal network to which the neuron belongs.
-            type (str, optional): 
+            type (str, optional):
                 The type of the neuron. Defaults to ''.
-            category (str, optional): 
+            category (str, optional):
                 The category of the neuron. Defaults to ''.
-            modality (str, optional): 
+            modality (str, optional):
                 The modality of the neuron. Defaults to ''.
-            position (dict, optional): 
+            position (dict, optional):
                 The position of the neuron. Defaults to None.
-            presynapses (list, optional): 
+            presynapses (list, optional):
                 The list of presynaptic components. Defaults to None.
-            postsynapses (dict, optional): 
+            postsynapses (dict, optional):
                 The dictionary of postsynaptic components. Defaults to None.
 
         Raises:
@@ -112,7 +121,8 @@ class Neuron(Cell):
         """
         if name in network.neurons:
             raise ValueError(f"Neuron with name '{name}' already exists in the network")
-        super().__init__(name, network, **kwargs)#cell_type=neuron_type, category=category, modality=modality,\ position=position)
+        Cell.__init__(self, name, network, **kwargs)
+        Citable.__init__(self)  # provides self.citations = {}
         self.network.neurons[name] = self
         # self.name = name
         # self.group_id = 0
@@ -141,7 +151,77 @@ class Neuron(Cell):
         # self.postsynapse = postsynapse or {}
         self.spatial_mask = kwargs.pop('spatial_mask', None)
         #self.cable_length = kwargs.pop('cable_length', 1)
-        
+
+    def _parent_citables(self):
+        """Walk citations up through containing NeuronGroups and the NervousSystem."""
+        parents = []
+        if self.network is not None:
+            for group in self.network.groups.values():
+                # O(1) membership via the name->Neuron dict each NeuronGroup maintains
+                if isinstance(group, NeuronGroup) and group.neurons.get(self.name) is self:
+                    parents.append(group)
+            parents.append(self.network)
+        return parents
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Serialize neuron to a plain Python dictionary.
+
+        Returns a dict with guaranteed keys: ``id``, ``type``, ``group_id``,
+        ``degree``, ``has_recordings``.  Optionally includes ``position``,
+        ``scalars`` (auto-discovered numeric attributes), and ``loadings``
+        (dimensionality-reduction weights).
+
+        Returns:
+            Dict[str, Any]: A JSON-compatible dictionary representation.
+        """
+        d: Dict[str, Any] = {
+            "id": self.name,
+            "type": getattr(self, 'type', 'Unknown'),
+            "group_id": getattr(self, 'group_id', 0),
+            "degree": len(self.in_connections) + len(self.out_connections),
+            "has_recordings": bool(self.trial),
+        }
+
+        # Position — serialize as-is (no LR string normalization)
+        if hasattr(self, 'position') and self.position:
+            if isinstance(self.position, dict):
+                d['position'] = dict(self.position)
+
+        # Numeric scalar attributes (dynamic introspection)
+        scalars: Dict[str, Any] = {}
+        for attr in vars(self):
+            if attr.startswith('_') or attr in self._SERIALIZE_SKIP:
+                continue
+            try:
+                val = getattr(self, attr)
+                if isinstance(val, (int, float)) and math.isfinite(val):
+                    scalars[attr] = val
+                elif (isinstance(val, (list, tuple)) and val
+                      and all(isinstance(v, (int, float)) for v in val)):
+                    scalars[attr] = list(val)
+            except Exception:
+                pass
+        if scalars:
+            d['scalars'] = scalars
+
+        # Loadings from dimensionality reduction
+        if hasattr(self, 'loadings') and self.loadings:
+            clean_loadings: Dict[str, float] = {}
+            for k, v in self.loadings.items():
+                try:
+                    fv = float(v)
+                    if math.isfinite(fv):
+                        clean_loadings[k] = fv
+                except (ValueError, TypeError):
+                    pass
+            if clean_loadings:
+                d['loadings'] = clean_loadings
+
+        # Citations attached directly to this neuron (not the inherited chain)
+        if hasattr(self, 'citations') and self.citations:
+            d['citations'] = serialize_citations(self.citations)
+
+        return d
 
     # def set_presynapse(self, presynapse):
     #     """
@@ -182,12 +262,38 @@ class Neuron(Cell):
         Returns:
             Trial: The newly added trial object.
         """
-        
+
         self.trial[trial_num] = Trial(self, trial_num)
         # B4: Sync to node attributes so **data works in subnetwork/copy
         nx.set_node_attributes(self.network, {self: {'trial': self.trial}})
         return self.trial[trial_num]
-    
+
+    def load_recording(self, data, trial_num=0, sampling_rate=None, metadata=None):
+        """Attach a 1D time-series recording to this neuron as a new Trial.
+
+        Thin convenience over `add_trial()` + setting `trial.recording`; use it
+        when you already have a per-neuron trace in memory (ndarray, list,
+        pandas Series) and don't want to manage Trial objects by hand.
+
+        Args:
+            data: 1D array-like of samples (calcium trace, voltage, etc.).
+            trial_num: Trial index (default 0). Overwrites any existing trial
+                at this index for this neuron.
+            sampling_rate: Sampling rate in Hz; written to ``trial.metadata``.
+                Leave as None to keep the module default (F_SAMPLE).
+            metadata: Extra metadata dict merged into ``trial.metadata``.
+
+        Returns:
+            Trial: The trial object holding the recording.
+        """
+        trial = self.add_trial(trial_num)
+        trial.recording = np.asarray(data)
+        if sampling_rate is not None:
+            trial.metadata['sampling_rate'] = float(sampling_rate)
+        if metadata:
+            trial.metadata.update(metadata)
+        return trial
+
     def remove_trial(self, trial_num):
         """
         Removes a trial from the trial dictionary.
@@ -371,23 +477,24 @@ class Neuron(Cell):
     #     return self.name
 
 
-class NeuronGroup:
+class NeuronGroup(Citable):
     ''' This contains a group of neurons in the network'''
     def __init__(self, network, members=None, group_name=None) -> None:
         """
         Initializes a new instance of the NeuronGroup class.
 
         Parameters:
-            groupname (str): 
+            groupname (str):
                 The name of the neuron group.
-            members (List[str]): 
+            members (List[str]):
                 The list of members in the neuron group.
-            group_id (int, optional): 
+            group_id (int, optional):
                 The ID of the neuron group. Defaults to 0.
 
         Returns:
             None
         """
+        Citable.__init__(self)  # provides self.citations = {}
         if group_name is None:
             self.group_name = 'Group-'+ generate_random_string(8)
         else:
@@ -404,6 +511,10 @@ class NeuronGroup:
         assert self.group_name not in self.network.groups, f"Group name {self.group_name}\
             already exists in the network"
         self.network.groups.update({self.group_name: self})
+
+    def _parent_citables(self):
+        """Walk citations up to the containing NervousSystem."""
+        return (self.network,) if self.network is not None else ()
 
     def __iter__(self):
         """

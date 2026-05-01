@@ -27,8 +27,16 @@ chemsyns = DATADIR / "chem_adj.pkl"
 elecsyns = DATADIR / "gapjn_symm_adj.pkl"
 neuronPositions = DATADIR / "neuronPosition.pkl"
 
+# One-shot cache for the Cook male loader. The raw supplementary workbook is
+# slow to parse (~5s via openpyxl); we preprocess it into a single pickle
+# (labels, type dict, category dict, sparse chem adj, sparse gap-jn adj) the
+# first time makeWorm(style='cook', sex='male') runs, and read from that
+# cache on every subsequent call.
+cook_male_cache = DATADIR / "cook_male_data.pkl"
+
 cook_connectome = DOWNLOAD_DIR / 'cook_2019'
 witvliet_connectome = DOWNLOAD_DIR / 'witvliet_2020'
+white_connectome = DOWNLOAD_DIR / 'white_1986'
 
 lineage = DOWNLOAD_DIR / 'Worm_Atlas' / 'Altun_lineage_corrected.xlsx'
 
@@ -46,6 +54,15 @@ winding_connectome = DOWNLOAD_DIR / 'Winding_2023'
 
 # Ciona connectome
 ciona_connectome = DOWNLOAD_DIR / 'Ryan_2016'
+
+# Pristionchus pacificus pharyngeal connectome
+pristionchus_pharynx = DOWNLOAD_DIR / 'Bumbarger_2013'
+
+# Platynereis dumerilii whole-body synaptic connectome (3-day larva)
+veraszto_connectome = DOWNLOAD_DIR / 'Veraszto_2025'
+
+# Brittin et al. 2018 C. elegans nerve-ring contactome (adult + L4)
+brittin_contactome = DOWNLOAD_DIR / 'Brittin_2018'
 
 #Download Links
 #CENGEN
@@ -96,7 +113,12 @@ citations = {
                  'https://doi.org/10.1038/s41586-024-07968-y',
                  'https://www.biorxiv.org/content/10.1101/2025.06.10.658788'
                 ],
-    'cook_connectome' : ['https://doi.org/10.1038/s41586-019-1352-7'],
+    'cook_connectome' : [
+        'https://doi.org/10.1038/s41586-019-1352-7',  # Cook et al. 2019 Nature — main reconstruction
+        'https://doi.org/10.1098/rstb.1986.0056',     # White et al. 1986 — upstream somatic EM
+        'https://doi.org/10.1098/rstb.1976.0085',     # Albertson & Thomson 1976 — upstream pharyngeal EM
+        'https://doi.org/10.1002/cne.24932',          # Cook et al. 2020 JCN — pharynx re-analysis
+    ],
     'witvliet_connectome': ['https://doi.org/10.1038/s41586-021-03778-8'],
     'sig_prop_atlas': ['https://doi.org/10.1038/s41586-023-06683-4'],
     'neuropeptide_atlas': ['https://doi.org/10.1016/j.neuron.2023.09.043'],
@@ -105,5 +127,121 @@ citations = {
     'altun_neurotrasmitters_receptors': ['https://doi.org/10.3908/wormatlas.5.202'],
     'worm_lineage': ['https://doi.org/10.1016/0012-1606(77)90158-0'],
     'winding_connectome': ['https://doi.org/10.1126/science.add9330'], 
-    'ciona_connectome': ['https://doi.org/10.7554/eLife.16962']
+    'ciona_connectome': ['https://doi.org/10.7554/eLife.16962'],
+    'bumbarger_pharynx': ['https://doi.org/10.1016/j.cell.2012.12.013'],
+    'white_connectome': ['https://doi.org/10.1098/rstb.1986.0056'],
+    'veraszto_connectome': ['https://doi.org/10.7554/eLife.97964'],
+    'brittin_contactome': ['https://doi.org/10.1038/s41586-021-03284-x'],
     }
+
+# Per-dataset capability matrix. A "dataset" is a specific
+# (species, sex, stage, style) tuple — e.g. C. elegans Cook hermaphrodite-adult
+# and Cook male-adult are separate datasets because the layered data available
+# for each is different.
+#
+# `capabilities` declares which CeDNe data layers exist for the dataset in
+# principle (regardless of whether a loader is wired up yet). The web UI uses
+# this to gray out unsupported controls; programmatic users can enumerate it
+# to discover what's loadable for a given organism.
+#
+# Capability keys:
+#   connectome        — synaptic wiring (the make_* / style itself)
+#   neurotransmitters — per-neuron transmitter assignments
+#   neuropeptides     — per-neuron neuropeptide expression (Ripoll-Sanchez 2023)
+#   transcriptome     — per-neuron transcript expression (CeNGEN)
+#   contactome        — physical adjacency (Brittin 2018)
+#   lineage           — developmental lineage (Altun, via load_lineage)
+#   position          — anatomical coordinates per neuron (drives Anatomical /
+#                       2D Map / 3D Map layouts in the web UI)
+#
+# Use None for cells whose status has not been verified — please confirm before
+# relying on them.
+
+organism_datasets = [
+    # === Caenorhabditis elegans ===
+    {'species': 'Caenorhabditis elegans', 'common_name': 'worm',
+     'sex': 'hermaphrodite', 'stage': 'adult', 'style': 'cook',
+     'capabilities': {
+         'connectome': True, 'neurotransmitters': True, 'neuropeptides': True,
+         'transcriptome': True, 'contactome': True, 'lineage': True,
+         'position': True}},
+    # Witvliet 2020 — 8 specimens across 4 stages (L1, L2, L3, adult).
+    # Replicates are surfaced via the loader's `dataset_ind` argument and are
+    # not enumerated as separate matrix rows since their capabilities are
+    # identical within a stage.
+    {'species': 'Caenorhabditis elegans', 'common_name': 'worm',
+     'sex': 'hermaphrodite', 'stage': 'L1', 'style': 'witvliet',
+     'capabilities': {
+         'connectome': True, 'neurotransmitters': True, 'neuropeptides': True,
+         'transcriptome': True,
+         'contactome': False,   # Brittin 2018 only released adult + L4 contactomes
+         'lineage': True,
+         'position': False}},   # witvliet loader does not populate node.position
+    {'species': 'Caenorhabditis elegans', 'common_name': 'worm',
+     'sex': 'hermaphrodite', 'stage': 'L2', 'style': 'witvliet',
+     'capabilities': {
+         'connectome': True, 'neurotransmitters': True, 'neuropeptides': True,
+         'transcriptome': True, 'contactome': False, 'lineage': True,
+         'position': False}},
+    {'species': 'Caenorhabditis elegans', 'common_name': 'worm',
+     'sex': 'hermaphrodite', 'stage': 'L3', 'style': 'witvliet',
+     'capabilities': {
+         'connectome': True, 'neurotransmitters': True, 'neuropeptides': True,
+         'transcriptome': True, 'contactome': False, 'lineage': True,
+         'position': False}},
+    {'species': 'Caenorhabditis elegans', 'common_name': 'worm',
+     'sex': 'hermaphrodite', 'stage': 'adult', 'style': 'witvliet',
+     'capabilities': {
+         'connectome': True, 'neurotransmitters': True, 'neuropeptides': True,
+         'transcriptome': True, 'contactome': True, 'lineage': True,
+         'position': False}},
+    {'species': 'Caenorhabditis elegans', 'common_name': 'worm',
+     'sex': 'male', 'stage': 'adult', 'style': 'cook',
+     'capabilities': {
+         'connectome': True,
+         'neurotransmitters': True,   # Wang 2024 ligand-table.xlsx has a Male sheet
+         'neuropeptides': False,      # Ripoll-Sanchez 2023 is hermaphrodite-only
+         'transcriptome': False,      # CeNGEN is hermaphrodite-only
+         'contactome': False,         # Brittin 2018 sampled hermaphrodites only
+         'lineage': None,             # Altun workbook may have a Male sheet — please verify
+         'position': False}},         # cook loader only populates position for hermaphrodite
+
+    # === Drosophila melanogaster ===
+    {'species': 'Drosophila melanogaster', 'common_name': 'fruit fly',
+     'sex': 'female', 'stage': 'adult', 'style': 'fly_wire',
+     'capabilities': {
+         'connectome': True,
+         'neurotransmitters': True,   # EM-inferred (Eckstein et al.) and shipped via FlyWire
+         'neuropeptides': False, 'transcriptome': False,
+         'contactome': False, 'lineage': False,
+         'position': None}},          # FlyWire ships 3D coords; loader wiring not yet verified
+    {'species': 'Drosophila melanogaster', 'common_name': 'fruit fly larva',
+     'sex': '', 'stage': 'L1', 'style': 'Winding_2023',
+     'capabilities': {
+         'connectome': True,
+         'neurotransmitters': None,   # please verify whether Winding 2023 ships NT calls
+         'neuropeptides': False, 'transcriptome': False,
+         'contactome': False, 'lineage': False,
+         'position': False}},
+
+    # === Other species ===
+    {'species': 'Ciona intestinalis', 'common_name': 'sea squirt',
+     'sex': '', 'stage': 'larva', 'style': 'ryan',
+     'capabilities': {
+         'connectome': True, 'neurotransmitters': False, 'neuropeptides': False,
+         'transcriptome': False, 'contactome': False, 'lineage': False,
+         'position': True}},          # ~57% of neurons carry numpy-array coords
+    {'species': 'Pristionchus pacificus', 'common_name': 'pristionchus (pharynx only)',
+     'sex': 'hermaphrodite', 'stage': 'adult', 'style': 'bumbarger',
+     'capabilities': {
+         'connectome': True, 'neurotransmitters': False, 'neuropeptides': False,
+         'transcriptome': False, 'contactome': False, 'lineage': False,
+         'position': False}},
+    {'species': 'Platynereis dumerilii', 'common_name': 'ragworm',
+     'sex': '', 'stage': '3-day larva', 'style': 'veraszto',
+     'capabilities': {
+         'connectome': True, 'neurotransmitters': False, 'neuropeptides': False,
+         'transcriptome': False, 'contactome': False, 'lineage': False,
+         'position': False}},
+]
+
