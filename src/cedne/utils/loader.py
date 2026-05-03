@@ -1044,52 +1044,193 @@ def loadNeurotransmitters(nn, sex='Hermaphrodite'):
 
 ## Neuropeptides tables
 
-def loadNeuropeptides(w, neuropeps:str= 'all'):
-    ''' Loads Neuropeptides into neurons using Ripoll-Sanchez et al. 2023'''
+NEUROPEPTIDE_TABLE_MODES = ("old", "new")
+NEUROPEPTIDE_RANGE_MODELS = {
+    "short": ("Individual NPP-GPCR networks SR", "short"),
+    "mid": ("Individual NPP-GPCR networks MR", "mid"),
+    "long": ("Individual NPP-GPCR networks LR", "long"),
+}
+NEUROPEPTIDE_NEW_PAIRS = "neuropeptide_pairs (network identities for Individual_net folders).csv"
 
-    #csvfile = DOWNLOAD_DIR + prefix_NP + 'neuropeptideConnectome.txt'
-    lrm = DOWNLOAD_DIR /  prefix_NP / 'NPP_GPCR_networks_long_range_model_2.csv'
-    nid = DOWNLOAD_DIR /  prefix_NP / '26012022_num_neuronID.txt'
-    np_order = DOWNLOAD_DIR /  prefix_NP / '91-NPPGPCR networks'
-    model = pd.read_csv(lrm,encoding= 'unicode_escape', header=None)
-    neuronID = pd.read_csv(nid,encoding= 'unicode_escape', sep='\t', index_col=0, names=['NID', "Neuron"]) 
+
+def _normalize_neuropeptide_mode(mode):
+    mode = (mode or "old").lower()
+    if mode not in NEUROPEPTIDE_TABLE_MODES:
+        raise ValueError(f"Unknown neuropeptide table mode: {mode}")
+    return mode
+
+
+def _normalize_neuropeptide_range(range_model):
+    range_model = (range_model or "long").lower().replace("-", "_")
+    if range_model in ("short_range", "sr"):
+        range_model = "short"
+    elif range_model in ("mid_range", "medium", "medium_range", "mr"):
+        range_model = "mid"
+    elif range_model in ("long_range", "lr"):
+        range_model = "long"
+    if range_model not in NEUROPEPTIDE_RANGE_MODELS:
+        raise ValueError(f"Unknown neuropeptide range model: {range_model}")
+    return range_model
+
+
+def _neuropeptide_data_roots():
+    root = DOWNLOAD_DIR / prefix_NP
+    seen = {root}
+    yield root
+
+    # Local CeDNe-web development often keeps the source CeDNe repository next
+    # to this app, with freshly downloaded tables that are not staged here.
+    for base in (TOPDIR.parent, TOPDIR.parent.parent):
+        sibling_root = base / "CeDNe" / "data_sources" / "downloads" / "Ripoll-Sanchez_2023"
+        if sibling_root not in seen:
+            seen.add(sibling_root)
+            yield sibling_root
+
+
+def _neuropeptide_old_root():
+    for root in _neuropeptide_data_roots():
+        old_root = root / "old"
+        if (old_root / "91-NPPGPCR networks").exists():
+            return old_root
+        if (root / "91-NPPGPCR networks").exists():
+            return root
+    raise FileNotFoundError("Could not find old Ripoll-Sanchez neuropeptide tables.")
+
+
+def _neuropeptide_new_root():
+    for root in _neuropeptide_data_roots():
+        new_root = root / "new"
+        if (new_root / NEUROPEPTIDE_NEW_PAIRS).exists():
+            return new_root
+    raise FileNotFoundError("Could not find new Ripoll-Sanchez neuropeptide tables.")
+
+
+def _neuropeptide_pair_name(ligand, receptor):
+    return f"{ligand}_{receptor}".replace("-", "_").replace(".", "_").replace(" ", "_")
+
+
+def _read_new_neuropeptide_pairs():
+    pairs_path = _neuropeptide_new_root() / NEUROPEPTIDE_NEW_PAIRS
+    pairs = pd.read_csv(
+        pairs_path,
+        sep=r"\s+",
+        header=None,
+        names=["Ligand", "GPCR"],
+        dtype=str,
+    )
+    pairs["pair_names_NPP"] = [
+        _neuropeptide_pair_name(ligand, gpcr)
+        for ligand, gpcr in zip(pairs["Ligand"], pairs["GPCR"])
+    ]
+    pairs["network_number"] = range(1, len(pairs) + 1)
+    return pairs
+
+
+def _read_old_neuropeptide_models():
+    old_root = _neuropeptide_old_root()
+    lrm = old_root / 'NPP_GPCR_networks_long_range_model_2.csv'
+    nid = old_root / '26012022_num_neuronID.txt'
+    np_order = old_root / '91-NPPGPCR networks'
+    model = pd.read_csv(lrm, encoding='unicode_escape', header=None)
+    neuronID = pd.read_csv(nid, encoding='unicode_escape', sep='\t', index_col=0, names=['NID', "Neuron"])
     neuropep_rec = pd.read_csv(np_order, sep=',', index_col=0)
     nidList = neuronID['Neuron'].to_list()
 
-    models_dict = {nprc: {} for nprc in neuropep_rec['pair_names_NPP']}
-
     models = {}
-    for i,j in enumerate(range(0,len(model),len(neuronID))):
-        models[i+1] = np.array(model[j:j+len(neuronID)], dtype=np.int8)
+    for i, j in enumerate(range(0, len(model), len(neuronID))):
+        models[i + 1] = np.array(model[j:j + len(neuronID)], dtype=np.int8)
 
+    models_dict = {}
     for k, nprc in enumerate(neuropep_rec['pair_names_NPP']):
-        npNum = k+1
-        for i,n1 in enumerate(nidList):
-            models_dict[nprc] [n1] = {}
-            for j, n2 in enumerate(nidList):
-                models_dict[nprc][n1][n2] = {'weight':models[npNum][i][j]}
-    npepreclist = neuropep_rec['pair_names_NPP'].tolist()
-    if neuropeps != 'all':
-        npepreclist_filter = neuropeps
-    else:
-        npepreclist_filter = npepreclist
+        npNum = k + 1
+        models_dict[nprc] = _matrix_to_neuropeptide_adjacency(models[npNum], nidList, nidList)
+    return neuropep_rec['pair_names_NPP'].tolist(), models_dict
 
-    for nprc, model in zip(npepreclist, models ):
+
+def _matrix_to_neuropeptide_adjacency(matrix, row_names, column_names, allowed_neurons=None):
+    allowed = set(allowed_neurons) if allowed_neurons is not None else None
+    adjacency = {}
+    for i, n1 in enumerate(row_names):
+        if allowed is not None and n1 not in allowed:
+            continue
+        adjacency[n1] = {}
+        for j, n2 in enumerate(column_names):
+            if allowed is not None and n2 not in allowed:
+                continue
+            adjacency[n1][n2] = {'weight': int(matrix[i][j])}
+    return adjacency
+
+
+def _read_new_neuropeptide_model(pair_row, range_model, allowed_neurons=None):
+    new_root = _neuropeptide_new_root()
+    folder, suffix = NEUROPEPTIDE_RANGE_MODELS[range_model]
+    network_number = int(pair_row["network_number"])
+    model_path = (
+        new_root / folder /
+        f"01022024_neuropeptide_network{network_number:03d}_{suffix}_range_model.csv"
+    )
+    matrix = pd.read_csv(model_path, index_col=0)
+    return _matrix_to_neuropeptide_adjacency(
+        matrix.to_numpy(dtype=np.int8),
+        matrix.index.astype(str).tolist(),
+        matrix.columns.astype(str).tolist(),
+        allowed_neurons=allowed_neurons,
+    )
+
+
+def loadNeuropeptides(w, neuropeps: str = 'all', mode: str = "old", range_model: str = "long"):
+    ''' Loads Neuropeptides into neurons using Ripoll-Sanchez et al. 2023'''
+
+    mode = _normalize_neuropeptide_mode(mode)
+    range_model = _normalize_neuropeptide_range(range_model)
+    allowed_neurons = w.neurons.keys() if type(w) == NervousSystem else None
+
+    if mode == "old":
+        npepreclist, models_dict = _read_old_neuropeptide_models()
+    else:
+        pairs = _read_new_neuropeptide_pairs()
+        npepreclist = pairs['pair_names_NPP'].tolist()
+        models_dict = {}
+
+    if neuropeps == 'all':
+        npepreclist_filter = set(npepreclist)
+    elif isinstance(neuropeps, str):
+        npepreclist_filter = {neuropeps}
+    else:
+        npepreclist_filter = set(neuropeps)
+
+    if mode == "new":
+        for _, pair_row in pairs.iterrows():
+            nprc = pair_row["pair_names_NPP"]
+            if nprc in npepreclist_filter:
+                models_dict[nprc] = _read_new_neuropeptide_model(
+                    pair_row,
+                    range_model,
+                    allowed_neurons=allowed_neurons,
+                )
+
+    for nprc in npepreclist:
         if nprc in npepreclist_filter:
-            if type(w)==Worm:
-                print(nprc, model, models_dict[nprc])
+            if type(w) == Worm:
                 nn_np = NervousSystem(w, network="{}".format(nprc))
                 nn_np.build_network(neuron_data=cell_list, adj=models_dict[nprc], label=nprc)
-                w.citations.update({'neuropeptide_atlas':citations['neuropeptide_atlas']})
-            elif type(w)==NervousSystem:
+                w.citations.update({'neuropeptide_atlas': citations['neuropeptide_atlas']})
+            elif type(w) == NervousSystem:
                 w.setup_connections(adjacency=models_dict[nprc], connection_type=nprc)
-                w.worm.citations.update({'neuropeptide_atlas':citations['neuropeptide_atlas']})
+                w.worm.citations.update({'neuropeptide_atlas': citations['neuropeptide_atlas']})
 
-def getNeuropeptideList():
+
+def getNeuropeptideList(mode: str = "old", range_model: str = "long"):
     ''' Returns the list of available neuropeptide networks '''
-    np_order = DOWNLOAD_DIR / prefix_NP / '91-NPPGPCR networks'
-    neuropep_rec = pd.read_csv(np_order, sep=',', index_col=0)
-    return neuropep_rec['pair_names_NPP'].tolist()
+    mode = _normalize_neuropeptide_mode(mode)
+    _normalize_neuropeptide_range(range_model)
+    if mode == "old":
+        old_root = _neuropeptide_old_root()
+        np_order = old_root / '91-NPPGPCR networks'
+        neuropep_rec = pd.read_csv(np_order, sep=',', index_col=0)
+        return neuropep_rec['pair_names_NPP'].tolist()
+    pairs = _read_new_neuropeptide_pairs()
+    return pairs['pair_names_NPP'].tolist()
 
 ## Load CENGEN tables
 thres_1 = DOWNLOAD_DIR / prefix_CENGEN / 'liberal_threshold1.csv'

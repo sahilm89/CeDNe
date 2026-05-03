@@ -20,6 +20,8 @@ data_sources/downloads/FlyWire
 data_sources/downloads/Atanas_2023
 data_sources/downloads/Winding_2023
 data_sources/downloads/Veraszto_2025
+data_sources/downloads/Ripoll-Sanchez_2023/new
+!data_sources/downloads/Ripoll-Sanchez_2023/old
 eggs/
 .eggs/
 lib/
