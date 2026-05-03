@@ -26,7 +26,7 @@ from .session import Session
 # Utilities and constants
 from .config import F_SAMPLE, RANDOM_SEED, RECURSION_LIMIT
 from .io import load_pickle, load_worm, generate_random_string
-from .logger import logger
+from .logger import logger, configure_logging
 from .mapping import GraphMap
 from .behavior import Behavior
 
@@ -56,5 +56,5 @@ __all__ = [
     # Utilities
     "F_SAMPLE", "RANDOM_SEED", "RECURSION_LIMIT",
     "load_pickle", "load_worm", "generate_random_string",
-    "logger"
+    "logger", "configure_logging"
 ]

@@ -26,12 +26,7 @@ import copy
 import logging
 from cedne import Neuron 
 
-logging.basicConfig(
-    filename="debug_log.txt",  # Save logs to a file
-    filemode="w",  # Overwrite each run
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    level=logging.INFO  # Set to INFO (change to DEBUG for more details)
-)
+logger = logging.getLogger(__name__)
 
 class Input:
     """ 
@@ -493,18 +488,18 @@ class RateModel(Model):
         gains = np.array([neuron.gain for neuron in self.dynamic_neurons])
 
         if np.isnan(time_constants).any():
-            logging.warning(f"NaN in time_constants at t={t}. Values: {time_constants}")
+            logger.warning(f"NaN in time_constants at t={t}. Values: {time_constants}")
         if np.isnan(gains).any():
-            logging.warning(f"NaN in gains at t={t}. Values: {gains}")
+            logger.warning(f"NaN in gains at t={t}. Values: {gains}")
         if np.isnan(rates).any():
-            logging.warning(f"NaN in rates at t={t}. Values: {rates}")
+            logger.warning(f"NaN in rates at t={t}. Values: {rates}")
         if np.isnan(activations).any():
-            logging.warning(f"NaN in activations at t={t}. Inputs: {total_input}")
+            logger.warning(f"NaN in activations at t={t}. Inputs: {total_input}")
 
         derivatives = (1 / time_constants) * (-rates + gains * activations)
 
         if np.isnan(derivatives).any():
-            logging.error(f"NaN in derivatives at t={t}! Full values: {derivatives}")
+            logger.error(f"NaN in derivatives at t={t}! Full values: {derivatives}")
 
         return derivatives
 

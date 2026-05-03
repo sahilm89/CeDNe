@@ -22,7 +22,7 @@ from .core import (
     load_pickle, load_worm, generate_random_string,
     GraphMap,
     Behavior,
-    logger
+    logger, configure_logging
 )
 
 # Utility layer (plotting, analysis, loaders)
@@ -45,7 +45,7 @@ __all__ = [
     "load_pickle", "load_worm", "generate_random_string",
 
     # Logging
-    "logger",
+    "logger", "configure_logging",
 
     # Utilities (as a namespace)
     "utils",
