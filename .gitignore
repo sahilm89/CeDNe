@@ -49,6 +49,7 @@ MANIFEST
 *.txt
 !.binder/requirements.txt
 !.binder/runtime.txt
+!data_sources/downloads/Ripoll-Sanchez_2023/old/26012022_num_neuronID.txt
 
 # Installer logs
 pip-log.txt
