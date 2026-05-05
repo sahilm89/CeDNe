@@ -261,7 +261,7 @@ and utility functions (e.g., graph motifs, loaders, visualization) from its subm
 <dl class="py class">
 <dt class="sig sig-object py" id="cedne.Animal">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">Animal</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">species</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sex</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genotype</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/animal.html#Animal"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Animal" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></p>
+<dd><p>Bases: <a class="reference internal" href="#cedne.Citable" title="cedne.core.source.Citable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></a></p>
 <p>This is a full animal class</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="cedne.Animal.save">
@@ -359,7 +359,7 @@ data: Optional data to associate with the context.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="cedne.Neuron">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">Neuron</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.NervousSystem" title="cedne.NervousSystem"><span class="pre">NervousSystem</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/neuron.html#Neuron"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Neuron" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#cedne.Cell" title="cedne.core.neuron.Cell"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cell</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></p>
+<dd><p>Bases: <a class="reference internal" href="#cedne.Cell" title="cedne.core.neuron.Cell"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cell</span></code></a>, <a class="reference internal" href="#cedne.Citable" title="cedne.core.source.Citable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></a></p>
 <p>Models a biological neuron</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="cedne.Neuron.to_dict">
@@ -502,7 +502,7 @@ property_value: The value of the property.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="cedne.NeuronGroup">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">NeuronGroup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">network</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">members</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/neuron.html#NeuronGroup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NeuronGroup" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></p>
+<dd><p>Bases: <a class="reference internal" href="#cedne.Citable" title="cedne.core.source.Citable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></a></p>
 <p>This contains a group of neurons in the network</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="cedne.NeuronGroup.items">
@@ -647,7 +647,7 @@ group_name: Optional name for the resulting group.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="cedne.NervousSystem">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">NervousSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">worm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.Worm" title="cedne.core.animal.Worm"><span class="pre">Worm</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'Neutral'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/network.html#NervousSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NervousSystem" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MultiDiGraph</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MultiDiGraph</span></code>, <a class="reference internal" href="#cedne.Citable" title="cedne.core.source.Citable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></a></p>
 <dl class="simple">
 <dt>This is the Nervous System class. This inherits from networkx.MultiDiGraph</dt><dd><p>and is the main high level class for the nervous system.</p>
 </dd>
@@ -1133,11 +1133,11 @@ network-level metadata, and visualization hints.</p>
 <dd><p>Creates a neuron group with the specified members.</p>
 <dl class="simple">
 <dt>Parameters:</dt><dd><dl class="simple">
-<dt>members (List[str]): </dt><dd><p>The list of members in the neuron group.</p>
+<dt>members (Iterable[Union[Neuron, str]]):</dt><dd><p>The members of the group. Each entry may be a <code class="docutils literal notranslate"><span class="pre">Neuron</span></code>
+instance or a neuron name (string); strings are resolved
+against <code class="docutils literal notranslate"><span class="pre">self.neurons</span></code>.</p>
 </dd>
-<dt>groupname (str): </dt><dd><p>The name of the neuron group. Defaults to None.</p>
-</dd>
-<dt>group_id (int, optional): </dt><dd><p>The ID of the neuron group. Defaults to 0.</p>
+<dt>group_name (str, optional):</dt><dd><p>The name of the neuron group. Auto-generated if omitted.</p>
 </dd>
 </dl>
 </dd>
@@ -1164,11 +1164,11 @@ network-level metadata, and visualization hints.</p>
 <dd><p>Creates a connection group with the specified members.</p>
 <dl class="simple">
 <dt>Parameters:</dt><dd><dl class="simple">
-<dt>members (List[str]): </dt><dd><p>The list of members in the connection group.</p>
+<dt>members (Iterable[Connection]):</dt><dd><p>The members of the group. Each entry must be a <code class="docutils literal notranslate"><span class="pre">Connection</span></code>
+instance — connection identity is the <code class="docutils literal notranslate"><span class="pre">(pre,</span> <span class="pre">post,</span> <span class="pre">uid)</span></code>
+triple, not a string name.</p>
 </dd>
-<dt>groupname (str): </dt><dd><p>The name of the connection group. Defaults to None.</p>
-</dd>
-<dt>group_id (int, optional): </dt><dd><p>The ID of the connection group. Defaults to 0.</p>
+<dt>group_name (str, optional):</dt><dd><p>The name of the connection group. Auto-generated if omitted.</p>
 </dd>
 </dl>
 </dd>
@@ -1194,7 +1194,7 @@ network-level metadata, and visualization hints.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="cedne.Connection">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">Connection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pre</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.Neuron" title="cedne.Neuron"><span class="pre">Neuron</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">post</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.Neuron" title="cedne.Neuron"><span class="pre">Neuron</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">uid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connection_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'chemical-synapse'</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/connection.html#Connection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Connection" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></p>
+<dd><p>Bases: <a class="reference internal" href="#cedne.Citable" title="cedne.core.source.Citable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></a></p>
 <p>This class represents a connection between two cells.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="cedne.Connection.by_name">
@@ -1259,7 +1259,7 @@ network-level metadata, and visualization hints.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="cedne.ConnectionGroup">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">ConnectionGroup</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">network</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">members</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/connection.html#ConnectionGroup"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.ConnectionGroup" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></p>
+<dd><p>Bases: <a class="reference internal" href="#cedne.Citable" title="cedne.core.source.Citable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></a></p>
 <p>This is a group of connections in the network</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="cedne.ConnectionGroup.clear">
@@ -1552,6 +1552,119 @@ group_name: Optional name for the resulting group.</p>
 </dl>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cedne.Citation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">Citation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">authors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">year</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doi</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">notes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/source.html#Citation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Citation" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A bibliographic reference: paper, dataset, or other evidence source.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">key</span></code> is the canonical identifier (BibTeX-style, e.g. <code class="docutils literal notranslate"><span class="pre">&quot;White1986&quot;</span></code>).
+All other fields are optional; populate as much metadata as is available.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cedne.Citation.key">
+<span class="sig-name descname"><span class="pre">key</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#cedne.Citation.key" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cedne.Citation.title">
+<span class="sig-name descname"><span class="pre">title</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#cedne.Citation.title" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cedne.Citation.authors">
+<span class="sig-name descname"><span class="pre">authors</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#cedne.Citation.authors" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cedne.Citation.year">
+<span class="sig-name descname"><span class="pre">year</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#cedne.Citation.year" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cedne.Citation.doi">
+<span class="sig-name descname"><span class="pre">doi</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#cedne.Citation.doi" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cedne.Citation.url">
+<span class="sig-name descname"><span class="pre">url</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#cedne.Citation.url" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cedne.Citation.notes">
+<span class="sig-name descname"><span class="pre">notes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#cedne.Citation.notes" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Citation.to_dict">
+<span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/cedne/core/source.html#Citation.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Citation.to_dict" title="Link to this definition">#</a></dt>
+<dd><p>Serialize to a plain dict, omitting None-valued fields.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Citation.from_dict">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#cedne.Citation" title="cedne.core.source.Citation"><span class="pre">Citation</span></a></span></span><a class="reference internal" href="_modules/cedne/core/source.html#Citation.from_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Citation.from_dict" title="Link to this definition">#</a></dt>
+<dd><p>Build a Citation from a dict; ignores unknown keys.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cedne.Citable">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">Citable</span></span><a class="reference internal" href="_modules/cedne/core/source.html#Citable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Citable" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Base class adding a citations container and hierarchical resolution.</p>
+<p>Subclasses should call <code class="docutils literal notranslate"><span class="pre">Citable.__init__(self)</span></code> somewhere in their own
+<code class="docutils literal notranslate"><span class="pre">__init__</span></code> (the call is idempotent, so order with other base classes
+doesn’t matter). Subclasses may override <code class="docutils literal notranslate"><span class="pre">_parent_citables</span></code> to define
+which container objects <code class="docutils literal notranslate"><span class="pre">effective_citations</span></code> should walk into.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">citations</span></code> attribute is a plain dict. Values may be <code class="docutils literal notranslate"><span class="pre">Citation</span></code>
+instances OR arbitrary user data (legacy loaders attach plain dicts).
+The hierarchical resolution treats both uniformly.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Citable.add_citation">
+<span class="sig-name descname"><span class="pre">add_citation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">citation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.Citation" title="cedne.core.source.Citation"><span class="pre">Citation</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/cedne/core/source.html#Citable.add_citation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Citable.add_citation" title="Link to this definition">#</a></dt>
+<dd><p>Attach a structured Citation. Defaults the dict key to citation.key.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Citable.remove_citation">
+<span class="sig-name descname"><span class="pre">remove_citation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/cedne/core/source.html#Citable.remove_citation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Citable.remove_citation" title="Link to this definition">#</a></dt>
+<dd><p>Remove a citation by dict key. No-op if absent.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Citable.citations_to_dict">
+<span class="sig-name descname"><span class="pre">citations_to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/cedne/core/source.html#Citable.citations_to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Citable.citations_to_dict" title="Link to this definition">#</a></dt>
+<dd><p>Serialize the local citations dict to JSON-friendly form.</p>
+<p>Citation instances are flattened via <code class="docutils literal notranslate"><span class="pre">Citation.to_dict</span></code>; any other
+value (e.g. legacy loader dicts) is passed through as-is.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cedne.Citable.effective_citations">
+<span class="sig-name descname"><span class="pre">effective_citations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">_visited</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">set</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/cedne/core/source.html#Citable.effective_citations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Citable.effective_citations" title="Link to this definition">#</a></dt>
+<dd><p>Walk up the containment hierarchy and return all applicable citations.</p>
+<dl>
+<dt>Returns:</dt><dd><p>A list of <code class="docutils literal notranslate"><span class="pre">(provenance_label,</span> <span class="pre">citation_key,</span> <span class="pre">citation_value)</span></code>
+tuples. The label identifies which object in the hierarchy carried
+the citation (most-specific first). Duplicate citation_keys are
+dropped, keeping the most-specific attribution.</p>
+<p><code class="docutils literal notranslate"><span class="pre">citation_value</span></code> may be a <code class="docutils literal notranslate"><span class="pre">Citation</span></code> instance or any other
+value the caller stored under that key.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cedne.serialize_citations">
+<span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">serialize_citations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">citations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/cedne/core/source.html#serialize_citations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.serialize_citations" title="Link to this definition">#</a></dt>
+<dd><p>Convert a citations dict to JSON-friendly form.</p>
+<p>Citation instances are flattened via <code class="docutils literal notranslate"><span class="pre">Citation.to_dict</span></code>; any other value
+(e.g. legacy loader dicts, strings) is passed through unchanged.</p>
 </dd></dl>
 
 <dl class="py class">
@@ -2243,6 +2356,26 @@ and/or file logging without CeDNe creating files as an import side effect.</p>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Path.get_connection_types"><code class="docutils literal notranslate"><span class="pre">Path.get_connection_types()</span></code></a></li>
 </ul>
 </li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Citation"><code class="docutils literal notranslate"><span class="pre">Citation</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Citation.key"><code class="docutils literal notranslate"><span class="pre">Citation.key</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Citation.title"><code class="docutils literal notranslate"><span class="pre">Citation.title</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Citation.authors"><code class="docutils literal notranslate"><span class="pre">Citation.authors</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Citation.year"><code class="docutils literal notranslate"><span class="pre">Citation.year</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Citation.doi"><code class="docutils literal notranslate"><span class="pre">Citation.doi</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Citation.url"><code class="docutils literal notranslate"><span class="pre">Citation.url</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Citation.notes"><code class="docutils literal notranslate"><span class="pre">Citation.notes</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Citation.to_dict"><code class="docutils literal notranslate"><span class="pre">Citation.to_dict()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Citation.from_dict"><code class="docutils literal notranslate"><span class="pre">Citation.from_dict()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Citable"><code class="docutils literal notranslate"><span class="pre">Citable</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Citable.add_citation"><code class="docutils literal notranslate"><span class="pre">Citable.add_citation()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Citable.remove_citation"><code class="docutils literal notranslate"><span class="pre">Citable.remove_citation()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Citable.citations_to_dict"><code class="docutils literal notranslate"><span class="pre">Citable.citations_to_dict()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Citable.effective_citations"><code class="docutils literal notranslate"><span class="pre">Citable.effective_citations()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.serialize_citations"><code class="docutils literal notranslate"><span class="pre">serialize_citations()</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Trial"><code class="docutils literal notranslate"><span class="pre">Trial</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Trial.recording"><code class="docutils literal notranslate"><span class="pre">Trial.recording</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Trial.get_duration"><code class="docutils literal notranslate"><span class="pre">Trial.get_duration()</span></code></a></li>

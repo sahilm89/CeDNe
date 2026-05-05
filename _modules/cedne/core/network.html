@@ -1538,12 +1538,12 @@
 <span class="sd">        Creates a neuron group with the specified members.</span>
 
 <span class="sd">        Parameters:</span>
-<span class="sd">            members (List[str]): </span>
-<span class="sd">                The list of members in the neuron group.</span>
-<span class="sd">            groupname (str): </span>
-<span class="sd">                The name of the neuron group. Defaults to None.</span>
-<span class="sd">            group_id (int, optional): </span>
-<span class="sd">                The ID of the neuron group. Defaults to 0.</span>
+<span class="sd">            members (Iterable[Union[Neuron, str]]):</span>
+<span class="sd">                The members of the group. Each entry may be a ``Neuron``</span>
+<span class="sd">                instance or a neuron name (string); strings are resolved</span>
+<span class="sd">                against ``self.neurons``.</span>
+<span class="sd">            group_name (str, optional):</span>
+<span class="sd">                The name of the neuron group. Auto-generated if omitted.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            NeuronGroup: The created neuron group.</span>
@@ -1573,12 +1573,12 @@
 <span class="sd">        Creates a connection group with the specified members.</span>
 
 <span class="sd">        Parameters:</span>
-<span class="sd">            members (List[str]): </span>
-<span class="sd">                The list of members in the connection group.</span>
-<span class="sd">            groupname (str): </span>
-<span class="sd">                The name of the connection group. Defaults to None.</span>
-<span class="sd">            group_id (int, optional): </span>
-<span class="sd">                The ID of the connection group. Defaults to 0.</span>
+<span class="sd">            members (Iterable[Connection]):</span>
+<span class="sd">                The members of the group. Each entry must be a ``Connection``</span>
+<span class="sd">                instance — connection identity is the ``(pre, post, uid)``</span>
+<span class="sd">                triple, not a string name.</span>
+<span class="sd">            group_name (str, optional):</span>
+<span class="sd">                The name of the connection group. Auto-generated if omitted.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            ConnectionGroup: The created connection group.</span>

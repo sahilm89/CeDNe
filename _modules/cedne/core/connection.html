@@ -470,12 +470,14 @@
 <span class="sd">        Initializes a new instance of the ConnectionGroup class.</span>
 
 <span class="sd">        Parameters:</span>
-<span class="sd">            groupname (str):</span>
-<span class="sd">                The name of the connection group.</span>
-<span class="sd">            members (List[str]):</span>
-<span class="sd">                The list of members in the connection group.</span>
-<span class="sd">            group_id (int, optional):</span>
-<span class="sd">                The ID of the neuron group. Defaults to 0.</span>
+<span class="sd">            network (NervousSystem):</span>
+<span class="sd">                The owning nervous system.</span>
+<span class="sd">            members (Iterable[Connection], optional):</span>
+<span class="sd">                The connections in the group. Each entry must be a</span>
+<span class="sd">                ``Connection`` instance — connection identity is the</span>
+<span class="sd">                ``(pre, post, uid)`` triple, not a string. Defaults to empty.</span>
+<span class="sd">            group_name (str, optional):</span>
+<span class="sd">                The name of the connection group. Auto-generated if omitted.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            None</span>

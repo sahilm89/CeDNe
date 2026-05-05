@@ -806,12 +806,14 @@
 <span class="sd">        Initializes a new instance of the NeuronGroup class.</span>
 
 <span class="sd">        Parameters:</span>
-<span class="sd">            groupname (str):</span>
-<span class="sd">                The name of the neuron group.</span>
-<span class="sd">            members (List[str]):</span>
-<span class="sd">                The list of members in the neuron group.</span>
-<span class="sd">            group_id (int, optional):</span>
-<span class="sd">                The ID of the neuron group. Defaults to 0.</span>
+<span class="sd">            network (NervousSystem):</span>
+<span class="sd">                The owning nervous system. Used to resolve string members.</span>
+<span class="sd">            members (Iterable[Union[Neuron, str]], optional):</span>
+<span class="sd">                The members of the group. Each entry may be a ``Neuron`` instance</span>
+<span class="sd">                or a neuron name (string) — names are resolved via</span>
+<span class="sd">                ``network.neurons``. Defaults to an empty group.</span>
+<span class="sd">            group_name (str, optional):</span>
+<span class="sd">                The name of the neuron group. Auto-generated if omitted.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            None</span>
@@ -825,8 +827,21 @@
         <span class="k">if</span> <span class="n">members</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">members</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">assert</span> <span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">Neuron</span><span class="p">)</span><span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">members</span><span class="p">]),</span> <span class="s2">&quot;Neuron group members must be</span><span class="se">\</span>
-<span class="s2">                 of type Neuron&quot;</span>
+            <span class="n">resolved</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">members</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">Neuron</span><span class="p">):</span>
+                    <span class="n">resolved</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">m</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">network</span><span class="o">.</span><span class="n">neurons</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;Neuron </span><span class="si">{</span><span class="n">m</span><span class="si">!r}</span><span class="s2"> not found in network </span><span class="si">{</span><span class="n">network</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2">&quot;</span>
+                        <span class="p">)</span>
+                    <span class="n">resolved</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">network</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">m</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;NeuronGroup members must be Neuron or str, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">m</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+            <span class="n">members</span> <span class="o">=</span> <span class="n">resolved</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">members</span> <span class="o">=</span> <span class="n">members</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span> <span class="o">=</span> <span class="p">{</span><span class="n">m</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">members</span><span class="p">}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">network</span> <span class="o">=</span> <span class="n">network</span>
