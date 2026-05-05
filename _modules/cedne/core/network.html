@@ -309,6 +309,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.connection</span><span class="w"> </span><span class="kn">import</span> <span class="n">Connection</span><span class="p">,</span> \
     <span class="n">ChemicalSynapse</span><span class="p">,</span> <span class="n">GapJunction</span><span class="p">,</span> <span class="n">ConnectionGroup</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.history</span><span class="w"> </span><span class="kn">import</span> <span class="n">record</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.neuron</span><span class="w"> </span><span class="kn">import</span> <span class="n">Neuron</span><span class="p">,</span> <span class="n">NeuronGroup</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.animal</span><span class="w"> </span><span class="kn">import</span> <span class="n">Worm</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.source</span><span class="w"> </span><span class="kn">import</span> <span class="n">Citable</span>
@@ -764,6 +765,7 @@
 
 <div class="viewcode-block" id="NervousSystem.subnetwork">
 <a class="viewcode-back" href="../../../index.html#cedne.NervousSystem.subnetwork">[docs]</a>
+    <span class="nd">@record</span><span class="p">(</span><span class="s2">&quot;subnetwork&quot;</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">subnetwork</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">neuron_names</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">connections</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">as_view</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Generates a subgraph of the network based on the given list of neuron names.</span>
@@ -880,6 +882,7 @@
 
 <div class="viewcode-block" id="NervousSystem.fold_network">
 <a class="viewcode-back" href="../../../index.html#cedne.NervousSystem.fold_network">[docs]</a>
+    <span class="nd">@record</span><span class="p">(</span><span class="s2">&quot;fold_network&quot;</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">fold_network</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fold_by</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="s1">&#39;collect&#39;</span><span class="p">,</span> <span class="n">exceptions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">self_loops</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fold the network based on a filter.</span>
