@@ -1148,12 +1148,12 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         Creates a neuron group with the specified members.
 
         Parameters:
-            members (List[str]): 
-                The list of members in the neuron group.
-            groupname (str): 
-                The name of the neuron group. Defaults to None.
-            group_id (int, optional): 
-                The ID of the neuron group. Defaults to 0.
+            members (Iterable[Union[Neuron, str]]):
+                The members of the group. Each entry may be a ``Neuron``
+                instance or a neuron name (string); strings are resolved
+                against ``self.neurons``.
+            group_name (str, optional):
+                The name of the neuron group. Auto-generated if omitted.
 
         Returns:
             NeuronGroup: The created neuron group.
@@ -1177,12 +1177,12 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         Creates a connection group with the specified members.
 
         Parameters:
-            members (List[str]): 
-                The list of members in the connection group.
-            groupname (str): 
-                The name of the connection group. Defaults to None.
-            group_id (int, optional): 
-                The ID of the connection group. Defaults to 0.
+            members (Iterable[Connection]):
+                The members of the group. Each entry must be a ``Connection``
+                instance — connection identity is the ``(pre, post, uid)``
+                triple, not a string name.
+            group_name (str, optional):
+                The name of the connection group. Auto-generated if omitted.
 
         Returns:
             ConnectionGroup: The created connection group.

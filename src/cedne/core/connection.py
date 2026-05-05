@@ -172,12 +172,14 @@ class ConnectionGroup(Citable):
         Initializes a new instance of the ConnectionGroup class.
 
         Parameters:
-            groupname (str):
-                The name of the connection group.
-            members (List[str]):
-                The list of members in the connection group.
-            group_id (int, optional):
-                The ID of the neuron group. Defaults to 0.
+            network (NervousSystem):
+                The owning nervous system.
+            members (Iterable[Connection], optional):
+                The connections in the group. Each entry must be a
+                ``Connection`` instance — connection identity is the
+                ``(pre, post, uid)`` triple, not a string. Defaults to empty.
+            group_name (str, optional):
+                The name of the connection group. Auto-generated if omitted.
 
         Returns:
             None

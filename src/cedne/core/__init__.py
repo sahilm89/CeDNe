@@ -19,6 +19,9 @@ from .connection import (
     ConnectionGroup, Path
 )
 
+# Provenance / citations
+from .source import Citation, Citable, serialize_citations
+
 # Experimental trial recordings and features
 from .recordings import Trial, StimResponse
 from .session import Session
@@ -43,7 +46,10 @@ __all__ = [
     # Connections
     "Connection", "ChemicalSynapse", "GapJunction", "BulkConnection",
     "ConnectionGroup", "Path",
-    
+
+    # Provenance
+    "Citation", "Citable", "serialize_citations",
+
     # Recordings
     "Trial", "StimResponse", "Session",
     

@@ -507,7 +507,7 @@ def make_pristionchus(name='', dataset_ind=1):
         f"dataset_ind must be one of {list(specimen_map)}; got {dataset_ind!r}"
     specimen, weight_col = specimen_map[dataset_ind]
 
-    df = pd.read_excel(pristionchus_pharynx / 'mmc3.xlsx', sheet_name='Sheet1',
+    df = pd.read_excel(pristionchus_pharynx / 'mmc2.xlsx', sheet_name='Sheet1',
                        header=1, engine='openpyxl')
     adjacency = {}
     if {'presynaptic', 'postsynaptic', weight_col}.issubset(df.columns):

@@ -17,6 +17,7 @@ from .core import (
     NervousSystem,
     Connection, ChemicalSynapse, GapJunction, BulkConnection,
     ConnectionGroup, Path,
+    Citation, Citable, serialize_citations,
     Trial, StimResponse,
     F_SAMPLE, RANDOM_SEED, RECURSION_LIMIT,
     load_pickle, load_worm, generate_random_string,
@@ -38,6 +39,7 @@ __all__ = [
     "NervousSystem",
     "Connection", "ChemicalSynapse", "GapJunction", "BulkConnection",
     "ConnectionGroup", "Path",
+    "Citation", "Citable", "serialize_citations",
     "Trial", "StimResponse", "Behavior", "GraphMap",
 
     # Config + I/O

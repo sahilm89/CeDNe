@@ -484,12 +484,14 @@ class NeuronGroup(Citable):
         Initializes a new instance of the NeuronGroup class.
 
         Parameters:
-            groupname (str):
-                The name of the neuron group.
-            members (List[str]):
-                The list of members in the neuron group.
-            group_id (int, optional):
-                The ID of the neuron group. Defaults to 0.
+            network (NervousSystem):
+                The owning nervous system. Used to resolve string members.
+            members (Iterable[Union[Neuron, str]], optional):
+                The members of the group. Each entry may be a ``Neuron`` instance
+                or a neuron name (string) — names are resolved via
+                ``network.neurons``. Defaults to an empty group.
+            group_name (str, optional):
+                The name of the neuron group. Auto-generated if omitted.
 
         Returns:
             None
@@ -503,8 +505,21 @@ class NeuronGroup(Citable):
         if members is None:
             members = []
         else:
-            assert all([isinstance(m, Neuron)for m in members]), "Neuron group members must be\
-                 of type Neuron"
+            resolved = []
+            for m in members:
+                if isinstance(m, Neuron):
+                    resolved.append(m)
+                elif isinstance(m, str):
+                    if m not in network.neurons:
+                        raise KeyError(
+                            f"Neuron {m!r} not found in network {network.name!r}"
+                        )
+                    resolved.append(network.neurons[m])
+                else:
+                    raise TypeError(
+                        f"NeuronGroup members must be Neuron or str, got {type(m).__name__}"
+                    )
+            members = resolved
         self.members = members
         self.neurons = {m.name: m for m in members}
         self.network = network
