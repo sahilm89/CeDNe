@@ -37,6 +37,7 @@ import networkx as nx
 from collections.abc import Sequence
 from .connection import Connection, \
     ChemicalSynapse, GapJunction, ConnectionGroup
+from .history import record
 from .neuron import Neuron, NeuronGroup
 from .animal import Worm
 from .source import Citable
@@ -437,6 +438,7 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         ''' Standard formats to load data into the network'''
         #pass
 
+    @record("subnetwork")
     def subnetwork(self, neuron_names=None, name=None, connections=None, as_view=False, data=True):
         """
         Generates a subgraph of the network based on the given list of neuron names.
@@ -547,6 +549,7 @@ class NervousSystem(nx.MultiDiGraph, Citable):
                 combined_network.connections[(combined_network.neurons[source_neuron], combined_network.neurons[target_neuron], connection.uid)] = connection
         return combined_network
 
+    @record("fold_network")
     def fold_network(self, fold_by, name=None, data='collect', exceptions=None, self_loops=True):
         """
         Fold the network based on a filter.

@@ -22,6 +22,7 @@ from cedne.core import Neuron, Behavior, Session
 from cedne.core.context import Context, ExperimentalContext
 from cedne.core.animal import Animal
 from cedne.core.source import Citation
+from cedne.core.history import record
 from .config import *
 warnings.filterwarnings("ignore", category=UserWarning, module='openpyxl')
 
@@ -111,6 +112,7 @@ def _celegans_canonical_types():
     }
 
 
+@record("make_worm")
 def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False):
     ''' Utility function to make a Worm based on import parameters.'''
     if import_parameters is None or (import_parameters['style'] == 'cook' and import_parameters['sex'] == 'hermaphrodite'):
@@ -300,6 +302,7 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
         raise ValueError("Unsupported connectome style")
     return w
 
+@record("make_fly")
 def makeFly(name = '', import_parameters=None):
     if import_parameters is not None and import_parameters['style'] == 'fly_wire':
         f = Fly(name)
@@ -371,6 +374,7 @@ def makeFly(name = '', import_parameters=None):
 
     return f
 
+@record("make_ciona")
 def make_ciona():
     a = Animal(name='Ciona intestinalis', species='Ciona intestinalis', common_name='sea squirt', phylum='Chordata', clade='Tunicata')
     a.citations.update({'ciona_connectome': citations['ciona_connectome']})
@@ -480,6 +484,7 @@ def make_ciona():
 
     return a
 
+@record("make_pristionchus")
 def make_pristionchus(name='', dataset_ind=1):
     """Load the Pristionchus pacificus pharyngeal connectome (Bumbarger et al. 2013).
 
@@ -552,6 +557,7 @@ def make_pristionchus(name='', dataset_ind=1):
     return a
 
 
+@record("make_platynereis")
 def make_platynereis(name=''):
     """Load the Platynereis dumerilii whole-body connectome (Verásztó 2025).
 
@@ -802,6 +808,7 @@ def make_platynereis(name=''):
     return a
 
 
+@record("load_contactome")
 def load_contactome(nn, stage='adult', matrix_path=None):
     """Layer Brittin 2018 nerve-ring contactome edges onto an existing NervousSystem.
 
@@ -920,6 +927,7 @@ def build_nervous_system(nn, neuron_data, chem_synapses, elec_synapses, position
             if not chem_only:
                 nn.setup_gap_junctions(elec_adjacency)
 
+@record("load_lineage")
 def load_lineage(neural_network, sex='Hermaphrodite'):
     lineage_meaning_description = pd.read_excel(lineage, sheet_name=sex, engine='openpyxl')
     return(lineage_meaning_description)
@@ -981,6 +989,7 @@ def getLigandsAndReceptors(npr, ligmap, col):
     return receptor_ligand
 
 
+@record("load_neurotransmitters")
 def loadNeurotransmitters(nn, sex='Hermaphrodite'):
     ''' Loads Neurotransmitters into neurons using Wang et al 2024'''
 
@@ -1178,6 +1187,7 @@ def _read_new_neuropeptide_model(pair_row, range_model, allowed_neurons=None):
     )
 
 
+@record("load_neuropeptides")
 def loadNeuropeptides(w, neuropeps: str = 'all', mode: str = "old", range_model: str = "long"):
     ''' Loads Neuropeptides into neurons using Ripoll-Sanchez et al. 2023'''
 
@@ -1285,6 +1295,7 @@ def returnThresholdDict(th1, th2, th3, th4, nnames, cengen_neurons):
     threshold_dict = {'1': th1_f, '2': th2_f, '3': th3_f, '4': th4_f}
     return threshold_dict
 
+@record("load_transcripts")
 def loadTranscripts(nn, threshold=4):
     """
     Loads transcripts from CENGEN data files and assigns them to neuron objects.
@@ -1392,6 +1403,7 @@ def get_enriched_neurons(network, target_neurons, excluded_neurons=None, thresho
 
     return enriched_neurons
 
+@record("load_gap_junctions")
 def loadGapJunctions(nn, threshold=4):
     """
     Use CENGEN data to load gap junction transcripts to known gap junctions in the given neural network.
@@ -1404,7 +1416,7 @@ def loadGapJunctions(nn, threshold=4):
         None
     """
     if not hasattr(list(nn.neurons.values())[0], 'transcript'):
-        loadTranscripts(nn, threshold)
+        loadTranscripts(nn, threshold=threshold)
 
     gene_names = list(nn.neurons.values())[0].transcript.index.tolist()
     gapjn_subunits = [g for g in gene_names if g.startswith('inx') or g in ['che-7', 'eat-5', 'unc-7', 'unc-9']]
@@ -1422,6 +1434,7 @@ def loadGapJunctions(nn, threshold=4):
     nn.worm.citations.update({'cengen':citations['cengen']})
 
 ## Synaptic weights
+@record("load_synaptic_weights")
 def loadSynapticWeights(nn):
     """
     Load synaptic weights from an Excel file into the given neural network.
@@ -1501,6 +1514,7 @@ def download_datasets(key=''):
         print("Not yet supported. Download manually into the directory.")
 
 
+@record("load_recordings")
 def load_recordings(animal, source, network=None, trial_num=0, time_col=0,
                     metadata=None, on_missing='skip'):
     """Attach per-neuron recordings to ``animal`` from a tidy CSV or DataFrame.
@@ -1579,6 +1593,7 @@ def load_recordings(animal, source, network=None, trial_num=0, time_col=0,
 
 
 """ This is experimental, not yet tested """
+@record("load_nwb")
 def load_nwb(filepath):
     """
     Loads an NWB file and maps its content to CeDNe core objects.
@@ -1696,6 +1711,7 @@ def load_nwb(filepath):
         return nn, session
 
 
+@record("load_atanas")
 def load_atanas(condition='Control', max_files=None, network=None):
     """
     Load Atanas et al. (2023) whole-brain calcium imaging data into CeDNe.

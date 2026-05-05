@@ -23,6 +23,9 @@ class Animal(Citable):
         self.contexts = {}  # Dict[str, Context]
         self.active_context = None
         self.active_network = None
+        # Descriptive event log; see cedne.core.history. Older pickles will
+        # not have this attribute — readers should defensively initialize.
+        self.history = []
         for key, value in kwargs.items():
             self.set_property(key, value)
 
