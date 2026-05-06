@@ -321,7 +321,15 @@
 
 <span class="n">ALLOWED_MODULE_PREFIXES</span> <span class="o">=</span> <span class="p">[</span>
     <span class="s2">&quot;cedne&quot;</span><span class="p">,</span>
-    <span class="s2">&quot;networkx&quot;</span>
+    <span class="s2">&quot;networkx&quot;</span><span class="p">,</span>
+    <span class="c1"># CeDNe Worms commonly carry pandas-backed attribute tables (neurotransmitter,</span>
+    <span class="c1"># neuropeptide, transcriptome). Pandas&#39;s pickle protocol pulls in many internal</span>
+    <span class="c1"># classes (Series, DataFrame, BlockManager, several Index types) and the set</span>
+    <span class="c1"># shifts across pandas minor versions, so an explicit class allowlist would be</span>
+    <span class="c1"># brittle. Wildcard prefix here mirrors networkx&#39;s risk profile — pandas has no</span>
+    <span class="c1"># widely-published __reduce__ RCE gadgets, but tightening this is on the</span>
+    <span class="c1"># backlog alongside narrowing networkx/cedne.</span>
+    <span class="s2">&quot;pandas&quot;</span><span class="p">,</span>
 <span class="p">]</span>
 
 <span class="k">class</span><span class="w"> </span><span class="nc">RestrictedUnpickler</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">Unpickler</span><span class="p">):</span>
