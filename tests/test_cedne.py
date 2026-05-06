@@ -40,11 +40,23 @@ class TestWorm:
         file_path = tmp_path / "test_worm.pkl"
         worm.save(str(file_path))
         loaded_worm = load_worm(str(file_path))
-        
+
         assert loaded_worm.name == worm.name
         assert loaded_worm.stage == worm.stage
         assert loaded_worm.sex == worm.sex
         assert loaded_worm.genotype == worm.genotype
+
+    def test_worm_serialization_with_pandas_attribute(self, worm, tmp_path):
+        """Worms commonly carry pandas-backed attribute tables (e.g. neurotransmitter
+        / neuropeptide data). RestrictedUnpickler must allow them through."""
+        import pandas as pd
+        worm.set_property("nt_table", pd.Series({"AVA": "Glu", "AVB": "ACh"}))
+        worm.set_property("np_table", pd.DataFrame({"peptide": ["FLP-1"], "range": ["short"]}))
+        file_path = tmp_path / "test_worm_pandas.pkl"
+        worm.save(str(file_path))
+        loaded_worm = load_worm(str(file_path))
+        assert loaded_worm.nt_table.loc["AVA"] == "Glu"
+        assert loaded_worm.np_table.iloc[0]["peptide"] == "FLP-1"
 
     def test_worm_invalid_attributes(self):
         """Test Worm initialization with invalid attributes"""
