@@ -8,7 +8,7 @@ This module contains the fundamental classes and functions for the CeDNe package
 from .animal import Animal, Worm, Fly
 
 # Neurons and cell primitives
-from .neuron import Cell, Neuron, NeuronGroup
+from .neuron import Cell, Neuron, NeuronGroup, MERGED_TYPE, MERGE_TRACK_ATTRS
 
 # Network graph and system-level logic
 from .network import NervousSystem
@@ -38,7 +38,7 @@ __all__ = [
     "Animal", "Worm", "Fly",
     
     # Neuron model
-    "Cell", "Neuron", "NeuronGroup",
+    "Cell", "Neuron", "NeuronGroup", "MERGED_TYPE", "MERGE_TRACK_ATTRS",
     
     # Network model
     "NervousSystem",

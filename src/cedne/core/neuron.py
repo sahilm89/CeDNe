@@ -36,8 +36,32 @@ if TYPE_CHECKING:
     from .connection import Path
     from .recordings import Trial
 
+"""Sentinel value assigned to enum-like neuron attributes
+(``type``, ``category``, ``modality``, …) when the constituents of a
+merged neuron disagree on that attribute. Analyses that switch on those
+attributes should branch on this value explicitly rather than silently
+treating a merged neuron as its first constituent's value.
+"""
+MERGED_TYPE = 'merged'
+
+# Enum-like attributes whose merge follows the "all-same → keep / mixed
+# → 'merged'" policy in ``NervousSystem.contract_neurons``. Adding an
+# attribute here automatically:
+#   * captures it in each constituent's snapshot under
+#     ``Neuron.constituents[name][attr]``,
+#   * applies the merge policy to the surviving neuron,
+#   * mirrors the result onto the networkx node attribute dict so paths
+#     that reconstruct neurons via ``create_neurons_from(data=True)``
+#     propagate it.
+# The list is intentionally short — only attributes that behave like
+# bounded categorical labels. Numeric properties (degree, length,
+# transcript counts) need their own aggregation policy and are not
+# covered here.
+MERGE_TRACK_ATTRS = ('type', 'category', 'modality')
+
+
 class Cell:
-    ''' 
+    '''
     Models a biological cell.
     '''
     def __init__(self, name, network, **kwargs):
@@ -93,6 +117,9 @@ class Neuron(Cell, Citable):
         'name', 'network', 'in_connections', 'out_connections',
         'trial', 'features', 'spatial_mask', '_data', 'loadings',
         'position', 'transcript', 'group_id', 'citations',
+        # `constituents` is a dict (not a numeric scalar) — handled
+        # explicitly in to_dict() via the merged-neuron block.
+        'constituents',
     })
     def __init__(self, name: str, network: 'NervousSystem', **kwargs):
         """
@@ -151,6 +178,63 @@ class Neuron(Cell, Citable):
         # self.postsynapse = postsynapse or {}
         self.spatial_mask = kwargs.pop('spatial_mask', None)
         #self.cable_length = kwargs.pop('cable_length', 1)
+
+    @property
+    def is_merged(self) -> bool:
+        """True iff this neuron was produced by contracting other neurons.
+
+        Backed by ``self.constituents``: a non-empty dict ⇒ merged.
+        Set by ``NervousSystem.contract_neurons``; round-trips through
+        graph cloning via the networkx node attribute mirror.
+        """
+        return bool(getattr(self, 'constituents', None))
+
+    def _constituent_values(self, attr):
+        """Sorted list of distinct, non-empty string values of `attr`
+        across this neuron's constituents. Foundation for the per-attr
+        derived properties below — kept as one helper so the policy
+        lives in one place.
+
+        Non-string values (``None``, ``NaN`` from upstream pandas
+        loaders, numeric junk) are dropped: these enum-like attributes
+        only carry meaningful information when they're string labels,
+        and mixed-type sets break ``sorted`` on Python 3 anyway.
+        """
+        if not getattr(self, 'constituents', None):
+            return []
+        values = set()
+        for meta in self.constituents.values():
+            v = meta.get(attr)
+            if isinstance(v, str) and v:
+                values.add(v)
+        return sorted(values)
+
+    @property
+    def constituent_types(self):
+        """Sorted list of distinct source types across this neuron's
+        constituents, derived on-demand from ``self.constituents``.
+
+        Single source of truth: changing ``constituents`` automatically
+        updates this list — no parallel field to keep in sync.
+        Returns ``[]`` for un-merged neurons.
+        """
+        return self._constituent_values('type')
+
+    @property
+    def constituent_categories(self):
+        """Sorted list of distinct source categories across this
+        neuron's constituents. ``[]`` for un-merged neurons or for
+        merged neurons whose constituents had no category set.
+        """
+        return self._constituent_values('category')
+
+    @property
+    def constituent_modalities(self):
+        """Sorted list of distinct source modalities across this
+        neuron's constituents. ``[]`` for un-merged neurons or for
+        merged neurons whose constituents had no modality set.
+        """
+        return self._constituent_values('modality')
 
     def _parent_citables(self):
         """Walk citations up through containing NeuronGroups and the NervousSystem."""
@@ -220,6 +304,27 @@ class Neuron(Cell, Citable):
         # Citations attached directly to this neuron (not the inherited chain)
         if hasattr(self, 'citations') and self.citations:
             d['citations'] = serialize_citations(self.citations)
+
+        # Merge provenance — `is_merged` is only emitted when actually
+        # merged so un-merged neurons stay payload-slim. Each
+        # constituent snapshot includes every MERGE_TRACK_ATTRS value
+        # captured at merge time.
+        if self.is_merged:
+            d['is_merged'] = True
+            d['constituents'] = [
+                {
+                    'name': meta.get('name', name),
+                    **{a: meta.get(a, '') for a in MERGE_TRACK_ATTRS},
+                }
+                for name, meta in self.constituents.items()
+            ]
+            d['constituent_types'] = self.constituent_types
+            cats = self.constituent_categories
+            if cats:
+                d['constituent_categories'] = cats
+            mods = self.constituent_modalities
+            if mods:
+                d['constituent_modalities'] = mods
 
         return d
 

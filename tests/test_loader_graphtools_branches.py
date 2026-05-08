@@ -315,6 +315,29 @@ def test_make_pristionchus_rejects_unknown_dataset():
         loader.make_pristionchus(dataset_ind=3)
 
 
+def test_make_pristionchus_filters_repeat_header_rows(monkeypatch):
+    """Repeat header rows mid-sheet must not leak into the cell list as
+    pseudo-neurons. The Bumbarger 2013 mmc2.xlsx workbook has a
+    multi-block layout where header literals reappear deeper in the file;
+    without the guard they showed up as neurons named 'presynaptic' /
+    'postsynaptic' in the loaded NervousSystem."""
+    raw = pd.DataFrame(
+        {
+            "presynaptic": ["A", "presynaptic", "A", "B"],
+            "postsynaptic": ["B", "postsynaptic", "C", "C"],
+            "weight 107": [3, 0, 1, 1],
+            "weight 148": [2, 0, 1, 0],
+        }
+    )
+    monkeypatch.setattr(loader.pd, "read_excel", lambda *args, **kwargs: raw)
+
+    animal = loader.make_pristionchus("pristi", dataset_ind=1)
+    nn = animal.networks["pharynx"]
+    assert "presynaptic" not in nn.neurons
+    assert "postsynaptic" not in nn.neurons
+    assert set(nn.neurons) == {"A", "B", "C"}
+
+
 def test_makeFly_fly_wire_loads_metadata_and_connections(monkeypatch):
     def fake_read_csv(path, *args, **kwargs):
         if path.name == "names.csv":

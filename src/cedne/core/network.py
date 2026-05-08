@@ -38,7 +38,7 @@ from collections.abc import Sequence
 from .connection import Connection, \
     ChemicalSynapse, GapJunction, ConnectionGroup
 from .history import record
-from .neuron import Neuron, NeuronGroup
+from .neuron import Neuron, NeuronGroup, MERGED_TYPE, MERGE_TRACK_ATTRS
 from .animal import Worm
 from .source import Citable
 
@@ -722,41 +722,149 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         # for e in self.out_edges(self.neurons[contracted_name], keys=True, data=True):
         #     self.connections.update({(e[0], e[1], e[2]): self.connections[e[3]['_id']]})
         
+    @record("contract_neurons")
     def contract_neurons(self, pair, contracted_name, data='collect', copy_graph=False, self_loops=True):
         """
-        Contract two neurons together. Currently, data from other nodes is stored in the contraction
-        attribute on each contracted node. Attributes are currently carried on from the source neuron
-        to the contraction.
+        Contract ``target`` into ``source``, redirecting target's edges
+        to source and renaming source to ``contracted_name``.
 
         Args:
-            pair (tuple): 
-                Pair of neuron names to contract.
-            copy_graph (bool): 
-                If True, returns a new graph with the contraction.
-                Otherwise, modifies the current graph.
+            pair (tuple[str, str]):
+                ``(source_name, target_name)``. Source survives (renamed
+                to ``contracted_name``); target is removed and its edges
+                are redirected onto source.
+            contracted_name (str):
+                New name for the surviving neuron.
+            data (str, optional):
+                No-op at the core layer — accepted for backwards
+                compatibility with callers that use it as a hint for
+                post-merge cleanup. The cedne_web backend uses
+                ``data='clean'`` to indicate that
+                ``contract_connections`` should be called after a chain
+                of contractions to collapse parallel edges.
+            copy_graph (bool, optional):
+                If True, work on a deep copy and return it; the original
+                is untouched. If False (default), mutate in place and
+                return None.
+            self_loops (bool, optional):
+                Forwarded to ``nx.contracted_nodes``. If False, drops
+                any self-loop produced by edges between the merged pair.
 
         Returns:
-            NervousSystem: 
-                A deep copy of the subgraph generated from the neuron_names.
-                The subgraph contains a dictionary of neurons with their names as keys.
-                Only returned if copy_graph is True.
+            NervousSystem | None:
+                The new graph if ``copy_graph=True``; ``None`` otherwise
+                (mutates in place).
+
+        Notes:
+            Tracks merge provenance on the surviving neuron via three
+            new Neuron API surfaces:
+
+            * ``Neuron.constituents``: dict mapping each pre-merge name
+              to a snapshot ``{'name', 'type'}``. Transitive — merging
+              A+B then merging the result with C yields constituents
+              ``{A, B, C}``.
+            * ``Neuron.is_merged``: bool, True iff ``constituents`` is
+              non-empty.
+            * ``Neuron.constituent_types``: sorted list of distinct
+              constituent types, derived from ``constituents`` so the
+              two cannot drift out of sync.
+
+            Type-merge policy:
+
+            * If all constituents share a single type → that type is
+              preserved on the surviving neuron.
+            * If types differ → ``Neuron.type`` is set to the sentinel
+              ``MERGED_TYPE`` (``'merged'``) so analyses that switch on
+              type can branch on the merged case explicitly rather than
+              silently inheriting one constituent's type.
         """
-        source_neuron, target_neuron = pair
+        source_name, target_name = pair
+
         if copy_graph:
             new_graph = self.copy()
-            new_graph = new_graph.contract_neurons((source_neuron, target_neuron, contracted_name)\
-                                                   , copy_graph=False)
+            # FIX: previously this passed a 3-tuple as `pair`, which the
+            # destructure rejects with ValueError. The 2-tuple goes in
+            # `pair`; `contracted_name` is its own argument.
+            new_graph.contract_neurons(
+                (source_name, target_name),
+                contracted_name,
+                data=data, copy_graph=False, self_loops=self_loops,
+            )
             return new_graph
 
-        for _cid, conn in self.neurons[source_neuron].get_connections().items():
+        src = self.neurons[source_name]
+        tgt = self.neurons[target_name]
+
+        # ----- Merge-provenance bookkeeping (new in Issue 10A) -------------
+        # We track constituents on the surviving neuron explicitly, BEFORE
+        # nx.contracted_nodes mutates the graph, because:
+        #   (a) transitive merges (A+B → A_m, then A_m+C → A_m) accumulate
+        #       cleanly through `setdefault`,
+        #   (b) we don't depend on networkx's internal `contraction` attr,
+        #       which has changed semantics across versions.
+        # Snapshot helper: capture every MERGE_TRACK_ATTRS value on a
+        # neuron at merge time. Stored under the original name so the
+        # merge policy below can reason about all of them uniformly.
+        def _snapshot(neuron, name):
+            snap = {'name': name}
+            for attr in MERGE_TRACK_ATTRS:
+                snap[attr] = getattr(neuron, attr, '')
+            return snap
+
+        if not getattr(src, 'constituents', None):
+            # First merge for src — record its pre-merge identity.
+            # src.name is still the original here (rename happens below).
+            src.constituents = {src.name: _snapshot(src, src.name)}
+
+        # Fold any constituents the target itself had from prior merges so
+        # nested merges produce a flat list of original neurons.
+        if getattr(tgt, 'constituents', None):
+            for c_name, c_meta in tgt.constituents.items():
+                src.constituents.setdefault(c_name, c_meta)
+
+        # Add the target as a constituent (keyed by its current name,
+        # which is its original name unless the target itself was already
+        # a merged neuron — in which case the fold above already covered
+        # the originals and target_name is the merged-name placeholder
+        # we still record for traceability).
+        src.constituents.setdefault(target_name, _snapshot(tgt, target_name))
+
+        # Apply the merge policy across every tracked enum-like attribute:
+        # all-same → keep that value; mixed → set to the MERGED_TYPE
+        # sentinel; no usable values → leave the attribute alone. type,
+        # category, and modality all need this — silent inheritance from
+        # the source neuron was the bug Issue 10 fixed for type, and the
+        # same fix needs to apply to category/modality (which are
+        # equally enum-like and equally susceptible to silent overwrite).
+        for attr in MERGE_TRACK_ATTRS:
+            values = {meta.get(attr) for meta in src.constituents.values()}
+            values.discard(None)
+            values.discard('')
+            if len(values) == 1:
+                setattr(src, attr, next(iter(values)))
+            elif len(values) > 1:
+                setattr(src, attr, MERGED_TYPE)
+
+        # Mirror `constituents` and any updated tracked attributes to
+        # the networkx node attribute dict so paths that reconstruct
+        # neurons via `create_neurons_from(data=True)` (used by
+        # contract_connections, copy(copy_type='deep_with_data'), etc.)
+        # propagate the merge state instead of dropping it.
+        self.nodes[src]['constituents'] = src.constituents
+        for attr in MERGE_TRACK_ATTRS:
+            if hasattr(src, attr):
+                self.nodes[src][attr] = getattr(src, attr)
+
+        # ----- Existing edge-contraction flow ------------------------------
+        for _cid, conn in src.get_connections().items():
             conn.set_property('_id', conn._id)
-        for _cid, conn in self.neurons[target_neuron].get_connections().items():
+        for _cid, conn in tgt.get_connections().items():
             conn.set_property('_id', conn._id)
-        nx.contracted_nodes(self, self.neurons[source_neuron], self.neurons[target_neuron],\
-                                copy=copy_graph, self_loops=self_loops)
-        self.neurons[source_neuron].name = contracted_name
+        nx.contracted_nodes(self, src, tgt, copy=False, self_loops=self_loops)
+        src.name = contracted_name
         self.update_neurons()
     
+    @record("contract_connections")
     def contract_connections(self, contraction_dict):
         """
         Contracts the connections into a single connection and modifies the graph accordingly.

@@ -16,7 +16,6 @@ import re
 from pathlib import Path
 import numpy as np
 import pandas as pd
-import requests
 from cedne import Worm, Fly, NervousSystem
 from cedne.core import Neuron, Behavior, Session
 from cedne.core.context import Context, ExperimentalContext
@@ -24,6 +23,15 @@ from cedne.core.animal import Animal
 from cedne.core.source import Citation
 from cedne.core.history import record
 from .config import *
+from .datasets import (
+    DatasetSpec,
+    DATASET_REGISTRY,
+    MissingDatasetError,
+    MergedNetworkError,
+    require_dataset_file,
+    download_dataset,
+    download_all_public,
+)
 warnings.filterwarnings("ignore", category=UserWarning, module='openpyxl')
 
 
@@ -140,9 +148,10 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
             adj_gapjn = cache['adj_gapjn']
         else:
             input_file = 'SI 5 Connectome adjacency matrices, corrected July 2020.xlsx'
+            cook_path = require_dataset_file(cook_connectome / input_file, 'cook_2019')
 
             ## Chemical synapses
-            cook_chem = pd.read_excel(cook_connectome / input_file, sheet_name='male chemical', engine='openpyxl')
+            cook_chem = pd.read_excel(cook_path, sheet_name='male chemical', engine='openpyxl')
             colnames = cook_chem.iloc[1, 3:-1].astype(str).tolist()
             labels = cook_chem.loc[2:383]['Unnamed: 2'].tolist()
 
@@ -183,7 +192,7 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
                                  if col1 in labels_set and chem_adj[i, j] != 0}
 
             ## Gap junctions
-            cook_gapjn = pd.read_excel(cook_connectome / input_file, sheet_name='male gap jn symmetric', engine='openpyxl')
+            cook_gapjn = pd.read_excel(cook_path, sheet_name='male gap jn symmetric', engine='openpyxl')
             colnames = cook_gapjn.iloc[1][3:-1].astype(str).tolist()
 
             row_labels = cook_gapjn.loc[2:383]['Unnamed: 2'].tolist()
@@ -228,7 +237,8 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
         assert int(import_parameters['dataset_ind']) in range(1,len(ind_dict[import_parameters['stage']])+1) , f"Dataset id {int(import_parameters['dataset_ind'])} for stage {import_parameters['stage']} should be in {list(range(1,len(ind_dict[import_parameters['stage']])+1))}"
 
         input_file = 'witvliet_2020_' + str(ind_dict[import_parameters['stage']][int(import_parameters['dataset_ind'])-1]) + ' ' + import_parameters['stage'] + '.xlsx'
-        witvliet_input = pd.read_excel(witvliet_connectome / input_file, engine='openpyxl')
+        witvliet_path = require_dataset_file(witvliet_connectome / input_file, 'witvliet_2020')
+        witvliet_input = pd.read_excel(witvliet_path, engine='openpyxl')
         all_labels = set(witvliet_input['pre']) | set(witvliet_input['post'])
         labels = [lab for lab in all_labels if not any(lab.startswith(k) for k in ['BWM-', 'CEPsh', 'GLR'])]
 
@@ -259,7 +269,7 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
         w.citations.update({'white_connectome': citations['white_connectome']})
         nn = NervousSystem(w, network='white_1986')
 
-        nt = pd.read_excel(white_connectome / 'NeuronType.xls')
+        nt = pd.read_excel(require_dataset_file(white_connectome / 'NeuronType.xls', 'white_1986'))
         nt.columns = [c.strip() for c in nt.columns]
         soma_position = {str(r['Neuron']).strip(): float(r['Soma Position'])
                          for _, r in nt.iterrows() if pd.notna(r['Soma Position'])}
@@ -279,7 +289,7 @@ def makeWorm(name='', import_parameters=None, chem_only=False, gapjn_only=False)
             s = str(x).strip()
             return name_fixups.get(s, s)
 
-        edges = pd.read_excel(white_connectome / 'NeuronConnect.xls')
+        edges = pd.read_excel(require_dataset_file(white_connectome / 'NeuronConnect.xls', 'white_1986'))
         chem_adj = {}
         for _, row in edges[edges['Type'].isin(['S', 'Sp'])].iterrows():
             pre, post = _canon(row['Neuron 1']), _canon(row['Neuron 2'])
@@ -312,7 +322,7 @@ def makeFly(name = '', import_parameters=None):
         ## Neurons
 
         ### Names
-        names = pd.read_csv(fly_wire / 'names.csv')
+        names = pd.read_csv(require_dataset_file(fly_wire / 'names.csv', 'fly_wire'))
         labs, neuron_types, lab_root_id = names['name'], names['group'], names['root_id']
         neuron_dict = {r:lab for r,lab in zip(lab_root_id, labs)}
         type_dict = {r:ntype for r,ntype in zip(lab_root_id, neuron_types)} 
@@ -322,12 +332,12 @@ def makeFly(name = '', import_parameters=None):
         neuron_types = {neuron_dict[rid]:type_dict[rid] for rid in root_ids}
         
         ### Positions
-        coordinates = pd.read_csv(fly_wire / 'coordinates.csv')
+        coordinates = pd.read_csv(require_dataset_file(fly_wire / 'coordinates.csv', 'fly_wire'))
         pos_root_id, position = coordinates['root_id'], coordinates['position']
         position_dict = {neuron_dict[rid]:np.array(list(filter(None, pos.split('[')[-1].split(']')[0].split(' '))), dtype=int) for rid,pos in zip(pos_root_id, position)}
         
         ### Stats
-        stats = pd.read_csv(fly_wire / 'cell_stats.csv')
+        stats = pd.read_csv(require_dataset_file(fly_wire / 'cell_stats.csv', 'fly_wire'))
         stats_root_id, nlength, narea, nvolume = stats['root_id'], np.array(stats['length_nm'], dtype=int), np.array(stats['area_nm'], dtype=int), np.array(stats['size_nm'], dtype=int)
 
         length_dict = {neuron_dict[rid]:nlen for (rid,nlen) in zip(stats_root_id, nlength)}
@@ -337,7 +347,7 @@ def makeFly(name = '', import_parameters=None):
         nn.create_neurons(labels, type=neuron_types, position=position_dict, length=length_dict, area=area_dict, volume=vol_dict)
 
         ## Connections
-        conns = pd.read_csv(fly_wire / 'connections_no_threshold.csv')
+        conns = pd.read_csv(require_dataset_file(fly_wire / 'connections_no_threshold.csv', 'fly_wire'))
         pre_rid, post_rid, weights, nts = conns['pre_root_id'], conns['post_root_id'], conns['syn_count'], conns['nt_type']
 
         for pre, post, weight, nt in zip(pre_rid, post_rid, weights, nts ):
@@ -350,7 +360,7 @@ def makeFly(name = '', import_parameters=None):
         f.citations.update({'winding_connectome': citations['winding_connectome']})
         nn = NervousSystem(f)
 
-        names = pd.read_csv(winding_connectome/ 'annotations.csv')
+        names = pd.read_csv(require_dataset_file(winding_connectome / 'annotations.csv', 'winding_2023'))
         base_neuron_names = names['left_id'].tolist() + names['right_id'].tolist()
         base_neuron_type = names['celltype'].tolist() + names['celltype'].tolist()
 
@@ -360,7 +370,7 @@ def makeFly(name = '', import_parameters=None):
             if base_neuron_names[j] != 'no pair':
                 neuron_types[str(base_neuron_names[j])] = str(base_neuron_type[j])
 
-        conns = pd.read_csv(winding_connectome/ 'all-all_connectivity_matrix.csv', index_col= 0)
+        conns = pd.read_csv(require_dataset_file(winding_connectome / 'all-all_connectivity_matrix.csv', 'winding_2023'), index_col=0)
 
         neuron_names = [str(n) for n in conns.index]
         nn.create_neurons(neuron_names, neuron_type=[neuron_types[nname] if nname in neuron_types else 'unannotated' for nname in neuron_names])
@@ -381,14 +391,14 @@ def make_ciona():
     nn = NervousSystem(a)
     
     # Load core data
-    names_df = pd.read_csv(ciona_connectome / 'nodes.csv')
+    names_df = pd.read_csv(require_dataset_file(ciona_connectome / 'nodes.csv', 'ryan_2016'))
     names_df.columns = names_df.columns.str.strip().str.lstrip('#').str.strip()
-    conns = pd.read_csv(ciona_connectome / 'edges.csv')
+    conns = pd.read_csv(require_dataset_file(ciona_connectome / 'edges.csv', 'ryan_2016'))
     conns.columns = conns.columns.str.strip().str.lstrip('#').str.strip()
 
     # Load enrichment data
-    fig1_xl = pd.read_excel(ciona_connectome / 'elife-16962-fig1-data1-v1.xlsx', sheet_name='Sheet1').ffill()
-    fig3_xl = pd.read_excel(ciona_connectome / 'elife-16962-fig3-data1-v1.xlsx', sheet_name='Sheet2')
+    fig1_xl = pd.read_excel(require_dataset_file(ciona_connectome / 'elife-16962-fig1-data1-v1.xlsx', 'ryan_2016'), sheet_name='Sheet1').ffill()
+    fig3_xl = pd.read_excel(require_dataset_file(ciona_connectome / 'elife-16962-fig3-data1-v1.xlsx', 'ryan_2016'), sheet_name='Sheet2')
     
     # Coordinates mapping from Fig 3 (3D)
     pos3d_dict = {}
@@ -512,17 +522,43 @@ def make_pristionchus(name='', dataset_ind=1):
         f"dataset_ind must be one of {list(specimen_map)}; got {dataset_ind!r}"
     specimen, weight_col = specimen_map[dataset_ind]
 
-    df = pd.read_excel(pristionchus_pharynx / 'mmc2.xlsx', sheet_name='Sheet1',
-                       header=1, engine='openpyxl')
+    df = pd.read_excel(require_dataset_file(pristionchus_pharynx / 'mmc2.xlsx', 'bumbarger_2013'),
+                       sheet_name='Sheet1', header=1, engine='openpyxl')
+
+    # Header tokens that must never appear as neuron names. The mmc2.xlsx
+    # workbook embeds repeat header rows further down the sheet (one per
+    # specimen block); without an explicit guard these literals propagate
+    # into the adjacency as bogus pseudo-neurons. Match case-insensitively
+    # to be safe against the file being rebuilt with capitalisation drift.
+    _header_tokens = {'presynaptic', 'postsynaptic',
+                      'pre-synaptic', 'post-synaptic',
+                      'pre', 'post', 'weight'}
+
+    def _is_header_literal(value: str) -> bool:
+        if not value:
+            return True
+        s = value.strip().lower()
+        if s in ('nan', ''):
+            return True
+        if s in _header_tokens:
+            return True
+        if s.startswith('weight '):  # e.g. 'weight 107', 'weight 148'
+            return True
+        return False
+
     adjacency = {}
     if {'presynaptic', 'postsynaptic', weight_col}.issubset(df.columns):
         df = df.dropna(subset=['presynaptic', 'postsynaptic']).copy()
         for _, row in df.iterrows():
             pre = str(row['presynaptic']).strip()
             post = str(row['postsynaptic']).strip()
-            if pre in ('nan', '') or post in ('nan', ''):
+            if _is_header_literal(pre) or _is_header_literal(post):
                 continue
-            adjacency.setdefault(pre, {})[post] = {'weight': float(row[weight_col])}
+            try:
+                weight = float(row[weight_col])
+            except (TypeError, ValueError):
+                continue
+            adjacency.setdefault(pre, {})[post] = {'weight': weight}
     else:
         col_offset = 0 if dataset_ind == 1 else 3
         pre_col = col_offset + 1
@@ -535,7 +571,7 @@ def make_pristionchus(name='', dataset_ind=1):
                 continue
             pre = str(pre).strip()
             post = str(post).strip()
-            if not pre or not post:
+            if _is_header_literal(pre) or _is_header_literal(post):
                 continue
             edge_counts[(pre, post)] = edge_counts.get((pre, post), 0) + 1
         for (pre, post), weight in edge_counts.items():
@@ -545,6 +581,16 @@ def make_pristionchus(name='', dataset_ind=1):
     for partners in adjacency.values():
         cells.update(partners.keys())
     cells = sorted(cells)
+
+    # Final safety net: if any cell still matches a header literal (could
+    # only happen if both filters missed a new variant), abort loudly.
+    leaked = [c for c in cells if _is_header_literal(c)]
+    if leaked:
+        raise ValueError(
+            f"Pristionchus parser leaked header literal(s) into the cell "
+            f"list: {leaked!r}. The Bumbarger 2013 mmc2.xlsx layout may "
+            f"have changed; update the header-token list in make_pristionchus."
+        )
 
     if not name:
         name = f'Pristionchus-consensus-{weight_col.replace(" ", "_")}'
@@ -596,15 +642,16 @@ def make_platynereis(name=''):
     import itertools
 
     src = veraszto_connectome
+    _vk = 'veraszto_2025'
 
-    celltypes    = pd.read_csv(src / 'neuronal_celltypes_table.csv')
-    fig1         = pd.read_csv(src / 'elife-97964-fig1-data1.txt', sep='\t')
-    fig3         = pd.read_csv(src / 'elife-97964-fig3-data1.txt', sep='\t')
-    fig3_nonneu  = pd.read_csv(src / 'elife-97964-fig3-data2-v1.txt', sep='\t')
-    annot_matrix = pd.read_csv(src / 'elife-97964-fig3-figsupp2-data1.txt',
+    celltypes    = pd.read_csv(require_dataset_file(src / 'neuronal_celltypes_table.csv', _vk))
+    fig1         = pd.read_csv(require_dataset_file(src / 'elife-97964-fig1-data1.txt', _vk), sep='\t')
+    fig3         = pd.read_csv(require_dataset_file(src / 'elife-97964-fig3-data1.txt', _vk), sep='\t')
+    fig3_nonneu  = pd.read_csv(require_dataset_file(src / 'elife-97964-fig3-data2-v1.txt', _vk), sep='\t')
+    annot_matrix = pd.read_csv(require_dataset_file(src / 'elife-97964-fig3-figsupp2-data1.txt', _vk),
                                sep='\t', index_col=0)
-    full_adj     = pd.read_csv(src / 'full_connectome_adjacency_matrix.csv', index_col=0)
-    grouped_adj  = pd.read_csv(src / 'all_celltypes_synapse_matrix.csv',
+    full_adj     = pd.read_csv(require_dataset_file(src / 'full_connectome_adjacency_matrix.csv', _vk), index_col=0)
+    grouped_adj  = pd.read_csv(require_dataset_file(src / 'all_celltypes_synapse_matrix.csv', _vk),
                                sep=';', index_col=0)
 
     # Drop unassigned EM fragments from the fine-grained adjacency. The source
@@ -840,7 +887,7 @@ def load_contactome(nn, stage='adult', matrix_path=None):
     sheet = {'adult': 'adult nerve ring neighbors',
              'L4':    'L4 nerve ring neighbors'}[stage]
 
-    mat = pd.read_excel(src, sheet_name=sheet, index_col=0)
+    mat = pd.read_excel(require_dataset_file(src, 'brittin_2018'), sheet_name=sheet, index_col=0)
     mat = mat.loc[:, ~mat.columns.astype(str).str.startswith('Unnamed')]
     mat = mat.loc[~mat.index.astype(str).isin(['nan'])]
     mat = mat.loc[~mat.index.astype(str).str.startswith('Unnamed')]
@@ -929,7 +976,10 @@ def build_nervous_system(nn, neuron_data, chem_synapses, elec_synapses, position
 
 @record("load_lineage")
 def load_lineage(neural_network, sex='Hermaphrodite'):
-    lineage_meaning_description = pd.read_excel(lineage, sheet_name=sex, engine='openpyxl')
+    lineage_meaning_description = pd.read_excel(
+        require_dataset_file(lineage, 'worm_atlas_lineage'),
+        sheet_name=sex, engine='openpyxl',
+    )
     return(lineage_meaning_description)
 ## Neurotransmitter tables
 suffixes = ['', 'D', 'V', 'L', 'R', 'DL', 'DR', 'VL', 'VR', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13']
@@ -949,7 +999,9 @@ def canonicalizeNT(name):
     return NT_CANONICAL.get(name.strip(), name.strip())
 
 def _readLigandTable(sex='Hermaphrodite'):
-    lig_file = DOWNLOAD_DIR / prefix_NT / 'ligand-table.xlsx'
+    lig_file = require_dataset_file(
+        DOWNLOAD_DIR / prefix_NT / 'ligand-table.xlsx', 'wang_2024',
+    )
     if sex in ['Hermaphrodite', 'hermaphrodite']:
         return pd.read_excel(lig_file, sheet_name='Hermaphrodite, sorted by neuron', skiprows=7, engine='openpyxl')
     if sex in ['Male', 'male']:
@@ -990,10 +1042,33 @@ def getLigandsAndReceptors(npr, ligmap, col):
 
 
 @record("load_neurotransmitters")
-def loadNeurotransmitters(nn, sex='Hermaphrodite'):
-    ''' Loads Neurotransmitters into neurons using Wang et al 2024'''
+def loadNeurotransmitters(nn, sex='Hermaphrodite', aggregate=False):
+    """Loads Neurotransmitters into neurons using Wang et al 2024.
 
-    npr_file = DOWNLOAD_DIR / prefix_NT / 'GenesExpressing-BATCH-thrs4_use.xlsx'
+    Refuses by default if ``nn`` contains merged neurons — the loader
+    keys by source neuron names (col + suffix), so merged-neuron names
+    silently miss their assignments. ``aggregate=True`` is a planned
+    follow-up; for now the only safe option is to reload, load NTs,
+    then merge.
+    """
+    # Merge-policy check runs before the dataset read so callers who
+    # won't opt into aggregation aren't punished with a slow Excel
+    # parse just to learn their network is merged.
+    merged_names = _merged_neuron_names(nn)
+    if merged_names and not aggregate:
+        raise MergedNetworkError(merged_names, op_name='loadNeurotransmitters')
+    if merged_names and aggregate:
+        raise NotImplementedError(
+            "loadNeurotransmitters(aggregate=True) is not yet supported. "
+            "Receptor/ligand union semantics across constituents are non-trivial "
+            "(receptors join via dict-merge but ligands need order-preserving "
+            "dedupe and per-pair NT inference). Reload the network and re-merge "
+            "after loading neurotransmitters."
+        )
+
+    npr_file = require_dataset_file(
+        DOWNLOAD_DIR / prefix_NT / 'GenesExpressing-BATCH-thrs4_use.xlsx', 'wang_2024',
+    )
     npr = pd.read_excel(npr_file, sheet_name='npr', true_values='TRUE', false_values='FALSE', engine='openpyxl')
     ligmap = pd.read_excel(npr_file, sheet_name='ligmap', engine='openpyxl')
     try:
@@ -1103,7 +1178,11 @@ def _neuropeptide_old_root():
             return old_root
         if (root / "91-NPPGPCR networks").exists():
             return root
-    raise FileNotFoundError("Could not find old Ripoll-Sanchez neuropeptide tables.")
+    raise MissingDatasetError(
+        dataset_key='ripoll_sanchez_2023',
+        expected_path=DOWNLOAD_DIR / prefix_NP / 'old' / '91-NPPGPCR networks',
+        hint="Old-format Ripoll-Sanchez neuropeptide tables (long-range model + neuron-ID map) not found.",
+    )
 
 
 def _neuropeptide_new_root():
@@ -1111,7 +1190,11 @@ def _neuropeptide_new_root():
         new_root = root / "new"
         if (new_root / NEUROPEPTIDE_NEW_PAIRS).exists():
             return new_root
-    raise FileNotFoundError("Could not find new Ripoll-Sanchez neuropeptide tables.")
+    raise MissingDatasetError(
+        dataset_key='ripoll_sanchez_2023',
+        expected_path=DOWNLOAD_DIR / prefix_NP / 'new' / NEUROPEPTIDE_NEW_PAIRS,
+        hint="New-format Ripoll-Sanchez neuropeptide pair table not found.",
+    )
 
 
 def _neuropeptide_pair_name(ligand, receptor):
@@ -1119,7 +1202,9 @@ def _neuropeptide_pair_name(ligand, receptor):
 
 
 def _read_new_neuropeptide_pairs():
-    pairs_path = _neuropeptide_new_root() / NEUROPEPTIDE_NEW_PAIRS
+    pairs_path = require_dataset_file(
+        _neuropeptide_new_root() / NEUROPEPTIDE_NEW_PAIRS, 'ripoll_sanchez_2023',
+    )
     pairs = pd.read_csv(
         pairs_path,
         sep=r"\s+",
@@ -1137,9 +1222,9 @@ def _read_new_neuropeptide_pairs():
 
 def _read_old_neuropeptide_models():
     old_root = _neuropeptide_old_root()
-    lrm = old_root / 'NPP_GPCR_networks_long_range_model_2.csv'
-    nid = old_root / '26012022_num_neuronID.txt'
-    np_order = old_root / '91-NPPGPCR networks'
+    lrm = require_dataset_file(old_root / 'NPP_GPCR_networks_long_range_model_2.csv', 'ripoll_sanchez_2023')
+    nid = require_dataset_file(old_root / '26012022_num_neuronID.txt', 'ripoll_sanchez_2023')
+    np_order = require_dataset_file(old_root / '91-NPPGPCR networks', 'ripoll_sanchez_2023')
     model = pd.read_csv(lrm, encoding='unicode_escape', header=None)
     neuronID = pd.read_csv(nid, encoding='unicode_escape', sep='\t', index_col=0, names=['NID', "Neuron"])
     neuropep_rec = pd.read_csv(np_order, sep=',', index_col=0)
@@ -1174,9 +1259,10 @@ def _read_new_neuropeptide_model(pair_row, range_model, allowed_neurons=None):
     new_root = _neuropeptide_new_root()
     folder, suffix = NEUROPEPTIDE_RANGE_MODELS[range_model]
     network_number = int(pair_row["network_number"])
-    model_path = (
+    model_path = require_dataset_file(
         new_root / folder /
-        f"01022024_neuropeptide_network{network_number:03d}_{suffix}_range_model.csv"
+        f"01022024_neuropeptide_network{network_number:03d}_{suffix}_range_model.csv",
+        'ripoll_sanchez_2023',
     )
     matrix = pd.read_csv(model_path, index_col=0)
     return _matrix_to_neuropeptide_adjacency(
@@ -1188,11 +1274,37 @@ def _read_new_neuropeptide_model(pair_row, range_model, allowed_neurons=None):
 
 
 @record("load_neuropeptides")
-def loadNeuropeptides(w, neuropeps: str = 'all', mode: str = "old", range_model: str = "long"):
-    ''' Loads Neuropeptides into neurons using Ripoll-Sanchez et al. 2023'''
+def loadNeuropeptides(w, neuropeps: str = 'all', mode: str = "old", range_model: str = "long",
+                     aggregate=False):
+    """Loads Neuropeptides into neurons using Ripoll-Sanchez et al. 2023.
+
+    Refuses by default if the target network contains merged neurons —
+    the per-pair adjacency in the source data uses original neuron
+    names (e.g. AVAL, AVAR), so peptide edges incident to a merged
+    name silently fail to materialise. ``aggregate=True`` is a planned
+    follow-up; for now the safe option is to reload, load peptides,
+    then merge.
+    """
 
     mode = _normalize_neuropeptide_mode(mode)
     range_model = _normalize_neuropeptide_range(range_model)
+    target_nn = w if isinstance(w, NervousSystem) else getattr(w, 'networks', None)
+    nn_for_check = w if isinstance(w, NervousSystem) else None
+    if nn_for_check is None and isinstance(target_nn, dict):
+        # Worm-level call: check every contained NervousSystem.
+        nn_for_check = next(iter(target_nn.values())) if target_nn else None
+    if nn_for_check is not None:
+        merged_names = _merged_neuron_names(nn_for_check)
+        if merged_names and not aggregate:
+            raise MergedNetworkError(merged_names, op_name='loadNeuropeptides')
+        if merged_names and aggregate:
+            raise NotImplementedError(
+                "loadNeuropeptides(aggregate=True) is not yet supported. "
+                "Per-pair peptide adjacency requires resolving each merged neuron's "
+                "constituents on both pre- and post-synaptic sides — non-trivial. "
+                "Reload the network and re-merge after loading peptides."
+            )
+
     allowed_neurons = w.neurons.keys() if type(w) == NervousSystem else None
 
     if mode == "old":
@@ -1236,7 +1348,7 @@ def getNeuropeptideList(mode: str = "old", range_model: str = "long"):
     _normalize_neuropeptide_range(range_model)
     if mode == "old":
         old_root = _neuropeptide_old_root()
-        np_order = old_root / '91-NPPGPCR networks'
+        np_order = require_dataset_file(old_root / '91-NPPGPCR networks', 'ripoll_sanchez_2023')
         neuropep_rec = pd.read_csv(np_order, sep=',', index_col=0)
         return neuropep_rec['pair_names_NPP'].tolist()
     pairs = _read_new_neuropeptide_pairs()
@@ -1295,28 +1407,105 @@ def returnThresholdDict(th1, th2, th3, th4, nnames, cengen_neurons):
     threshold_dict = {'1': th1_f, '2': th2_f, '3': th3_f, '4': th4_f}
     return threshold_dict
 
+def _merged_neuron_names(nn):
+    """Names of all merged neurons in `nn`. Used by property loaders to
+    detect the merge-on-graph case before running their per-name lookups
+    (which would otherwise crash or silently miss data).
+    """
+    return [name for name, neuron in nn.neurons.items()
+            if getattr(neuron, 'is_merged', False)]
+
+
+# CENGEN-specific aliases for cells that show up under merged column
+# names in the source tables (e.g. left/right pairs collapsed into a
+# single column). Lookup order: direct match → strip-LR → these aliases
+# → prefix matches for VD/DD/RMD[DV]/IL2[DV]. The aggregate path uses
+# ``_lookup_constituent_cengen_transcript`` rather than re-running the
+# inline elif chain in ``loadTranscripts`` — that chain is order-sensitive
+# and depends on currently-present nn.neurons (groupNames), neither of
+# which applies cleanly to constituents that have already been merged out.
+_CENGEN_CONSTITUENT_ALIASES = {
+    'AWCL': 'AWC_OFF', 'AWCR': 'AWC_ON',
+    'VC04': 'VC_4_5', 'VC05': 'VC_4_5',
+    'DA09': 'DA9',
+    'RMEL': 'RME_LR', 'RMER': 'RME_LR',
+    'RMED': 'RME_DV', 'RMEV': 'RME_DV',
+    'RMDL': 'RMD_LR', 'RMDR': 'RMD_LR',
+    'IL2L': 'IL2_LR', 'IL2R': 'IL2_LR',
+}
+
+
+def _lookup_constituent_cengen_transcript(c_name, threshold_table):
+    """Best-effort CENGEN row lookup for a constituent neuron whose
+    pre-merge name no longer appears in the live network. Returns the
+    transcript Series or ``None`` if no match.
+
+    Best-effort by design — full faithful resolution would require
+    re-running the order-sensitive elif chain in `loadTranscripts`
+    against constituent partners that are themselves no longer in
+    the network. Misses on uncommon names are reported via the
+    ``_aggregated_from`` provenance the caller writes (which lists the
+    constituents that were actually folded in) so the user can spot
+    silent gaps.
+    """
+    cols = threshold_table.columns
+    if c_name in cols:
+        return threshold_table[c_name]
+    if len(c_name) > 1 and c_name[-1] in ('L', 'R'):
+        g = c_name[:-1]
+        if g in cols:
+            return threshold_table[g]
+    if c_name in _CENGEN_CONSTITUENT_ALIASES:
+        alias = _CENGEN_CONSTITUENT_ALIASES[c_name]
+        if alias in cols:
+            return threshold_table[alias]
+    if c_name.startswith('VD') or c_name.startswith('DD'):
+        if 'VD_DD' in cols:
+            return threshold_table['VD_DD']
+    if c_name.startswith('RMDD') or c_name.startswith('RMDV'):
+        if 'RMD_DV' in cols:
+            return threshold_table['RMD_DV']
+    if c_name.startswith('IL2D') or c_name.startswith('IL2V'):
+        if 'IL2_DV' in cols:
+            return threshold_table['IL2_DV']
+    return None
+
+
 @record("load_transcripts")
-def loadTranscripts(nn, threshold=4):
+def loadTranscripts(nn, threshold=4, aggregate=False):
     """
     Loads transcripts from CENGEN data files and assigns them to neuron objects.
-    
+
     Parameters:
     - nn: Neuron object
-    - thres_1, thres_2, thres_3, thres_4: Paths to CSV files containing transcript data
-    
+    - threshold: CENGEN threshold level 1-4.
+    - aggregate: If True, merged neurons receive transcripts unioned
+      from their constituents (a gene is "expressed" iff expressed in
+      any constituent). Default False — refuses with
+      :class:`MergedNetworkError` when the network has any merged
+      neurons, so the caller can decide between (preferred) reloading
+      and re-merging after, or aggregating with provenance.
+
     Returns:
     - None
     """
-    th1 = pd.read_csv(thres_1,encoding= 'unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis = 'columns')
+    # Merge-policy check runs *before* the CENGEN file reads so callers
+    # who'll never opt into aggregation aren't punished with a slow
+    # disk read just to learn their network is merged.
+    merged_names = _merged_neuron_names(nn)
+    if merged_names and not aggregate:
+        raise MergedNetworkError(merged_names, op_name='loadTranscripts')
+
+    th1 = pd.read_csv(require_dataset_file(thres_1, 'cengen'),encoding= 'unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis = 'columns')
     th1 = th1[th1.columns]>0
 
-    th2 = pd.read_csv(thres_2,encoding= 'unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis = 'columns')
+    th2 = pd.read_csv(require_dataset_file(thres_2, 'cengen'),encoding= 'unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis = 'columns')
     th2 = th2[th2.columns]>0
 
-    th3 = pd.read_csv(thres_3,encoding= 'unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis = 'columns')
+    th3 = pd.read_csv(require_dataset_file(thres_3, 'cengen'),encoding= 'unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis = 'columns')
     th3 = th3[th3.columns]>0
 
-    th4 = pd.read_csv(thres_4,encoding= 'unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis = 'columns')
+    th4 = pd.read_csv(require_dataset_file(thres_4, 'cengen'),encoding= 'unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis = 'columns')
     th4 = th4[th4.columns]>0
 
     ## Group Names
@@ -1372,9 +1561,45 @@ def loadTranscripts(nn, threshold=4):
     cengen_neurons['VC05']=  'VC_4_5'
     cengen_neurons['DA09']=  'DA9'
 
+    # `merged_names` was computed at the top of the function; reuse it
+    # here for the aggregate pass below. Their direct lookup would fail
+    # on '' (default cengen_neurons value for unmapped names) and
+    # silently leave the merged neuron without a transcript — handled
+    # via `_lookup_constituent_cengen_transcript` in the aggregate path.
     th_i = [th1, th2, th3, th4]
+    table = th_i[threshold - 1]
     for n in nn.neurons:
-        nn.neurons[n].set_property('transcript', th_i[threshold-1][cengen_neurons[n]])
+        if getattr(nn.neurons[n], 'is_merged', False):
+            # Handled by the aggregate pass below; skip the direct lookup
+            # since cengen_neurons[n] is '' for merged names and would
+            # raise KeyError on table[''].
+            continue
+        key = cengen_neurons.get(n, '')
+        if not key or key not in table.columns:
+            continue
+        nn.neurons[n].set_property('transcript', table[key])
+
+    if aggregate and merged_names:
+        from functools import reduce
+        for m_name in merged_names:
+            merged_neuron = nn.neurons[m_name]
+            constituent_names = list((merged_neuron.constituents or {}).keys())
+            transcripts = []
+            folded_in = []
+            for c_name in constituent_names:
+                if c_name == m_name:
+                    continue  # surviving-source placeholder
+                t = _lookup_constituent_cengen_transcript(c_name, table)
+                if t is not None:
+                    transcripts.append(t)
+                    folded_in.append(c_name)
+            if transcripts:
+                # Pandas Series of bools — element-wise OR. Any constituent
+                # expressing a gene → merged neuron expresses it.
+                merged_t = reduce(lambda a, b: a | b, transcripts)
+                merged_neuron.set_property('transcript', merged_t)
+                merged_neuron.set_property('_aggregated_from', folded_in)
+
     nn.worm.citations.update({'cengen':citations['cengen']})
 
 def get_enriched_neurons(network, target_neurons, excluded_neurons=None, threshold=4):
@@ -1448,7 +1673,10 @@ def loadSynapticWeights(nn):
         None
     """
     ## Load synaptic weights from Excel file
-    weightMatrix = DOWNLOAD_DIR / prefix_synaptic_weights / "41586_2023_6683_MOESM13_ESM.xls"
+    weightMatrix = require_dataset_file(
+        DOWNLOAD_DIR / prefix_synaptic_weights / "41586_2023_6683_MOESM13_ESM.xls",
+        'randi_2023',
+    )
     wtMat = pd.read_excel(weightMatrix, index_col=0).T
     for sid in nn.connections.keys():
         if sid[0].name in wtMat:
@@ -1461,57 +1689,56 @@ def loadSynapticWeights(nn):
     nn.worm.citations.update({'sig_prop_atlas':citations['sig_prop_atlas']})
     return wtMat
 
-def download_datasets(key=''):
-    """
-    Downloads the required datasets from online sources.
+_LEGACY_KEY_ALIASES = {
+    # Original `download_datasets` accepted these legacy keys directly;
+    # the registry uses canonical snake_case dataset keys instead. Map
+    # the old strings so existing scripts and notebooks keep working.
+    'atanas_whole_brain': 'atanas_2023',
+}
+
+
+def download_datasets(key='', *, force=False):
+    """Download a registered dataset (or all of them with ``key='all_public'``).
+
+    Delegates to :func:`cedne.utils.datasets.download_dataset`, which is
+    registry-driven and applies sha256 verification when configured. The
+    legacy keys ``'cengen'`` and ``'atanas_whole_brain'`` are preserved for
+    backwards compatibility (the latter is aliased to ``'atanas_2023'``).
+
+    Parameters
+    ----------
+    key:
+        Dataset key, or ``'all_public'`` to fetch every registered dataset
+        whose download URLs are populated.
+    force:
+        If True, re-download files that already exist on disk.
+
+    Returns
+    -------
+    list[DownloadResult] | dict[str, list[DownloadResult]]
+        Per-file results (single dataset) or per-dataset results
+        (``'all_public'``). ``None`` if no key was given (legacy behaviour).
     """
     if not key:
-        print("Nothing downloaded. Pass key")
-    elif key == 'cengen':
-        cengen_dir = (DOWNLOAD_DIR / prefix_CENGEN).resolve()
-        cengen_dir.mkdir(parents=True, exist_ok=True)
-        for link in cengen_links:
-            response = requests.get(link, stream=True)
-            response.raise_for_status()  # Raises HTTPError for bad responses
-            local_dir = cengen_dir
-            local_filename = link.split('021821_')[-1]
-            with open(local_dir / local_filename, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            print(f"Downloaded {local_filename} at {local_dir}")
-
-    # elif key == 'fly_wire':
-        # if not os.path.exists(fly_wire):
-        #     os.makedirs(fly_wire)
-        # for link in flywire_links:
-        #     response = requests.get(link, stream=True)
-        #     response.raise_for_status()  # Raises HTTPError for bad responses
-        #     local_dir = fly_wire
-
-        #     local_filename = link.split('data_product=')[-1].split('&data_version')[0] + '.csv.gz'
-        #     with open(local_dir + local_filename, "wb") as f:
-        #         for chunk in response.iter_content(chunk_size=8192):
-        #             f.write(chunk)
-        #     print(f"Downloaded {local_filename} at {local_dir}")
-
-    elif key == 'atanas_whole_brain':
-        for stim, location in atanas_whole_brain.items():
-            location.mkdir(parents=True, exist_ok=True)
-
-            for suff in atanas_links[stim]:
-                link = atanas_link_prefix + suff
-                response = requests.get(link, stream=True)
-                response.raise_for_status()  # Raises HTTPError for bad responses
-                local_dir = location
-                local_filename = suff
-
-                with open(local_dir / local_filename, "wb") as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        f.write(chunk)
-                print(f"Downloaded {local_filename} at {local_dir}")
-    # elif key == 'neuropeptide_atlas':
-    else:
-        print("Not yet supported. Download manually into the directory.")
+        print("Nothing downloaded. Pass key (e.g. 'cengen', 'atanas_2023', 'all_public').")
+        return None
+    if key == 'all_public':
+        return download_all_public(force=force)
+    canonical = _LEGACY_KEY_ALIASES.get(key, key)
+    if canonical not in DATASET_REGISTRY:
+        print(
+            f"Unknown dataset '{key}'. Known: {sorted(DATASET_REGISTRY)} "
+            "(or use 'all_public')."
+        )
+        return None
+    spec = DATASET_REGISTRY[canonical]
+    if not spec.download_specs:
+        print(
+            f"Dataset '{canonical}' has no registered download URLs. "
+            f"Stage manually under {spec.expected_dir} (see {spec.source_url})."
+        )
+        return None
+    return download_dataset(canonical, force=force)
 
 
 @record("load_recordings")
@@ -1751,15 +1978,20 @@ def load_atanas(condition='Control', max_files=None, network=None):
 
     data_dir = atanas_whole_brain[condition]
     if not data_dir.exists():
-        raise FileNotFoundError(
-            f"Atanas data directory not found at {data_dir}. "
-            "Run download_data('atanas_whole_brain') first."
+        raise MissingDatasetError(
+            dataset_key='atanas_2023',
+            expected_path=data_dir,
+            hint=f"Run download_datasets('atanas_whole_brain') to fetch the {condition} JSONs.",
         )
 
     # Find available JSON files
     json_files = sorted(data_dir.glob('*.json'))
     if not json_files:
-        raise FileNotFoundError(f"No JSON files found in {data_dir}")
+        raise MissingDatasetError(
+            dataset_key='atanas_2023',
+            expected_path=data_dir,
+            hint=f"Directory exists but contains no *.json files for condition '{condition}'.",
+        )
     if max_files:
         json_files = json_files[:max_files]
 
