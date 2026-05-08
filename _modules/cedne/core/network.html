@@ -310,7 +310,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.connection</span><span class="w"> </span><span class="kn">import</span> <span class="n">Connection</span><span class="p">,</span> \
     <span class="n">ChemicalSynapse</span><span class="p">,</span> <span class="n">GapJunction</span><span class="p">,</span> <span class="n">ConnectionGroup</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.history</span><span class="w"> </span><span class="kn">import</span> <span class="n">record</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.neuron</span><span class="w"> </span><span class="kn">import</span> <span class="n">Neuron</span><span class="p">,</span> <span class="n">NeuronGroup</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.neuron</span><span class="w"> </span><span class="kn">import</span> <span class="n">Neuron</span><span class="p">,</span> <span class="n">NeuronGroup</span><span class="p">,</span> <span class="n">MERGED_TYPE</span><span class="p">,</span> <span class="n">MERGE_TRACK_ATTRS</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.animal</span><span class="w"> </span><span class="kn">import</span> <span class="n">Worm</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.source</span><span class="w"> </span><span class="kn">import</span> <span class="n">Citable</span>
 
@@ -1064,44 +1064,152 @@
         
 <div class="viewcode-block" id="NervousSystem.contract_neurons">
 <a class="viewcode-back" href="../../../index.html#cedne.NervousSystem.contract_neurons">[docs]</a>
+    <span class="nd">@record</span><span class="p">(</span><span class="s2">&quot;contract_neurons&quot;</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">contract_neurons</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pair</span><span class="p">,</span> <span class="n">contracted_name</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="s1">&#39;collect&#39;</span><span class="p">,</span> <span class="n">copy_graph</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">self_loops</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Contract two neurons together. Currently, data from other nodes is stored in the contraction</span>
-<span class="sd">        attribute on each contracted node. Attributes are currently carried on from the source neuron</span>
-<span class="sd">        to the contraction.</span>
+<span class="sd">        Contract ``target`` into ``source``, redirecting target&#39;s edges</span>
+<span class="sd">        to source and renaming source to ``contracted_name``.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            pair (tuple): </span>
-<span class="sd">                Pair of neuron names to contract.</span>
-<span class="sd">            copy_graph (bool): </span>
-<span class="sd">                If True, returns a new graph with the contraction.</span>
-<span class="sd">                Otherwise, modifies the current graph.</span>
+<span class="sd">            pair (tuple[str, str]):</span>
+<span class="sd">                ``(source_name, target_name)``. Source survives (renamed</span>
+<span class="sd">                to ``contracted_name``); target is removed and its edges</span>
+<span class="sd">                are redirected onto source.</span>
+<span class="sd">            contracted_name (str):</span>
+<span class="sd">                New name for the surviving neuron.</span>
+<span class="sd">            data (str, optional):</span>
+<span class="sd">                No-op at the core layer — accepted for backwards</span>
+<span class="sd">                compatibility with callers that use it as a hint for</span>
+<span class="sd">                post-merge cleanup. The cedne_web backend uses</span>
+<span class="sd">                ``data=&#39;clean&#39;`` to indicate that</span>
+<span class="sd">                ``contract_connections`` should be called after a chain</span>
+<span class="sd">                of contractions to collapse parallel edges.</span>
+<span class="sd">            copy_graph (bool, optional):</span>
+<span class="sd">                If True, work on a deep copy and return it; the original</span>
+<span class="sd">                is untouched. If False (default), mutate in place and</span>
+<span class="sd">                return None.</span>
+<span class="sd">            self_loops (bool, optional):</span>
+<span class="sd">                Forwarded to ``nx.contracted_nodes``. If False, drops</span>
+<span class="sd">                any self-loop produced by edges between the merged pair.</span>
 
 <span class="sd">        Returns:</span>
-<span class="sd">            NervousSystem: </span>
-<span class="sd">                A deep copy of the subgraph generated from the neuron_names.</span>
-<span class="sd">                The subgraph contains a dictionary of neurons with their names as keys.</span>
-<span class="sd">                Only returned if copy_graph is True.</span>
+<span class="sd">            NervousSystem | None:</span>
+<span class="sd">                The new graph if ``copy_graph=True``; ``None`` otherwise</span>
+<span class="sd">                (mutates in place).</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            Tracks merge provenance on the surviving neuron via three</span>
+<span class="sd">            new Neuron API surfaces:</span>
+
+<span class="sd">            * ``Neuron.constituents``: dict mapping each pre-merge name</span>
+<span class="sd">              to a snapshot ``{&#39;name&#39;, &#39;type&#39;}``. Transitive — merging</span>
+<span class="sd">              A+B then merging the result with C yields constituents</span>
+<span class="sd">              ``{A, B, C}``.</span>
+<span class="sd">            * ``Neuron.is_merged``: bool, True iff ``constituents`` is</span>
+<span class="sd">              non-empty.</span>
+<span class="sd">            * ``Neuron.constituent_types``: sorted list of distinct</span>
+<span class="sd">              constituent types, derived from ``constituents`` so the</span>
+<span class="sd">              two cannot drift out of sync.</span>
+
+<span class="sd">            Type-merge policy:</span>
+
+<span class="sd">            * If all constituents share a single type → that type is</span>
+<span class="sd">              preserved on the surviving neuron.</span>
+<span class="sd">            * If types differ → ``Neuron.type`` is set to the sentinel</span>
+<span class="sd">              ``MERGED_TYPE`` (``&#39;merged&#39;``) so analyses that switch on</span>
+<span class="sd">              type can branch on the merged case explicitly rather than</span>
+<span class="sd">              silently inheriting one constituent&#39;s type.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">source_neuron</span><span class="p">,</span> <span class="n">target_neuron</span> <span class="o">=</span> <span class="n">pair</span>
+        <span class="n">source_name</span><span class="p">,</span> <span class="n">target_name</span> <span class="o">=</span> <span class="n">pair</span>
+
         <span class="k">if</span> <span class="n">copy_graph</span><span class="p">:</span>
             <span class="n">new_graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-            <span class="n">new_graph</span> <span class="o">=</span> <span class="n">new_graph</span><span class="o">.</span><span class="n">contract_neurons</span><span class="p">((</span><span class="n">source_neuron</span><span class="p">,</span> <span class="n">target_neuron</span><span class="p">,</span> <span class="n">contracted_name</span><span class="p">)</span>\
-                                                   <span class="p">,</span> <span class="n">copy_graph</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="c1"># FIX: previously this passed a 3-tuple as `pair`, which the</span>
+            <span class="c1"># destructure rejects with ValueError. The 2-tuple goes in</span>
+            <span class="c1"># `pair`; `contracted_name` is its own argument.</span>
+            <span class="n">new_graph</span><span class="o">.</span><span class="n">contract_neurons</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">source_name</span><span class="p">,</span> <span class="n">target_name</span><span class="p">),</span>
+                <span class="n">contracted_name</span><span class="p">,</span>
+                <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">copy_graph</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">self_loops</span><span class="o">=</span><span class="n">self_loops</span><span class="p">,</span>
+            <span class="p">)</span>
             <span class="k">return</span> <span class="n">new_graph</span>
 
-        <span class="k">for</span> <span class="n">_cid</span><span class="p">,</span> <span class="n">conn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">source_neuron</span><span class="p">]</span><span class="o">.</span><span class="n">get_connections</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">source_name</span><span class="p">]</span>
+        <span class="n">tgt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">target_name</span><span class="p">]</span>
+
+        <span class="c1"># ----- Merge-provenance bookkeeping (new in Issue 10A) -------------</span>
+        <span class="c1"># We track constituents on the surviving neuron explicitly, BEFORE</span>
+        <span class="c1"># nx.contracted_nodes mutates the graph, because:</span>
+        <span class="c1">#   (a) transitive merges (A+B → A_m, then A_m+C → A_m) accumulate</span>
+        <span class="c1">#       cleanly through `setdefault`,</span>
+        <span class="c1">#   (b) we don&#39;t depend on networkx&#39;s internal `contraction` attr,</span>
+        <span class="c1">#       which has changed semantics across versions.</span>
+        <span class="c1"># Snapshot helper: capture every MERGE_TRACK_ATTRS value on a</span>
+        <span class="c1"># neuron at merge time. Stored under the original name so the</span>
+        <span class="c1"># merge policy below can reason about all of them uniformly.</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">_snapshot</span><span class="p">(</span><span class="n">neuron</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+            <span class="n">snap</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span>
+            <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">MERGE_TRACK_ATTRS</span><span class="p">:</span>
+                <span class="n">snap</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">neuron</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">snap</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="s1">&#39;constituents&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="c1"># First merge for src — record its pre-merge identity.</span>
+            <span class="c1"># src.name is still the original here (rename happens below).</span>
+            <span class="n">src</span><span class="o">.</span><span class="n">constituents</span> <span class="o">=</span> <span class="p">{</span><span class="n">src</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">_snapshot</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">src</span><span class="o">.</span><span class="n">name</span><span class="p">)}</span>
+
+        <span class="c1"># Fold any constituents the target itself had from prior merges so</span>
+        <span class="c1"># nested merges produce a flat list of original neurons.</span>
+        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">tgt</span><span class="p">,</span> <span class="s1">&#39;constituents&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">c_name</span><span class="p">,</span> <span class="n">c_meta</span> <span class="ow">in</span> <span class="n">tgt</span><span class="o">.</span><span class="n">constituents</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">src</span><span class="o">.</span><span class="n">constituents</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">c_name</span><span class="p">,</span> <span class="n">c_meta</span><span class="p">)</span>
+
+        <span class="c1"># Add the target as a constituent (keyed by its current name,</span>
+        <span class="c1"># which is its original name unless the target itself was already</span>
+        <span class="c1"># a merged neuron — in which case the fold above already covered</span>
+        <span class="c1"># the originals and target_name is the merged-name placeholder</span>
+        <span class="c1"># we still record for traceability).</span>
+        <span class="n">src</span><span class="o">.</span><span class="n">constituents</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">target_name</span><span class="p">,</span> <span class="n">_snapshot</span><span class="p">(</span><span class="n">tgt</span><span class="p">,</span> <span class="n">target_name</span><span class="p">))</span>
+
+        <span class="c1"># Apply the merge policy across every tracked enum-like attribute:</span>
+        <span class="c1"># all-same → keep that value; mixed → set to the MERGED_TYPE</span>
+        <span class="c1"># sentinel; no usable values → leave the attribute alone. type,</span>
+        <span class="c1"># category, and modality all need this — silent inheritance from</span>
+        <span class="c1"># the source neuron was the bug Issue 10 fixed for type, and the</span>
+        <span class="c1"># same fix needs to apply to category/modality (which are</span>
+        <span class="c1"># equally enum-like and equally susceptible to silent overwrite).</span>
+        <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">MERGE_TRACK_ATTRS</span><span class="p">:</span>
+            <span class="n">values</span> <span class="o">=</span> <span class="p">{</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span> <span class="k">for</span> <span class="n">meta</span> <span class="ow">in</span> <span class="n">src</span><span class="o">.</span><span class="n">constituents</span><span class="o">.</span><span class="n">values</span><span class="p">()}</span>
+            <span class="n">values</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+            <span class="n">values</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">values</span><span class="p">)))</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="n">MERGED_TYPE</span><span class="p">)</span>
+
+        <span class="c1"># Mirror `constituents` and any updated tracked attributes to</span>
+        <span class="c1"># the networkx node attribute dict so paths that reconstruct</span>
+        <span class="c1"># neurons via `create_neurons_from(data=True)` (used by</span>
+        <span class="c1"># contract_connections, copy(copy_type=&#39;deep_with_data&#39;), etc.)</span>
+        <span class="c1"># propagate the merge state instead of dropping it.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">src</span><span class="p">][</span><span class="s1">&#39;constituents&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">constituents</span>
+        <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">MERGE_TRACK_ATTRS</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">src</span><span class="p">][</span><span class="n">attr</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+
+        <span class="c1"># ----- Existing edge-contraction flow ------------------------------</span>
+        <span class="k">for</span> <span class="n">_cid</span><span class="p">,</span> <span class="n">conn</span> <span class="ow">in</span> <span class="n">src</span><span class="o">.</span><span class="n">get_connections</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">conn</span><span class="o">.</span><span class="n">set_property</span><span class="p">(</span><span class="s1">&#39;_id&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">_id</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">_cid</span><span class="p">,</span> <span class="n">conn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">target_neuron</span><span class="p">]</span><span class="o">.</span><span class="n">get_connections</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">_cid</span><span class="p">,</span> <span class="n">conn</span> <span class="ow">in</span> <span class="n">tgt</span><span class="o">.</span><span class="n">get_connections</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">conn</span><span class="o">.</span><span class="n">set_property</span><span class="p">(</span><span class="s1">&#39;_id&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">_id</span><span class="p">)</span>
-        <span class="n">nx</span><span class="o">.</span><span class="n">contracted_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">source_neuron</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">target_neuron</span><span class="p">],</span>\
-                                <span class="n">copy</span><span class="o">=</span><span class="n">copy_graph</span><span class="p">,</span> <span class="n">self_loops</span><span class="o">=</span><span class="n">self_loops</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">source_neuron</span><span class="p">]</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">contracted_name</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">contracted_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">tgt</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">self_loops</span><span class="o">=</span><span class="n">self_loops</span><span class="p">)</span>
+        <span class="n">src</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">contracted_name</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">update_neurons</span><span class="p">()</span></div>
 
     
 <div class="viewcode-block" id="NervousSystem.contract_connections">
 <a class="viewcode-back" href="../../../index.html#cedne.NervousSystem.contract_connections">[docs]</a>
+    <span class="nd">@record</span><span class="p">(</span><span class="s2">&quot;contract_connections&quot;</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">contract_connections</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">contraction_dict</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Contracts the connections into a single connection and modifies the graph accordingly.</span>

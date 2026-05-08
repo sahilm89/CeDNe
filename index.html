@@ -361,6 +361,41 @@ data: Optional data to associate with the context.</p>
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">Neuron</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.NervousSystem" title="cedne.NervousSystem"><span class="pre">NervousSystem</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/neuron.html#Neuron"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Neuron" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#cedne.Cell" title="cedne.core.neuron.Cell"><code class="xref py py-class docutils literal notranslate"><span class="pre">Cell</span></code></a>, <a class="reference internal" href="#cedne.Citable" title="cedne.core.source.Citable"><code class="xref py py-class docutils literal notranslate"><span class="pre">Citable</span></code></a></p>
 <p>Models a biological neuron</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="cedne.Neuron.is_merged">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">is_merged</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#cedne.Neuron.is_merged" title="Link to this definition">#</a></dt>
+<dd><p>True iff this neuron was produced by contracting other neurons.</p>
+<p>Backed by <code class="docutils literal notranslate"><span class="pre">self.constituents</span></code>: a non-empty dict ⇒ merged.
+Set by <code class="docutils literal notranslate"><span class="pre">NervousSystem.contract_neurons</span></code>; round-trips through
+graph cloning via the networkx node attribute mirror.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cedne.Neuron.constituent_types">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">constituent_types</span></span><a class="headerlink" href="#cedne.Neuron.constituent_types" title="Link to this definition">#</a></dt>
+<dd><p>Sorted list of distinct source types across this neuron’s
+constituents, derived on-demand from <code class="docutils literal notranslate"><span class="pre">self.constituents</span></code>.</p>
+<p>Single source of truth: changing <code class="docutils literal notranslate"><span class="pre">constituents</span></code> automatically
+updates this list — no parallel field to keep in sync.
+Returns <code class="docutils literal notranslate"><span class="pre">[]</span></code> for un-merged neurons.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cedne.Neuron.constituent_categories">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">constituent_categories</span></span><a class="headerlink" href="#cedne.Neuron.constituent_categories" title="Link to this definition">#</a></dt>
+<dd><p>Sorted list of distinct source categories across this
+neuron’s constituents. <code class="docutils literal notranslate"><span class="pre">[]</span></code> for un-merged neurons or for
+merged neurons whose constituents had no category set.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="cedne.Neuron.constituent_modalities">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">constituent_modalities</span></span><a class="headerlink" href="#cedne.Neuron.constituent_modalities" title="Link to this definition">#</a></dt>
+<dd><p>Sorted list of distinct source modalities across this
+neuron’s constituents. <code class="docutils literal notranslate"><span class="pre">[]</span></code> for un-merged neurons or for
+merged neurons whose constituents had no modality set.</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="cedne.Neuron.to_dict">
 <span class="sig-name descname"><span class="pre">to_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/cedne/core/neuron.html#Neuron.to_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.Neuron.to_dict" title="Link to this definition">#</a></dt>
@@ -944,24 +979,60 @@ addition to exact connection type names.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="cedne.NervousSystem.contract_neurons">
 <span class="sig-name descname"><span class="pre">contract_neurons</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pair</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">contracted_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'collect'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">copy_graph</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">self_loops</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/network.html#NervousSystem.contract_neurons"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NervousSystem.contract_neurons" title="Link to this definition">#</a></dt>
-<dd><p>Contract two neurons together. Currently, data from other nodes is stored in the contraction
-attribute on each contracted node. Attributes are currently carried on from the source neuron
-to the contraction.</p>
-<dl class="simple">
+<dd><p>Contract <code class="docutils literal notranslate"><span class="pre">target</span></code> into <code class="docutils literal notranslate"><span class="pre">source</span></code>, redirecting target’s edges
+to source and renaming source to <code class="docutils literal notranslate"><span class="pre">contracted_name</span></code>.</p>
+<dl>
 <dt>Args:</dt><dd><dl class="simple">
-<dt>pair (tuple): </dt><dd><p>Pair of neuron names to contract.</p>
+<dt>pair (tuple[str, str]):</dt><dd><p><code class="docutils literal notranslate"><span class="pre">(source_name,</span> <span class="pre">target_name)</span></code>. Source survives (renamed
+to <code class="docutils literal notranslate"><span class="pre">contracted_name</span></code>); target is removed and its edges
+are redirected onto source.</p>
 </dd>
-<dt>copy_graph (bool): </dt><dd><p>If True, returns a new graph with the contraction.
-Otherwise, modifies the current graph.</p>
+<dt>contracted_name (str):</dt><dd><p>New name for the surviving neuron.</p>
+</dd>
+<dt>data (str, optional):</dt><dd><p>No-op at the core layer — accepted for backwards
+compatibility with callers that use it as a hint for
+post-merge cleanup. The cedne_web backend uses
+<code class="docutils literal notranslate"><span class="pre">data='clean'</span></code> to indicate that
+<code class="docutils literal notranslate"><span class="pre">contract_connections</span></code> should be called after a chain
+of contractions to collapse parallel edges.</p>
+</dd>
+<dt>copy_graph (bool, optional):</dt><dd><p>If True, work on a deep copy and return it; the original
+is untouched. If False (default), mutate in place and
+return None.</p>
+</dd>
+<dt>self_loops (bool, optional):</dt><dd><p>Forwarded to <code class="docutils literal notranslate"><span class="pre">nx.contracted_nodes</span></code>. If False, drops
+any self-loop produced by edges between the merged pair.</p>
 </dd>
 </dl>
 </dd>
 <dt>Returns:</dt><dd><dl class="simple">
-<dt>NervousSystem: </dt><dd><p>A deep copy of the subgraph generated from the neuron_names.
-The subgraph contains a dictionary of neurons with their names as keys.
-Only returned if copy_graph is True.</p>
+<dt>NervousSystem | None:</dt><dd><p>The new graph if <code class="docutils literal notranslate"><span class="pre">copy_graph=True</span></code>; <code class="docutils literal notranslate"><span class="pre">None</span></code> otherwise
+(mutates in place).</p>
 </dd>
 </dl>
+</dd>
+<dt>Notes:</dt><dd><p>Tracks merge provenance on the surviving neuron via three
+new Neuron API surfaces:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Neuron.constituents</span></code>: dict mapping each pre-merge name
+to a snapshot <code class="docutils literal notranslate"><span class="pre">{'name',</span> <span class="pre">'type'}</span></code>. Transitive — merging
+A+B then merging the result with C yields constituents
+<code class="docutils literal notranslate"><span class="pre">{A,</span> <span class="pre">B,</span> <span class="pre">C}</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Neuron.is_merged</span></code>: bool, True iff <code class="docutils literal notranslate"><span class="pre">constituents</span></code> is
+non-empty.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Neuron.constituent_types</span></code>: sorted list of distinct
+constituent types, derived from <code class="docutils literal notranslate"><span class="pre">constituents</span></code> so the
+two cannot drift out of sync.</p></li>
+</ul>
+<p>Type-merge policy:</p>
+<ul class="simple">
+<li><p>If all constituents share a single type → that type is
+preserved on the surviving neuron.</p></li>
+<li><p>If types differ → <code class="docutils literal notranslate"><span class="pre">Neuron.type</span></code> is set to the sentinel
+<code class="docutils literal notranslate"><span class="pre">MERGED_TYPE</span></code> (<code class="docutils literal notranslate"><span class="pre">'merged'</span></code>) so analyses that switch on
+type can branch on the merged case explicitly rather than
+silently inheriting one constituent’s type.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -2229,6 +2300,10 @@ and/or file logging without CeDNe creating files as an import side effect.</p>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Fly"><code class="docutils literal notranslate"><span class="pre">Fly</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Cell"><code class="docutils literal notranslate"><span class="pre">Cell</span></code></a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Neuron"><code class="docutils literal notranslate"><span class="pre">Neuron</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Neuron.is_merged"><code class="docutils literal notranslate"><span class="pre">Neuron.is_merged</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Neuron.constituent_types"><code class="docutils literal notranslate"><span class="pre">Neuron.constituent_types</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Neuron.constituent_categories"><code class="docutils literal notranslate"><span class="pre">Neuron.constituent_categories</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Neuron.constituent_modalities"><code class="docutils literal notranslate"><span class="pre">Neuron.constituent_modalities</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Neuron.to_dict"><code class="docutils literal notranslate"><span class="pre">Neuron.to_dict()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Neuron.add_trial"><code class="docutils literal notranslate"><span class="pre">Neuron.add_trial()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#cedne.Neuron.load_recording"><code class="docutils literal notranslate"><span class="pre">Neuron.load_recording()</span></code></a></li>

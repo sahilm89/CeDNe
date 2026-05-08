@@ -308,10 +308,34 @@
     <span class="kn">from</span><span class="w"> </span><span class="nn">.connection</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">.recordings</span><span class="w"> </span><span class="kn">import</span> <span class="n">Trial</span>
 
+<span class="sd">&quot;&quot;&quot;Sentinel value assigned to enum-like neuron attributes</span>
+<span class="sd">(``type``, ``category``, ``modality``, …) when the constituents of a</span>
+<span class="sd">merged neuron disagree on that attribute. Analyses that switch on those</span>
+<span class="sd">attributes should branch on this value explicitly rather than silently</span>
+<span class="sd">treating a merged neuron as its first constituent&#39;s value.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="n">MERGED_TYPE</span> <span class="o">=</span> <span class="s1">&#39;merged&#39;</span>
+
+<span class="c1"># Enum-like attributes whose merge follows the &quot;all-same → keep / mixed</span>
+<span class="c1"># → &#39;merged&#39;&quot; policy in ``NervousSystem.contract_neurons``. Adding an</span>
+<span class="c1"># attribute here automatically:</span>
+<span class="c1">#   * captures it in each constituent&#39;s snapshot under</span>
+<span class="c1">#     ``Neuron.constituents[name][attr]``,</span>
+<span class="c1">#   * applies the merge policy to the surviving neuron,</span>
+<span class="c1">#   * mirrors the result onto the networkx node attribute dict so paths</span>
+<span class="c1">#     that reconstruct neurons via ``create_neurons_from(data=True)``</span>
+<span class="c1">#     propagate it.</span>
+<span class="c1"># The list is intentionally short — only attributes that behave like</span>
+<span class="c1"># bounded categorical labels. Numeric properties (degree, length,</span>
+<span class="c1"># transcript counts) need their own aggregation policy and are not</span>
+<span class="c1"># covered here.</span>
+<span class="n">MERGE_TRACK_ATTRS</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">,</span> <span class="s1">&#39;category&#39;</span><span class="p">,</span> <span class="s1">&#39;modality&#39;</span><span class="p">)</span>
+
+
 <div class="viewcode-block" id="Cell">
 <a class="viewcode-back" href="../../../index.html#cedne.Cell">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Cell</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39; </span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Models a biological cell.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">network</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -370,6 +394,9 @@
         <span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;network&#39;</span><span class="p">,</span> <span class="s1">&#39;in_connections&#39;</span><span class="p">,</span> <span class="s1">&#39;out_connections&#39;</span><span class="p">,</span>
         <span class="s1">&#39;trial&#39;</span><span class="p">,</span> <span class="s1">&#39;features&#39;</span><span class="p">,</span> <span class="s1">&#39;spatial_mask&#39;</span><span class="p">,</span> <span class="s1">&#39;_data&#39;</span><span class="p">,</span> <span class="s1">&#39;loadings&#39;</span><span class="p">,</span>
         <span class="s1">&#39;position&#39;</span><span class="p">,</span> <span class="s1">&#39;transcript&#39;</span><span class="p">,</span> <span class="s1">&#39;group_id&#39;</span><span class="p">,</span> <span class="s1">&#39;citations&#39;</span><span class="p">,</span>
+        <span class="c1"># `constituents` is a dict (not a numeric scalar) — handled</span>
+        <span class="c1"># explicitly in to_dict() via the merged-neuron block.</span>
+        <span class="s1">&#39;constituents&#39;</span><span class="p">,</span>
     <span class="p">})</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">network</span><span class="p">:</span> <span class="s1">&#39;NervousSystem&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -428,6 +455,63 @@
         <span class="c1"># self.postsynapse = postsynapse or {}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">spatial_mask</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;spatial_mask&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
         <span class="c1">#self.cable_length = kwargs.pop(&#39;cable_length&#39;, 1)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_merged</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;True iff this neuron was produced by contracting other neurons.</span>
+
+<span class="sd">        Backed by ``self.constituents``: a non-empty dict ⇒ merged.</span>
+<span class="sd">        Set by ``NervousSystem.contract_neurons``; round-trips through</span>
+<span class="sd">        graph cloning via the networkx node attribute mirror.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;constituents&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_constituent_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sorted list of distinct, non-empty string values of `attr`</span>
+<span class="sd">        across this neuron&#39;s constituents. Foundation for the per-attr</span>
+<span class="sd">        derived properties below — kept as one helper so the policy</span>
+<span class="sd">        lives in one place.</span>
+
+<span class="sd">        Non-string values (``None``, ``NaN`` from upstream pandas</span>
+<span class="sd">        loaders, numeric junk) are dropped: these enum-like attributes</span>
+<span class="sd">        only carry meaningful information when they&#39;re string labels,</span>
+<span class="sd">        and mixed-type sets break ``sorted`` on Python 3 anyway.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;constituents&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">meta</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constituents</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">v</span><span class="p">:</span>
+                <span class="n">values</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">constituent_types</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sorted list of distinct source types across this neuron&#39;s</span>
+<span class="sd">        constituents, derived on-demand from ``self.constituents``.</span>
+
+<span class="sd">        Single source of truth: changing ``constituents`` automatically</span>
+<span class="sd">        updates this list — no parallel field to keep in sync.</span>
+<span class="sd">        Returns ``[]`` for un-merged neurons.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_constituent_values</span><span class="p">(</span><span class="s1">&#39;type&#39;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">constituent_categories</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sorted list of distinct source categories across this</span>
+<span class="sd">        neuron&#39;s constituents. ``[]`` for un-merged neurons or for</span>
+<span class="sd">        merged neurons whose constituents had no category set.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_constituent_values</span><span class="p">(</span><span class="s1">&#39;category&#39;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">constituent_modalities</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sorted list of distinct source modalities across this</span>
+<span class="sd">        neuron&#39;s constituents. ``[]`` for un-merged neurons or for</span>
+<span class="sd">        merged neurons whose constituents had no modality set.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_constituent_values</span><span class="p">(</span><span class="s1">&#39;modality&#39;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_parent_citables</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Walk citations up through containing NeuronGroups and the NervousSystem.&quot;&quot;&quot;</span>
@@ -499,6 +583,27 @@
         <span class="c1"># Citations attached directly to this neuron (not the inherited chain)</span>
         <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;citations&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">citations</span><span class="p">:</span>
             <span class="n">d</span><span class="p">[</span><span class="s1">&#39;citations&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">serialize_citations</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">citations</span><span class="p">)</span>
+
+        <span class="c1"># Merge provenance — `is_merged` is only emitted when actually</span>
+        <span class="c1"># merged so un-merged neurons stay payload-slim. Each</span>
+        <span class="c1"># constituent snapshot includes every MERGE_TRACK_ATTRS value</span>
+        <span class="c1"># captured at merge time.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_merged</span><span class="p">:</span>
+            <span class="n">d</span><span class="p">[</span><span class="s1">&#39;is_merged&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">d</span><span class="p">[</span><span class="s1">&#39;constituents&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">{</span>
+                    <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
+                    <span class="o">**</span><span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">MERGE_TRACK_ATTRS</span><span class="p">},</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">meta</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">constituents</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="p">]</span>
+            <span class="n">d</span><span class="p">[</span><span class="s1">&#39;constituent_types&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constituent_types</span>
+            <span class="n">cats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constituent_categories</span>
+            <span class="k">if</span> <span class="n">cats</span><span class="p">:</span>
+                <span class="n">d</span><span class="p">[</span><span class="s1">&#39;constituent_categories&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cats</span>
+            <span class="n">mods</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constituent_modalities</span>
+            <span class="k">if</span> <span class="n">mods</span><span class="p">:</span>
+                <span class="n">d</span><span class="p">[</span><span class="s1">&#39;constituent_modalities&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mods</span>
 
         <span class="k">return</span> <span class="n">d</span></div>
 
