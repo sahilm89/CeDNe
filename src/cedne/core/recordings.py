@@ -659,7 +659,7 @@ class StimResponse:
         # If no onset found, return nan
         return np.nan
 
-    def _find_positive_area(self, bin_size: int = 10) -> tuple[float, float]:
+    def _find_positive_area(self, bin_size: int = 5) -> tuple[float, float]:
         """Calculate the positive and negative areas of the response.
 
         Args:
@@ -669,13 +669,18 @@ class StimResponse:
             tuple: (positive_area, negative_area) in amplitude-seconds.
         """
         undersampling = self.response[::bin_size]
-        pos_mask = undersampling > 0
-        neg_mask = undersampling < 0
-        
-        pos_area = float(np.trapz(undersampling[pos_mask], 
-                                dx=self.sampling_time*bin_size))
-        neg_area = float(abs(np.trapz(undersampling[neg_mask], 
-                                    dx=self.sampling_time*bin_size)))
+        positive_trace = np.clip(undersampling, 0, None)
+        negative_trace = np.clip(-undersampling, 0, None)
+
+        dx = self.sampling_time * bin_size
+        pos_area = float(np.trapz(positive_trace, dx=dx))
+        neg_area = float(np.trapz(negative_trace, dx=dx))
+        abs_area = float(np.trapz(np.abs(undersampling), dx=dx))
+        signed_total = pos_area + neg_area
+        if signed_total > abs_area and np.isclose(signed_total, abs_area):
+            scale = abs_area / signed_total
+            pos_area *= scale
+            neg_area *= scale
         
         return pos_area, neg_area
 

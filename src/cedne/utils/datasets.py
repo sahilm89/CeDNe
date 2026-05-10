@@ -220,7 +220,7 @@ DATASET_REGISTRY: dict[str, DatasetSpec] = {
         key="cengen",
         title="CeNGEN — single-cell C. elegans transcriptome thresholds",
         expected_dir=DOWNLOAD_DIR / prefix_CENGEN.rstrip("/"),
-        citation="Taylor et al. (2021) Cell 184:4329–4347",
+        citation="Taylor et al. (2021) Cell 184:4329–4347; Taylor et al. (2025) bioRxiv",
         source_url="https://cengen.org/",
         download_specs=_cengen_download_specs(),
     ),
@@ -373,7 +373,7 @@ DATASET_REGISTRY: dict[str, DatasetSpec] = {
     ),
     "wang_2024": DatasetSpec(
         key="wang_2024",
-        title="Wang 2024 — C. elegans neurotransmitter atlas (ligand + receptor tables)",
+        title="Wang 2024 — C. elegans neurotransmitter ligand calls",
         expected_dir=DOWNLOAD_DIR / prefix_NT.rstrip("/"),
         citation="Wang et al. (2024) eLife 13:RP95402",
         source_url="https://doi.org/10.7554/eLife.95402",

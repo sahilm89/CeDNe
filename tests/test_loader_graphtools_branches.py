@@ -769,7 +769,7 @@ def test_loadNeurotransmitters_populates_edges_and_preserves_gap_junctions(monke
     monkeypatch.setattr(
         loader,
         "getLigands",
-        lambda neuron, sex="Hermaphrodite": ["Acetylcholine", "GABA"]
+        lambda neuron, sex="Hermaphrodite", ligtable=None: ["Acetylcholine", "GABA"]
         if neuron == "AVAL"
         else [],
     )
@@ -792,8 +792,11 @@ def test_loadNeurotransmitters_populates_edges_and_preserves_gap_junctions(monke
     assert matched_conn.putative_neurotrasmitter_receptors == [("Acetylcholine", "acr-1")]
     assert matched_conn.neurotransmitters == ["Acetylcholine"]
     assert fallback_conn.putative_neurotrasmitter_receptors == []
-    assert fallback_conn.neurotransmitters == ["Acetylcholine", "GABA"]
+    assert fallback_conn.neurotransmitters == []
     assert not hasattr(gap_conn, "neurotransmitters")
+    assert nn.worm.citations["neurotransmitter_atlas"] == loader.citations["neurotransmitter_atlas"]
+    assert nn.worm.citations["altun_neurotransmitters_receptors"] == loader.citations["altun_neurotransmitters_receptors"]
+    assert nn.worm.citations["cengen"] == loader.citations["cengen"]
 
 
 def test_foldByNeuronType_groups_suffix_families_and_forwards_options():

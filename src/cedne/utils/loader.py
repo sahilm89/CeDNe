@@ -35,6 +35,23 @@ from .datasets import (
 warnings.filterwarnings("ignore", category=UserWarning, module='openpyxl')
 
 
+def _read_csv_dataset(path, dataset_key, hint=None, **kwargs):
+    """Read a CSV and translate real missing files to MissingDatasetError.
+
+    Keeping the existence check at the pandas boundary allows tests to
+    monkeypatch ``pd.read_csv`` with synthetic tables without staging the full
+    external dataset.
+    """
+    try:
+        return pd.read_csv(path, **kwargs)
+    except FileNotFoundError as exc:
+        raise MissingDatasetError(
+            dataset_key=dataset_key,
+            expected_path=Path(path),
+            hint=hint,
+        ) from exc
+
+
 # Canonical SIM vocabulary used throughout CeDNe for the sensory / interneuron /
 # motorneuron axis. Every C. elegans loader (cook, witvliet, white_1986) and
 # the comparative loaders (platynereis, ciona) normalize to these exact strings
@@ -322,7 +339,7 @@ def makeFly(name = '', import_parameters=None):
         ## Neurons
 
         ### Names
-        names = pd.read_csv(require_dataset_file(fly_wire / 'names.csv', 'fly_wire'))
+        names = _read_csv_dataset(fly_wire / 'names.csv', 'fly_wire')
         labs, neuron_types, lab_root_id = names['name'], names['group'], names['root_id']
         neuron_dict = {r:lab for r,lab in zip(lab_root_id, labs)}
         type_dict = {r:ntype for r,ntype in zip(lab_root_id, neuron_types)} 
@@ -332,12 +349,12 @@ def makeFly(name = '', import_parameters=None):
         neuron_types = {neuron_dict[rid]:type_dict[rid] for rid in root_ids}
         
         ### Positions
-        coordinates = pd.read_csv(require_dataset_file(fly_wire / 'coordinates.csv', 'fly_wire'))
+        coordinates = _read_csv_dataset(fly_wire / 'coordinates.csv', 'fly_wire')
         pos_root_id, position = coordinates['root_id'], coordinates['position']
         position_dict = {neuron_dict[rid]:np.array(list(filter(None, pos.split('[')[-1].split(']')[0].split(' '))), dtype=int) for rid,pos in zip(pos_root_id, position)}
         
         ### Stats
-        stats = pd.read_csv(require_dataset_file(fly_wire / 'cell_stats.csv', 'fly_wire'))
+        stats = _read_csv_dataset(fly_wire / 'cell_stats.csv', 'fly_wire')
         stats_root_id, nlength, narea, nvolume = stats['root_id'], np.array(stats['length_nm'], dtype=int), np.array(stats['area_nm'], dtype=int), np.array(stats['size_nm'], dtype=int)
 
         length_dict = {neuron_dict[rid]:nlen for (rid,nlen) in zip(stats_root_id, nlength)}
@@ -347,7 +364,7 @@ def makeFly(name = '', import_parameters=None):
         nn.create_neurons(labels, type=neuron_types, position=position_dict, length=length_dict, area=area_dict, volume=vol_dict)
 
         ## Connections
-        conns = pd.read_csv(require_dataset_file(fly_wire / 'connections_no_threshold.csv', 'fly_wire'))
+        conns = _read_csv_dataset(fly_wire / 'connections_no_threshold.csv', 'fly_wire')
         pre_rid, post_rid, weights, nts = conns['pre_root_id'], conns['post_root_id'], conns['syn_count'], conns['nt_type']
 
         for pre, post, weight, nt in zip(pre_rid, post_rid, weights, nts ):
@@ -360,7 +377,7 @@ def makeFly(name = '', import_parameters=None):
         f.citations.update({'winding_connectome': citations['winding_connectome']})
         nn = NervousSystem(f)
 
-        names = pd.read_csv(require_dataset_file(winding_connectome / 'annotations.csv', 'winding_2023'))
+        names = _read_csv_dataset(winding_connectome / 'annotations.csv', 'winding_2023')
         base_neuron_names = names['left_id'].tolist() + names['right_id'].tolist()
         base_neuron_type = names['celltype'].tolist() + names['celltype'].tolist()
 
@@ -370,7 +387,7 @@ def makeFly(name = '', import_parameters=None):
             if base_neuron_names[j] != 'no pair':
                 neuron_types[str(base_neuron_names[j])] = str(base_neuron_type[j])
 
-        conns = pd.read_csv(require_dataset_file(winding_connectome / 'all-all_connectivity_matrix.csv', 'winding_2023'), index_col=0)
+        conns = _read_csv_dataset(winding_connectome / 'all-all_connectivity_matrix.csv', 'winding_2023', index_col=0)
 
         neuron_names = [str(n) for n in conns.index]
         nn.create_neurons(neuron_names, neuron_type=[neuron_types[nname] if nname in neuron_types else 'unannotated' for nname in neuron_names])
@@ -644,15 +661,15 @@ def make_platynereis(name=''):
     src = veraszto_connectome
     _vk = 'veraszto_2025'
 
-    celltypes    = pd.read_csv(require_dataset_file(src / 'neuronal_celltypes_table.csv', _vk))
-    fig1         = pd.read_csv(require_dataset_file(src / 'elife-97964-fig1-data1.txt', _vk), sep='\t')
-    fig3         = pd.read_csv(require_dataset_file(src / 'elife-97964-fig3-data1.txt', _vk), sep='\t')
-    fig3_nonneu  = pd.read_csv(require_dataset_file(src / 'elife-97964-fig3-data2-v1.txt', _vk), sep='\t')
-    annot_matrix = pd.read_csv(require_dataset_file(src / 'elife-97964-fig3-figsupp2-data1.txt', _vk),
-                               sep='\t', index_col=0)
-    full_adj     = pd.read_csv(require_dataset_file(src / 'full_connectome_adjacency_matrix.csv', _vk), index_col=0)
-    grouped_adj  = pd.read_csv(require_dataset_file(src / 'all_celltypes_synapse_matrix.csv', _vk),
-                               sep=';', index_col=0)
+    celltypes    = _read_csv_dataset(src / 'neuronal_celltypes_table.csv', _vk)
+    fig1         = _read_csv_dataset(src / 'elife-97964-fig1-data1.txt', _vk, sep='\t')
+    fig3         = _read_csv_dataset(src / 'elife-97964-fig3-data1.txt', _vk, sep='\t')
+    fig3_nonneu  = _read_csv_dataset(src / 'elife-97964-fig3-data2-v1.txt', _vk, sep='\t')
+    annot_matrix = _read_csv_dataset(src / 'elife-97964-fig3-figsupp2-data1.txt', _vk,
+                                     sep='\t', index_col=0)
+    full_adj     = _read_csv_dataset(src / 'full_connectome_adjacency_matrix.csv', _vk, index_col=0)
+    grouped_adj  = _read_csv_dataset(src / 'all_celltypes_synapse_matrix.csv', _vk,
+                                     sep=';', index_col=0)
 
     # Drop unassigned EM fragments from the fine-grained adjacency. The source
     # has rows labeled 'fragment', 'SHORTfrg', 'SHORTFRG *', 'SHORTfragment *',
@@ -1042,8 +1059,22 @@ def getLigandsAndReceptors(npr, ligmap, col):
 
 
 @record("load_neurotransmitters")
-def loadNeurotransmitters(nn, sex='Hermaphrodite', aggregate=False):
-    """Loads Neurotransmitters into neurons using Wang et al 2024.
+def loadNeurotransmitters(
+    nn,
+    sex='Hermaphrodite',
+    aggregate=False,
+    transcriptome_threshold=4,
+    transcriptome_sex='hermaphrodite',
+    transcriptome_stage='L4',
+    transcriptome_dataset='auto',
+    threshold=None,
+):
+    """Loads receptor-supported putative neurotransmitters into neurons.
+
+    Wang 2024 supplies presynaptic ligand calls; Altun 2011 supplies
+    ligand-receptor mappings; ``transcriptome_sex`` and
+    ``transcriptome_stage`` select the CeNGEN transcriptome dataset used
+    for postsynaptic receptor expression.
 
     Refuses by default if ``nn`` contains merged neurons — the loader
     keys by source neuron names (col + suffix), so merged-neuron names
@@ -1066,11 +1097,39 @@ def loadNeurotransmitters(nn, sex='Hermaphrodite', aggregate=False):
             "after loading neurotransmitters."
         )
 
-    npr_file = require_dataset_file(
+    if threshold is not None:
+        transcriptome_threshold = threshold
+    transcriptome_threshold = int(transcriptome_threshold)
+    if transcriptome_threshold not in (1, 2, 3, 4):
+        raise ValueError('Neurotransmitter transcriptome threshold must be one of 1, 2, 3, or 4.')
+
+    cengen_paths = _cengen_threshold_paths(
+        sex=transcriptome_sex,
+        stage=transcriptome_stage,
+        dataset=transcriptome_dataset,
+    )
+    npr_file = require_dataset_file(cengen_paths[transcriptome_threshold - 1], 'cengen')
+    npr = _read_csv_dataset(npr_file, 'cengen', encoding='unicode_escape')
+    if 'gene_name' not in npr.columns:
+        for candidate in ('Gene', 'gene', 'genes', 'Gene Name'):
+            if candidate in npr.columns:
+                npr = npr.rename(columns={candidate: 'gene_name'})
+                break
+    if 'gene_name' not in npr.columns:
+        raise ValueError(f"CeNGEN transcriptome file is missing a gene_name column: {npr_file}")
+    npr = npr.drop(['Wormbase_ID', 'Unnamed: 0'], axis='columns', errors='ignore')
+    for col in npr.columns:
+        if col == 'gene_name':
+            continue
+        numeric = pd.to_numeric(npr[col], errors='coerce')
+        if numeric.notna().any():
+            npr[col] = numeric.fillna(0) > 0
+        else:
+            npr[col] = npr[col].fillna(False).astype(bool)
+    ligmap_file = require_dataset_file(
         DOWNLOAD_DIR / prefix_NT / 'GenesExpressing-BATCH-thrs4_use.xlsx', 'wang_2024',
     )
-    npr = pd.read_excel(npr_file, sheet_name='npr', true_values='TRUE', false_values='FALSE', engine='openpyxl')
-    ligmap = pd.read_excel(npr_file, sheet_name='ligmap', engine='openpyxl')
+    ligmap = pd.read_excel(ligmap_file, sheet_name='ligmap', engine='openpyxl')
     try:
         ligtable = _readLigandTable(sex=sex)
     except (FileNotFoundError, StopIteration):
@@ -1107,24 +1166,40 @@ def loadNeurotransmitters(nn, sex='Hermaphrodite', aggregate=False):
                 if lig in conn.ligands:
                     conn.putative_neurotrasmitter_receptors.append((lig, rec))
 
-            # Authoritative per-edge neurotransmitter set: receptor-matched
-            # ligands (deduped, canonical names). Falls back to the full
-            # presynaptic ligand list when the postsynaptic neuron has no
-            # receptor data, so we don't erase transmitters just because the
-            # NPR table is sparse.
+            # Authoritative per-edge neurotransmitter set: only
+            # receptor-supported ligand matches are treated as putative NTs.
             matched = []
             seen = set()
             for lig, _rec in conn.putative_neurotrasmitter_receptors:
                 if lig and lig not in seen:
                     matched.append(lig)
                     seen.add(lig)
-            if not matched:
-                for lig in conn.ligands:
-                    if lig and lig not in seen:
-                        matched.append(lig)
-                        seen.add(lig)
             conn.set_property('neurotransmitters', matched)
-    nn.worm.citations.update({'neurotransmitter_atlas':citations['neurotransmitter_atlas']})
+    transcriptome_source = str(npr_file.relative_to(DATADIR)) if npr_file.is_relative_to(DATADIR) else str(npr_file)
+    ligmap_source = str(ligmap_file.relative_to(DATADIR)) if ligmap_file.is_relative_to(DATADIR) else str(ligmap_file)
+    nn.set_property('neurotransmitter_threshold', transcriptome_threshold)
+    nn.set_property('neurotransmitter_source_file', transcriptome_source)
+    nn.set_property('neurotransmitter_transcriptome_threshold', transcriptome_threshold)
+    nn.set_property('neurotransmitter_transcriptome_source_file', transcriptome_source)
+    nn.set_property('neurotransmitter_transcriptome_dataset', transcriptome_dataset)
+    nn.set_property('neurotransmitter_transcriptome_sex', transcriptome_sex)
+    nn.set_property('neurotransmitter_transcriptome_stage', transcriptome_stage)
+    nn.set_property('neurotransmitter_ligmap_source_file', ligmap_source)
+    nn.worm.citations.update({
+        'neurotransmitter_atlas': citations['neurotransmitter_atlas'],
+        'altun_neurotransmitters_receptors': citations['altun_neurotransmitters_receptors'],
+        'cengen': citations['cengen'],
+    })
+    return {
+        'threshold': transcriptome_threshold,
+        'source_file': nn.neurotransmitter_source_file,
+        'transcriptome_threshold': transcriptome_threshold,
+        'transcriptome_source_file': nn.neurotransmitter_transcriptome_source_file,
+        'transcriptome_dataset': transcriptome_dataset,
+        'transcriptome_sex': transcriptome_sex,
+        'transcriptome_stage': transcriptome_stage,
+        'ligmap_source_file': nn.neurotransmitter_ligmap_source_file,
+    }
 
 ## Neuropeptides tables
 
@@ -1360,6 +1435,106 @@ thres_2 = DOWNLOAD_DIR / prefix_CENGEN / 'medium_threshold2.csv'
 thres_3 = DOWNLOAD_DIR / prefix_CENGEN / 'conservative_threshold3.csv'
 thres_4 = DOWNLOAD_DIR / prefix_CENGEN / 'stringent_threshold4.csv'
 
+
+_CENGEN_THRESHOLD_FILENAMES = {
+    1: ('GenesExpressing-BATCH-thrs1.csv', 'liberal_threshold1.csv'),
+    2: ('GenesExpressing-BATCH-thrs2.csv', 'medium_threshold2.csv'),
+    3: ('GenesExpressing-BATCH-thrs3.csv', 'conservative_threshold3.csv'),
+    4: ('GenesExpressing-BATCH-thrs4.csv', 'stringent_threshold4.csv'),
+}
+
+
+def _cengen_threshold_file(directory, threshold):
+    for filename in _CENGEN_THRESHOLD_FILENAMES[threshold]:
+        path = directory / filename
+        if path.exists():
+            return path
+    return None
+
+
+def _case_insensitive_child(parent, name):
+    candidate = parent / str(name)
+    if candidate.exists() or not parent.exists():
+        return candidate
+    needle = str(name).lower()
+    for child in parent.iterdir():
+        if child.name.lower() == needle:
+            return child
+    return candidate
+
+
+def _cengen_threshold_paths(sex=None, stage=None, dataset='auto'):
+    root = DOWNLOAD_DIR / prefix_CENGEN
+    legacy = [thres_1, thres_2, thres_3, thres_4]
+
+    if dataset and dataset != 'auto':
+        rel = Path(str(dataset).split(':', 1)[-1])
+        candidate = root
+        for part in rel.parts:
+            candidate = _case_insensitive_child(candidate, part)
+    else:
+        sex = str(sex or '').strip()
+        stage = str(stage or '').strip()
+        if sex and stage:
+            candidate = _case_insensitive_child(_case_insensitive_child(root, sex), stage)
+        else:
+            candidate = None
+
+    if candidate and candidate.exists():
+        paths = [_cengen_threshold_file(candidate, i) for i in range(1, 5)]
+        if all(paths):
+            return paths
+    return legacy
+
+
+def listTranscriptomeDatasets():
+    root = DOWNLOAD_DIR / prefix_CENGEN
+    rows = []
+    has_hermaphrodite_l4 = False
+    if root.exists():
+        for sex_dir in sorted(p for p in root.iterdir() if p.is_dir()):
+            for stage_dir in sorted(p for p in sex_dir.iterdir() if p.is_dir()):
+                threshold_paths = {
+                    i: _cengen_threshold_file(stage_dir, i)
+                    for i in range(1, 5)
+                }
+                thresholds = [i for i, threshold_path in threshold_paths.items() if threshold_path]
+                if thresholds:
+                    sex = sex_dir.name.lower()
+                    stage = stage_dir.name.lower()
+                    is_default = (sex == 'hermaphrodite' and stage == 'l4')
+                    if is_default:
+                        has_hermaphrodite_l4 = True
+                    rows.append({
+                        'key': f'cengen:{sex}/{stage}',
+                        'label': f'CeNGEN {sex_dir.name} {stage_dir.name}',
+                        'sex': sex,
+                        'stage': stage,
+                        'source': 'CeNGEN',
+                        'default': is_default,
+                        'thresholds': thresholds,
+                        'source_files': [
+                            str(threshold_paths[i].relative_to(DATADIR))
+                            for i in thresholds
+                        ],
+                    })
+    legacy_thresholds = [i for i, p in enumerate([thres_1, thres_2, thres_3, thres_4], start=1) if p.exists()]
+    # The original CeNGEN release at the CENGEN/ root is hermaphrodite L4 data.
+    # Skip if the new sex/stage layout already provides hermaphrodite/L4 to
+    # avoid a duplicate row; otherwise present it under its true semantics.
+    if legacy_thresholds and not has_hermaphrodite_l4:
+        rows.append({
+            'key': 'cengen:legacy',
+            'label': 'CeNGEN hermaphrodite L4',
+            'sex': 'hermaphrodite',
+            'stage': 'L4',
+            'source': 'CeNGEN',
+            'default': True,
+            'thresholds': legacy_thresholds,
+            'source_files': [str(p.relative_to(DATADIR)) for p in [thres_1, thres_2, thres_3, thres_4] if p.exists()],
+        })
+    return rows
+
 def returnThresholdDict(th1, th2, th3, th4, nnames, cengen_neurons):
     """
     Generate a dictionary of thresholds using CENGEN levels of sensitivity.
@@ -1472,7 +1647,7 @@ def _lookup_constituent_cengen_transcript(c_name, threshold_table):
 
 
 @record("load_transcripts")
-def loadTranscripts(nn, threshold=4, aggregate=False):
+def loadTranscripts(nn, threshold=4, aggregate=False, dataset='auto', sex=None, stage=None):
     """
     Loads transcripts from CENGEN data files and assigns them to neuron objects.
 
@@ -1496,16 +1671,21 @@ def loadTranscripts(nn, threshold=4, aggregate=False):
     if merged_names and not aggregate:
         raise MergedNetworkError(merged_names, op_name='loadTranscripts')
 
-    th1 = pd.read_csv(require_dataset_file(thres_1, 'cengen'),encoding= 'unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis = 'columns')
+    selected_thresholds = _cengen_threshold_paths(
+        sex=sex or getattr(getattr(nn, 'worm', None), 'sex', None),
+        stage=stage or getattr(getattr(nn, 'worm', None), 'stage', None),
+        dataset=dataset,
+    )
+    th1 = _read_csv_dataset(selected_thresholds[0], 'cengen', encoding='unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis='columns', errors='ignore')
     th1 = th1[th1.columns]>0
 
-    th2 = pd.read_csv(require_dataset_file(thres_2, 'cengen'),encoding= 'unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis = 'columns')
+    th2 = _read_csv_dataset(selected_thresholds[1], 'cengen', encoding='unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis='columns', errors='ignore')
     th2 = th2[th2.columns]>0
 
-    th3 = pd.read_csv(require_dataset_file(thres_3, 'cengen'),encoding= 'unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis = 'columns')
+    th3 = _read_csv_dataset(selected_thresholds[2], 'cengen', encoding='unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis='columns', errors='ignore')
     th3 = th3[th3.columns]>0
 
-    th4 = pd.read_csv(require_dataset_file(thres_4, 'cengen'),encoding= 'unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis = 'columns')
+    th4 = _read_csv_dataset(selected_thresholds[3], 'cengen', encoding='unicode_escape', index_col=1).drop(['Wormbase_ID','Unnamed: 0'], axis='columns', errors='ignore')
     th4 = th4[th4.columns]>0
 
     ## Group Names
@@ -1600,7 +1780,18 @@ def loadTranscripts(nn, threshold=4, aggregate=False):
                 merged_neuron.set_property('transcript', merged_t)
                 merged_neuron.set_property('_aggregated_from', folded_in)
 
+    nn.set_property('transcriptome_dataset', dataset)
+    nn.set_property('transcriptome_threshold', threshold)
+    nn.set_property('transcriptome_source_files', [
+        str(path.relative_to(DATADIR)) if path.is_relative_to(DATADIR) else str(path)
+        for path in selected_thresholds
+    ])
     nn.worm.citations.update({'cengen':citations['cengen']})
+    return {
+        'dataset': dataset,
+        'threshold': threshold,
+        'source_files': nn.transcriptome_source_files,
+    }
 
 def get_enriched_neurons(network, target_neurons, excluded_neurons=None, threshold=4):
     """

@@ -105,6 +105,7 @@ neuropeptide_atlas_links = ['01022024_neuropeptide_connectome_long_range_model.c
 citations = {
     'cengen': ['https://doi.org/10.1016/j.neuron.2018.07.042',
                'https://doi.org/10.1016/j.cell.2021.06.023',
+               'https://doi.org/10.1101/2025.11.21.689793',
             ],
     'fly_wire': ['https://doi.org/10.1038/s41586-024-07558-y',
                  'https://doi.org/10.1038/s41586-024-07686-5',
@@ -131,6 +132,8 @@ citations = {
         'https://doi.org/10.1186/s12859-022-04738-3',
         'https://doi.org/10.1016/j.cell.2020.12.012',
     ],
+    'altun_neurotransmitters_receptors': ['https://doi.org/10.3908/wormatlas.5.202'],
+    # Back-compat alias for the historical misspelling.
     'altun_neurotrasmitters_receptors': ['https://doi.org/10.3908/wormatlas.5.202'],
     'worm_lineage': ['https://doi.org/10.1016/0012-1606(77)90158-0'],
     'winding_connectome': ['https://doi.org/10.1126/science.add9330'], 
