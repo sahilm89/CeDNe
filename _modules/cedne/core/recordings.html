@@ -984,7 +984,7 @@
         <span class="c1"># If no onset found, return nan</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_find_positive_area</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bin_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_find_positive_area</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bin_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the positive and negative areas of the response.</span>
 
 <span class="sd">        Args:</span>
@@ -994,13 +994,18 @@
 <span class="sd">            tuple: (positive_area, negative_area) in amplitude-seconds.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">undersampling</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">response</span><span class="p">[::</span><span class="n">bin_size</span><span class="p">]</span>
-        <span class="n">pos_mask</span> <span class="o">=</span> <span class="n">undersampling</span> <span class="o">&gt;</span> <span class="mi">0</span>
-        <span class="n">neg_mask</span> <span class="o">=</span> <span class="n">undersampling</span> <span class="o">&lt;</span> <span class="mi">0</span>
-        
-        <span class="n">pos_area</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">undersampling</span><span class="p">[</span><span class="n">pos_mask</span><span class="p">],</span> 
-                                <span class="n">dx</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sampling_time</span><span class="o">*</span><span class="n">bin_size</span><span class="p">))</span>
-        <span class="n">neg_area</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">undersampling</span><span class="p">[</span><span class="n">neg_mask</span><span class="p">],</span> 
-                                    <span class="n">dx</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sampling_time</span><span class="o">*</span><span class="n">bin_size</span><span class="p">)))</span>
+        <span class="n">positive_trace</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">undersampling</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">negative_trace</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="o">-</span><span class="n">undersampling</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="n">dx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sampling_time</span> <span class="o">*</span> <span class="n">bin_size</span>
+        <span class="n">pos_area</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">positive_trace</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="n">dx</span><span class="p">))</span>
+        <span class="n">neg_area</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">negative_trace</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="n">dx</span><span class="p">))</span>
+        <span class="n">abs_area</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">undersampling</span><span class="p">),</span> <span class="n">dx</span><span class="o">=</span><span class="n">dx</span><span class="p">))</span>
+        <span class="n">signed_total</span> <span class="o">=</span> <span class="n">pos_area</span> <span class="o">+</span> <span class="n">neg_area</span>
+        <span class="k">if</span> <span class="n">signed_total</span> <span class="o">&gt;</span> <span class="n">abs_area</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">signed_total</span><span class="p">,</span> <span class="n">abs_area</span><span class="p">):</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="n">abs_area</span> <span class="o">/</span> <span class="n">signed_total</span>
+            <span class="n">pos_area</span> <span class="o">*=</span> <span class="n">scale</span>
+            <span class="n">neg_area</span> <span class="o">*=</span> <span class="n">scale</span>
         
         <span class="k">return</span> <span class="n">pos_area</span><span class="p">,</span> <span class="n">neg_area</span>
 
