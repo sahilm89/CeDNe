@@ -918,10 +918,49 @@
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fold_by</span><span class="p">,</span> <span class="nb">dict</span><span class="p">),</span> <span class="s2">&quot;Enter a dictionary with neuron class</span><span class="se">\</span>
 <span class="s2">            names as keys and the neurons to fold as values. If there is only one</span><span class="se">\</span>
 <span class="s2">                neuron in the list of values, the neuron will be renamed to the key.&quot;</span>
-        
-        <span class="n">graph_copy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">copy_type</span><span class="o">=</span><span class="s1">&#39;deep_with_data&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+
         <span class="k">if</span> <span class="n">exceptions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">exceptions</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Capture per-fold constituent subgraphs from the *pre-fold*</span>
+        <span class="c1"># graph BEFORE any contraction mutates the working copy. Each</span>
+        <span class="c1"># captured subnetwork holds the originally-selected set + all</span>
+        <span class="c1"># internal edges + per-element attributes, so drill-down can</span>
+        <span class="c1"># reconstruct the un-folded state without walking graph history.</span>
+        <span class="c1">#</span>
+        <span class="c1"># Why we capture at fold granularity (not the internal</span>
+        <span class="c1"># contract_neurons pair-wise steps): the fold is the user-level</span>
+        <span class="c1"># primitive. Hierarchy depth and provenance should count folds.</span>
+        <span class="c1"># A single fold of N neurons is one hierarchy level, irrespective</span>
+        <span class="c1"># of how many pair-wise contractions implement it internally.</span>
+        <span class="c1">#</span>
+        <span class="c1"># ``_silent=True`` keeps the per-fold subnetwork copies out of</span>
+        <span class="c1"># the animal log — only the fold_network event is user-relevant.</span>
+        <span class="n">constituent_subgraphs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">merged_nodename</span><span class="p">,</span> <span class="n">nodes_to_fold</span> <span class="ow">in</span> <span class="n">fold_by</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes_to_fold</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">present</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">nodes_to_fold</span>
+                <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">exceptions</span> <span class="ow">and</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span>
+            <span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">present</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">constituent_subgraphs</span><span class="p">[</span><span class="n">merged_nodename</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">subnetwork</span><span class="p">(</span>
+                    <span class="n">neuron_names</span><span class="o">=</span><span class="n">present</span><span class="p">,</span>
+                    <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Constituents of </span><span class="si">{</span><span class="n">merged_nodename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                    <span class="n">_silent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="c1"># Defensive: a subnetwork failure must not block the fold.</span>
+                <span class="k">pass</span>
+
+        <span class="n">graph_copy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">copy_type</span><span class="o">=</span><span class="s1">&#39;deep_with_data&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+        <span class="c1"># Internal pair-wise contractions are an implementation detail</span>
+        <span class="c1"># of the fold — pass ``_silent=True`` so the animal log only</span>
+        <span class="c1"># carries the user-level fold_network event, not N-1 noisy</span>
+        <span class="c1"># contract_neurons events per fold.</span>
         <span class="k">for</span> <span class="n">merged_nodename</span><span class="p">,</span> <span class="n">nodes_to_fold</span> <span class="ow">in</span> <span class="n">fold_by</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes_to_fold</span><span class="p">)</span> <span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
                 <span class="n">merged_node</span> <span class="o">=</span> <span class="n">nodes_to_fold</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -929,17 +968,32 @@
                     <span class="n">npair</span> <span class="o">=</span> <span class="p">(</span><span class="n">merged_node</span><span class="p">,</span> <span class="n">nodes_to_fold</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="n">npair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">exceptions</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">npair</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">exceptions</span><span class="p">:</span>
                         <span class="c1">#self.contract_neurons(npair, merged_nodename, data=data)</span>
-                        <span class="n">graph_copy</span><span class="o">.</span><span class="n">contract_neurons</span><span class="p">(</span><span class="n">npair</span><span class="p">,</span> <span class="n">merged_nodename</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">self_loops</span><span class="o">=</span><span class="n">self_loops</span><span class="p">)</span>
+                        <span class="n">graph_copy</span><span class="o">.</span><span class="n">contract_neurons</span><span class="p">(</span><span class="n">npair</span><span class="p">,</span> <span class="n">merged_nodename</span><span class="p">,</span>
+                                                   <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">self_loops</span><span class="o">=</span><span class="n">self_loops</span><span class="p">,</span>
+                                                   <span class="n">_silent</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
                         <span class="n">merged_node</span> <span class="o">=</span> <span class="n">merged_nodename</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">graph_copy</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">nodes_to_fold</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">merged_nodename</span>
-        
+
         <span class="n">graph_copy</span><span class="o">.</span><span class="n">update_network</span><span class="p">()</span>
         <span class="n">graph_copy</span><span class="o">.</span><span class="n">update_neurons</span><span class="p">()</span>
         <span class="n">graph_copy</span><span class="o">.</span><span class="n">reassign_connections</span><span class="p">()</span>
-        
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">_attach_constituent_subgraphs</span><span class="p">(</span><span class="n">result_graph</span><span class="p">):</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;Pin each captured pre-fold subgraph onto its surviving</span>
+<span class="sd">            merged neuron in ``result_graph``. Set both the python</span>
+<span class="sd">            attribute and the nodes-dict mirror so the subgraph</span>
+<span class="sd">            propagates through subsequent deep_with_data copies</span>
+<span class="sd">            (matching the existing constituents pattern).&quot;&quot;&quot;</span>
+            <span class="k">for</span> <span class="n">merged_name</span><span class="p">,</span> <span class="n">subg</span> <span class="ow">in</span> <span class="n">constituent_subgraphs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">merged_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">result_graph</span><span class="o">.</span><span class="n">neurons</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">merged_neuron</span> <span class="o">=</span> <span class="n">result_graph</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">merged_name</span><span class="p">]</span>
+                <span class="n">merged_neuron</span><span class="o">.</span><span class="n">constituent_subgraph</span> <span class="o">=</span> <span class="n">subg</span>
+                <span class="n">result_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">merged_neuron</span><span class="p">][</span><span class="s1">&#39;constituent_subgraph&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">subg</span>
 
         <span class="k">if</span> <span class="n">data</span> <span class="o">==</span> <span class="s1">&#39;collect&#39;</span><span class="p">:</span>
+            <span class="n">_attach_constituent_subgraphs</span><span class="p">(</span><span class="n">graph_copy</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">graph_copy</span>
         <span class="k">if</span> <span class="n">data</span> <span class="o">==</span> <span class="s1">&#39;clean&#39;</span><span class="p">:</span>
             <span class="n">parsed_conns</span> <span class="o">=</span> <span class="p">{}</span>
@@ -947,7 +1001,12 @@
                 <span class="k">if</span> <span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">conn</span><span class="o">.</span><span class="n">connection_type</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">parsed_conns</span><span class="p">:</span>
                     <span class="n">parsed_conns</span><span class="p">[(</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">conn</span><span class="o">.</span><span class="n">connection_type</span><span class="p">)]</span> <span class="o">=</span> <span class="p">[]</span>
                 <span class="n">parsed_conns</span><span class="p">[(</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">conn</span><span class="o">.</span><span class="n">connection_type</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span>
-            <span class="n">contracted_graph</span> <span class="o">=</span> <span class="n">graph_copy</span><span class="o">.</span><span class="n">contract_connections</span><span class="p">(</span><span class="n">parsed_conns</span><span class="p">)</span>
+            <span class="c1"># Internal cleanup step of the fold — silent so the log</span>
+            <span class="c1"># only shows the fold_network event the user actually</span>
+            <span class="c1"># initiated, not the parallel-edge merge that happens</span>
+            <span class="c1"># underneath.</span>
+            <span class="n">contracted_graph</span> <span class="o">=</span> <span class="n">graph_copy</span><span class="o">.</span><span class="n">contract_connections</span><span class="p">(</span><span class="n">parsed_conns</span><span class="p">,</span> <span class="n">_silent</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">_attach_constituent_subgraphs</span><span class="p">(</span><span class="n">contracted_graph</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">contracted_graph</span></div>
 
 
@@ -1196,6 +1255,15 @@
         <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">MERGE_TRACK_ATTRS</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">src</span><span class="p">][</span><span class="n">attr</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+
+        <span class="c1"># NOTE on provenance: pair-wise contraction is an implementation</span>
+        <span class="c1"># detail of folding. We deliberately do NOT attach a</span>
+        <span class="c1"># ``constituent_subgraph`` here — that record belongs at the</span>
+        <span class="c1"># user-level operation (``fold_network``), which captures the</span>
+        <span class="c1"># full flat subgraph of the originally-selected set on the</span>
+        <span class="c1"># resulting merged neuron. Counting pair-wise steps would</span>
+        <span class="c1"># over-count hierarchy depth (a single fold of N neurons would</span>
+        <span class="c1"># look like N-1 nested levels rather than 1).</span>
 
         <span class="c1"># ----- Existing edge-contraction flow ------------------------------</span>
         <span class="k">for</span> <span class="n">_cid</span><span class="p">,</span> <span class="n">conn</span> <span class="ow">in</span> <span class="n">src</span><span class="o">.</span><span class="n">get_connections</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
