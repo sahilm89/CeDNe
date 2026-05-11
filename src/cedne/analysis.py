@@ -23,6 +23,30 @@ import numpy as np
 from numpy.typing import NDArray
 from typing import Optional, Dict, Any, List, Tuple
 from scipy import linalg
+from scipy.sparse.linalg import svds
+
+
+def _truncated_svd(matrix: NDArray, n_components: int) -> Tuple[NDArray, NDArray, NDArray]:
+    """Top-K SVD.
+
+    Uses ``scipy.sparse.linalg.svds`` for ``k < min(M, N)``, which computes only
+    the top singular triplets and scales linearly in matrix size — avoids the
+    O(min(M^2 N, N^2 M)) cost of a full dense SVD when we only want a handful
+    of components. Falls back to the full dense SVD for small matrices where
+    ``svds`` is not applicable (``k`` must be strictly less than ``min(M, N)``).
+
+    Returns ``(U, S, Vt)`` in *descending* singular-value order, matching
+    ``scipy.linalg.svd``'s convention. ``svds`` itself returns ascending order;
+    we reverse here so callers don't need to know which path ran.
+    """
+    M, T = matrix.shape
+    min_dim = min(M, T)
+    if n_components >= min_dim:
+        U, S, Vt = linalg.svd(matrix, full_matrices=False)
+        return U[:, :n_components], S[:n_components], Vt[:n_components, :]
+    U, S, Vt = svds(matrix, k=n_components)
+    order = np.argsort(S)[::-1]
+    return U[:, order], S[order], Vt[order, :]
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -75,22 +99,25 @@ def compute_state_space(
     names = neuron_names or [f"neuron_{i}" for i in range(N)]
 
     if method == "svd":
-        U, S, Vt = linalg.svd(activity_matrix, full_matrices=False)
-        loadings = U[:, :n_components]              # N × K
-        projections = (np.diag(S[:n_components]) @ Vt[:n_components, :]).T  # T × K
-        total_var = np.sum(S ** 2)
-        explained = (S[:n_components] ** 2) / total_var if total_var > 0 else np.zeros(n_components)
-        singular_values = S[:n_components]
+        # Top-K SVD; total variance comes from the matrix Frobenius norm so
+        # the explained-variance fractions remain comparable to the full-SVD
+        # path (||X||_F^2 == sum of all sigma^2).
+        U, S, Vt = _truncated_svd(activity_matrix, n_components)
+        loadings = U                                 # N × K
+        projections = (np.diag(S) @ Vt).T            # T × K
+        total_var = float((activity_matrix ** 2).sum())
+        explained = (S ** 2) / total_var if total_var > 0 else np.zeros(n_components)
+        singular_values = S
 
     elif method == "pca":
         mean = activity_matrix.mean(axis=1, keepdims=True)
         centered = activity_matrix - mean
-        U, S, Vt = linalg.svd(centered, full_matrices=False)
-        loadings = U[:, :n_components]
-        projections = (np.diag(S[:n_components]) @ Vt[:n_components, :]).T
-        total_var = np.sum(S ** 2)
-        explained = (S[:n_components] ** 2) / total_var if total_var > 0 else np.zeros(n_components)
-        singular_values = S[:n_components]
+        U, S, Vt = _truncated_svd(centered, n_components)
+        loadings = U
+        projections = (np.diag(S) @ Vt).T
+        total_var = float((centered ** 2).sum())
+        explained = (S ** 2) / total_var if total_var > 0 else np.zeros(n_components)
+        singular_values = S
 
     elif method == "nmf":
         from sklearn.decomposition import NMF
@@ -116,6 +143,13 @@ def compute_state_space(
             f"Unknown method '{method}'. Use 'svd', 'pca', or 'nmf'."
         )
 
+    # Component-label prefix for axes/legends: PCA produces principal components
+    # ("PC"), NMF produces non-negative factors ("Factor"), and a plain
+    # uncentered SVD produces neither — call them generic components ("Comp").
+    # Centralising this here is deliberate: the frontend should not switch on
+    # method itself, it just renders whatever label the analysis returned.
+    component_label = {"pca": "PC", "nmf": "Factor"}.get(method, "Comp")
+
     return {
         "projections": projections,
         "loadings": loadings,
@@ -124,6 +158,7 @@ def compute_state_space(
         "neuron_names": names,
         "method": method,
         "n_components": n_components,
+        "component_label": component_label,
     }
 
 
@@ -184,10 +219,15 @@ def fit_var(
         X_blocks.append(activity_matrix[:, lag - p : T - p])
     X = np.vstack(X_blocks)                       # (N*lag) × (T - lag)
 
-    # Ridge regression: A = Y @ X.T @ (X @ X.T + λI)^{-1}
+    # Ridge regression: A = Y @ X.T @ (X @ X.T + λI)^{-1}.
+    # Use linalg.solve instead of forming the inverse explicitly — same result,
+    # faster (one factorization vs. inversion), and more numerically stable
+    # near a singular XXT. (XXT + λI) is symmetric, so we pass assume_a='sym'
+    # to take the symmetric solver path.
     XXT = X @ X.T
     reg_matrix = regularizer * np.eye(N * lag)
-    A = Y @ X.T @ linalg.inv(XXT + reg_matrix)   # N × (N*lag)
+    # Solve (XXT + λI) @ A.T = X @ Y.T  →  A = solve(...).T
+    A = linalg.solve(XXT + reg_matrix, X @ Y.T, assume_a='sym').T   # N × (N*lag)
 
     # Apply connectome mask if provided
     if connectome_mask is not None:

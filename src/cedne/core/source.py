@@ -37,6 +37,26 @@ class Citation:
         return cls(**{k: v for k, v in d.items() if k in valid_keys})
 
 
+# Canonical self-citation for the CeDNe software. Auto-attached to every
+# Animal at construction so any consumer that walks ``effective_citations``
+# (notebooks, the web UI's References panel, exported provenance manifests)
+# sees that CeDNe was used to build the result.
+CEDNE_SOFTWARE_CITATION_KEY = "CeDNe_2025"
+
+CEDNE_SOFTWARE_CITATION = Citation(
+    key=CEDNE_SOFTWARE_CITATION_KEY,
+    title=(
+        "CeDNe: A unified framework for analysis and modeling of integrated "
+        "cross-modality neural data"
+    ),
+    authors=["Moza, Sahil"],
+    year=2025,
+    doi="10.1101/2025.11.03.683805",
+    url="https://www.biorxiv.org/content/10.1101/2025.11.03.683805v1",
+    notes="Please cite the CeDNe preprint if you use CeDNe in your work.",
+)
+
+
 def serialize_citations(citations: Dict[str, Any]) -> Dict[str, Any]:
     """Convert a citations dict to JSON-friendly form.
 

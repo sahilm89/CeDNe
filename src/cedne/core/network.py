@@ -453,7 +453,7 @@ class NervousSystem(nx.MultiDiGraph, Citable):
             names as keys.
         """
 
-        
+
         if not as_view:
             if data==True:
                 graph_copy = self.copy(copy_type='deep_with_data', name=name)
@@ -495,7 +495,7 @@ class NervousSystem(nx.MultiDiGraph, Citable):
             subgraph.update_network()
             subgraph.update_neurons()
             subgraph.update_connections()
-            
+
         else:
             if neuron_names is not None:
                 filter_neurons = [self.neurons[name] for name in neuron_names]
@@ -506,7 +506,7 @@ class NervousSystem(nx.MultiDiGraph, Citable):
             else:
                 subgraph = self
         return subgraph #subgraph.copy(as_view)
-    
+
     def join_networks(self, networks, mode='consensus'):
         ''' Goes through the list of networks and joins them to the current graph.'''
         assert all([isinstance(network, NervousSystem) for network in networks])
@@ -550,37 +550,52 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         return combined_network
 
     @record("fold_network")
-    def fold_network(self, fold_by, name=None, data='collect', exceptions=None, self_loops=True):
+    def fold_network(self, fold_by, name=None, data='collect', exceptions=None,
+                     self_loops=True, legacy=False):
         """
-        Fold the network based on a filter.
-
-        <TODO>
-        
-        !!! The fold_by can also take Neuron Group objects as input.
-
-        </TODO>
+        Fold the network based on a partition.
 
         Args:
-            fold_by (tuple): A tuple of length 2 specifying the neurons to fold.
-                The first element is the neurons to fold, and the second element
-                is the neurons that are exempt from folding.
-                The tuple can contain any neuron name as a string.
-            data (str, optional): The data to use for folding. Defaults to 'collect'.
-                Available options are:
-                    - 'collect': Collect the data together from all neurons in the fold_by
-                        tuple, but keep them separate.
-                    - 'union' : Union the data from all neurons in the fold_by tuple.
-                    - 'intersect': Intersect the data from all neurons in the fold_by tuple.
+            fold_by (dict[str, list[str]]):
+                Mapping from each merged-neuron name to the list of original
+                neuron names that should collapse into it. Singleton lists
+                are treated as renames.
+            name (str, optional):
+                Name for the resulting NervousSystem.
+            data (str, optional): One of:
+                - 'collect': Preserve every original edge as a separate
+                  parallel in the folded view (default).
+                - 'clean': Sum weights of parallel edges per
+                  ``(folded_pre, folded_post, connection_type)`` and union
+                  list-valued edge metadata (ligands, neurotransmitters,
+                  putative receptors, receptor dicts).
+            exceptions (list[str], optional):
+                Neuron names that should NOT be folded into their class —
+                they pass through to the folded view under their original
+                names.
+            self_loops (bool, optional):
+                If False, intra-class edges (i.e. edges whose endpoints
+                both belong to the same merged class) are dropped from
+                the result. Defaults to True.
+            legacy (bool, optional):
+                Selects between two implementations that should be
+                behaviourally equivalent. Default ``False`` uses the
+                batch path which builds the folded view directly from
+                the partition map in O(V + E). Set ``True`` to use the
+                pre-batch implementation that does N-1 pair-wise
+                ``contract_neurons`` calls per class (O(class_size ×
+                growing_supernode_degree) per class — unusable at
+                scale). Preserved during the rollout so callers can
+                bisect parity issues, and scheduled for removal once
+                the fast path has soaked.
 
         Returns:
-            None
-
-        Raises:
-            AssertionError: If the length of fold_by is not 2.
-
-        Notes:
-            This function folds the network by contracting the specified neurons.
-            The neurons specified in exceptions will not be folded.
+            NervousSystem: The folded graph. Each merged neuron carries
+            ``constituents``, ``is_merged``, ``constituent_subgraph`` and
+            the merge-policy-resolved ``MERGE_TRACK_ATTRS``. Both code
+            paths produce structurally equivalent NervousSystem objects;
+            see ``_fold_network_batch`` for the precise preservation
+            contract.
         """
         assert isinstance(fold_by, dict), "Enter a dictionary with neuron class\
             names as keys and the neurons to fold as values. If there is only one\
@@ -607,6 +622,45 @@ class NervousSystem(nx.MultiDiGraph, Citable):
                     f"({list(nodes_to_fold)!r})."
                 )
 
+        # The partition must be disjoint: a neuron can belong to at
+        # most one merged class. Without this check the batch path
+        # silently overwrites ``rename_map`` (last-write-wins) and the
+        # legacy path also misbehaves — both produce silent data loss
+        # / duplication rather than a clean error. Excepted members
+        # are ignored: they pass through to the folded view regardless
+        # of how many classes nominally list them.
+        seen_assignments: dict[str, str] = {}
+        for merged_nodename, nodes_to_fold in fold_by.items():
+            for n in nodes_to_fold:
+                if n in exceptions:
+                    continue
+                prior = seen_assignments.get(n)
+                if prior is not None and prior != merged_nodename:
+                    raise ValueError(
+                        f"Cannot fold: neuron '{n}' is listed under "
+                        f"multiple merged classes ('{prior}' and "
+                        f"'{merged_nodename}'). Each neuron may appear "
+                        f"in at most one class."
+                    )
+                seen_assignments[n] = merged_nodename
+
+        if legacy:
+            return self._fold_network_legacy(
+                fold_by, name, data, exceptions, self_loops,
+            )
+        return self._fold_network_batch(
+            fold_by, name, data, exceptions, self_loops,
+        )
+
+    def _fold_network_legacy(self, fold_by, name, data, exceptions, self_loops):
+        """Pre-batch fold: pair-wise ``contract_neurons`` for every class
+        member after the first, then optional ``contract_connections``.
+
+        Preserved for parity comparison. O(class_size × supernode_degree)
+        per class — unusable at scale (a 43k-member class on a 17M-edge
+        graph wedges for many hours). The batch implementation
+        (``_fold_network_batch``) is the default.
+        """
         # Capture per-fold constituent subgraphs from the *pre-fold*
         # graph BEFORE any contraction mutates the working copy. Each
         # captured subnetwork holds the originally-selected set + all
@@ -652,7 +706,6 @@ class NervousSystem(nx.MultiDiGraph, Citable):
                 for j in range(1,len(nodes_to_fold)):
                     npair = (merged_node, nodes_to_fold[j])
                     if not npair[0] in exceptions and not npair[1] in exceptions:
-                        #self.contract_neurons(npair, merged_nodename, data=data)
                         graph_copy.contract_neurons(npair, merged_nodename,
                                                    data=data, self_loops=self_loops,
                                                    _silent=True)
@@ -665,11 +718,6 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         graph_copy.reassign_connections()
 
         def _attach_constituent_subgraphs(result_graph):
-            """Pin each captured pre-fold subgraph onto its surviving
-            merged neuron in ``result_graph``. Set both the python
-            attribute and the nodes-dict mirror so the subgraph
-            propagates through subsequent deep_with_data copies
-            (matching the existing constituents pattern)."""
             for merged_name, subg in constituent_subgraphs.items():
                 if merged_name not in result_graph.neurons:
                     continue
@@ -686,13 +734,318 @@ class NervousSystem(nx.MultiDiGraph, Citable):
                 if (e[0],e[1], conn.connection_type) not in parsed_conns:
                     parsed_conns[(e[0],e[1], conn.connection_type)] = []
                 parsed_conns[(e[0],e[1], conn.connection_type)].append(conn)
-            # Internal cleanup step of the fold — silent so the log
-            # only shows the fold_network event the user actually
-            # initiated, not the parallel-edge merge that happens
-            # underneath.
             contracted_graph = graph_copy.contract_connections(parsed_conns, _silent=True)
             _attach_constituent_subgraphs(contracted_graph)
             return contracted_graph
+
+    def _fold_network_batch(self, fold_by, name, data, exceptions, self_loops):
+        """Batch fold: construct the folded NervousSystem directly from
+        the partition map in O(V + E + Σ class_internal_edges).
+
+        Preservation contract:
+        - The folded NervousSystem is a fresh object with fresh Neuron
+          and Connection instances. Mutable attribute *values* on the
+          new neurons/connections may share references with the parent's
+          counterparts (same as ``copy(copy_type='deep_with_data')`` and
+          the legacy fold path). Use ``copy(copy_type='deep')`` if you
+          need full attribute isolation.
+        - Merged-neuron provenance matches ``contract_neurons`` exactly:
+          per-member snapshots are captured via the same ``_snapshot``
+          logic; merge policy on ``MERGE_TRACK_ATTRS`` (all-same →
+          preserved value; mixed → ``MERGED_TYPE`` sentinel) is applied
+          once across the snapshot set; constituents from transitively
+          merged inputs are flattened into the new constituents dict
+          (matching the ``contract_neurons`` line "Fold any constituents
+          the target itself had from prior merges").
+        - The merged neuron's ``constituent_subgraph`` is the pre-fold
+          subnetwork captured by ``self.subnetwork(neuron_names=present,
+          _silent=True)`` and is mirrored to the nx node dict so
+          subsequent ``deep_with_data`` copies propagate it.
+        - Edges:
+          * ``data='collect'``: every parent edge becomes one folded
+            edge with the original key and ``**edge_data`` preserved.
+          * ``data='clean'``: parallels per
+            ``(folded_pre, folded_post, connection_type)`` are summed
+            (weights) and union'd (ligands / neurotransmitters /
+            putative_neurotrasmitter_receptors / receptors), and the
+            resulting Connection carries ``contraction_data`` mapping
+            each pre-fold edge's ``_id`` → its pre-fold Connection
+            object. Note: the legacy ``data='clean'`` path computes
+            ``contraction_data`` keyed by the post-pair-wise edge IDs;
+            keying by pre-fold IDs here is more directly useful for
+            consumers (e.g. the FlyWire notebook reads
+            ``conn.contraction_data[k].neurotransmitter`` — the
+            attribute survives on either set of Connection objects).
+        - ``self_loops=False`` drops intra-class edges from the folded
+          view, matching ``nx.contracted_nodes(self_loops=False)``.
+        - ``exceptions`` members pass through to the folded view under
+          their original names (matching the legacy path: the pair-wise
+          contraction loop skips pairs containing an excepted neuron).
+        """
+        # ---------------------------------------------------------------
+        # Step 1: pre-fold constituent_subgraph capture in ONE O(V + E)
+        # pass over the parent graph.
+        #
+        # The earlier draft of this step called ``self.subnetwork(...)``
+        # per class, which iterates the entire parent edge list per call
+        # (the view-based subnetwork filters by node-membership on every
+        # edge access). That made the capture phase O(classes × E_parent)
+        # — pathological at FlyWire's 510 classes × 17M edges scale.
+        #
+        # The fix here: bucket internal-to-class edges by a single sweep
+        # of ``self.edges(...)``, then build each constituent NervousSystem
+        # directly from its bucket. Per-class cost is now
+        # O(class_size + class_internal_edges); total O(V + E).
+        from collections import defaultdict
+
+        class_members: dict[str, list[str]] = {}
+        member_to_class: dict[str, str] = {}
+        for merged_nodename, nodes_to_fold in fold_by.items():
+            if len(nodes_to_fold) <= 1:
+                continue
+            present = [
+                n for n in nodes_to_fold
+                if n not in exceptions and n in self.neurons
+            ]
+            if len(present) <= 1:
+                continue
+            class_members[merged_nodename] = present
+            for m in present:
+                member_to_class[m] = merged_nodename
+
+        # Single sweep over parent edges. Keep tuples of (u_name, v_name,
+        # key, edge_data) so the build loop below can construct fresh
+        # Connections without holding refs to the parent's Connection
+        # objects (matches what self.subnetwork(...) would have done).
+        by_class_edges: dict[str, list] = defaultdict(list)
+        if class_members:
+            for u, v, k, edge_data in self.edges(keys=True, data=True):
+                cu = member_to_class.get(u.name)
+                if cu is None:
+                    continue
+                if member_to_class.get(v.name) != cu:
+                    continue
+                by_class_edges[cu].append((u.name, v.name, k, edge_data))
+
+        constituent_subgraphs: dict[str, 'NervousSystem'] = {}
+        for cname, members in class_members.items():
+            try:
+                sub = NervousSystem(
+                    self.worm,
+                    network=f"Constituents of {cname}",
+                )
+                # Mirror what ``deep_with_data`` does: each new Neuron
+                # gets the parent's nx node attribute dict as **kwargs.
+                # Same preservation contract as the legacy
+                # ``subnetwork(...)`` path, just scoped to the class.
+                for member_name in members:
+                    parent_n = self.neurons[member_name]
+                    nx_node_data = dict(self.nodes[parent_n])
+                    Neuron(member_name, sub, **nx_node_data)
+                for un, vn, k, edge_data in by_class_edges.get(cname, ()):
+                    src = sub.neurons[un]
+                    dst = sub.neurons[vn]
+                    # Preserve the parent edge's key + every attribute it
+                    # carries. ``Connection(...)`` uses the kwargs to both
+                    # ``add_edge`` (nx side) and to ``set_property`` (Python
+                    # side) — identical to ``create_connections_from``.
+                    ed = dict(edge_data)
+                    ct = ed.pop('connection_type', 'chemical-synapse')
+                    wt = ed.pop('weight', 1)
+                    new_conn = Connection(src, dst, k, connection_type=ct,
+                                          weight=wt, **ed)
+                    sub.connections[(src, dst, new_conn.uid)] = new_conn
+                sub.visualization_metadata = copy.deepcopy(self.visualization_metadata)
+                constituent_subgraphs[cname] = sub
+            except Exception:
+                # Defensive: a single bad class must not block the fold.
+                pass
+
+        # ---------------------------------------------------------------
+        # Step 2: build the partition map: original_name -> folded_name.
+        # Excepted members pass through unchanged.
+        # ---------------------------------------------------------------
+        rename_map = {}
+        for merged_nodename, nodes_to_fold in fold_by.items():
+            present = [n for n in nodes_to_fold
+                       if n not in exceptions and n in self.neurons]
+            if len(present) > 1:
+                for m in present:
+                    rename_map[m] = merged_nodename
+            elif len(present) == 1:
+                # Singleton: rename the single member to the class key.
+                # Matches the legacy ``else`` branch (line 660-661 in the
+                # pre-refactor source) which renamed unconditionally.
+                rename_map[present[0]] = merged_nodename
+
+        # ---------------------------------------------------------------
+        # Step 3: snapshot pre-fold provenance per merged class. Mirrors
+        # ``contract_neurons``'s ``_snapshot`` helper and merge-policy
+        # loop. Single-member classes don't enter this step (their
+        # "merged" neuron is just the renamed source — its existing
+        # constituents/etc. survive via the nx-node-data copy in step 5).
+        # ---------------------------------------------------------------
+        def _snapshot(neuron, n_name):
+            snap = {'name': n_name}
+            for attr in MERGE_TRACK_ATTRS:
+                snap[attr] = getattr(neuron, attr, '')
+            return snap
+
+        merged_class_snapshots = {}  # cname -> {orig_name: snapshot}
+        merged_class_resolved_attrs = {}  # cname -> {merge-policy attrs}
+        for merged_nodename in constituent_subgraphs:
+            present = [n for n in fold_by[merged_nodename]
+                       if n not in exceptions and n in self.neurons]
+            snapshots = {}
+            for m in present:
+                mn = self.neurons[m]
+                # Flatten constituents from any transitively-merged source.
+                if getattr(mn, 'constituents', None):
+                    for child_name, child_meta in mn.constituents.items():
+                        snapshots.setdefault(child_name, dict(child_meta))
+                snapshots.setdefault(m, _snapshot(mn, m))
+            merged_class_snapshots[merged_nodename] = snapshots
+
+            resolved = {}
+            for attr in MERGE_TRACK_ATTRS:
+                values = {meta.get(attr) for meta in snapshots.values()}
+                values.discard(None)
+                values.discard('')
+                if len(values) == 1:
+                    resolved[attr] = next(iter(values))
+                elif len(values) > 1:
+                    resolved[attr] = MERGED_TYPE
+                # else: leave attr unset
+            merged_class_resolved_attrs[merged_nodename] = resolved
+
+        # ---------------------------------------------------------------
+        # Step 4: construct the folded NervousSystem and its neurons.
+        # ---------------------------------------------------------------
+        folded = NervousSystem(self.worm, network=name or (self.name + "_folded"))
+        folded.visualization_metadata = copy.deepcopy(self.visualization_metadata)
+
+        created = set()
+        # 4a. Multi-member merged neurons.
+        for cname, snapshots in merged_class_snapshots.items():
+            attrs = dict(merged_class_resolved_attrs[cname])
+            # ``dict(snapshots)`` creates a fresh top-level constituents
+            # dict (snapshot meta values are still shared, matching the
+            # behaviour of contract_neurons line 936). The freshness of
+            # the OUTER dict matters: prevents the
+            # constituents-leak-across-folds bug captured by
+            # ``test_hierarchical_fold_keeps_inner_constituents_intact``.
+            attrs['constituents'] = dict(snapshots)
+            Neuron(cname, folded, **attrs)
+            created.add(cname)
+
+        # 4b. Singletons and pass-through neurons. Pull attributes from
+        # the parent's nx node attribute dict (same source-of-truth as
+        # ``create_neurons_from(self, data=True)``).
+        for orig_name, orig_neuron in self.neurons.items():
+            target = rename_map.get(orig_name, orig_name)
+            if target in created:
+                continue
+            nx_data = dict(self.nodes[orig_neuron])
+            Neuron(target, folded, **nx_data)
+            created.add(target)
+
+        # ---------------------------------------------------------------
+        # Step 5: aggregate edges into the folded view.
+        # ---------------------------------------------------------------
+        if data == 'collect':
+            for u, v, k, edge_data in self.edges(keys=True, data=True):
+                fu = rename_map.get(u.name, u.name)
+                fv = rename_map.get(v.name, v.name)
+                if fu == fv and not self_loops:
+                    continue
+                src = folded.neurons[fu]
+                dst = folded.neurons[fv]
+                conn = Connection(src, dst, k, **edge_data)
+                folded.connections[(src, dst, conn.uid)] = conn
+        elif data == 'clean':
+            # Aggregate parallels per (folded_pre, folded_post, type).
+            # Mirrors the union-metadata logic in ``contract_connections``.
+            from collections import defaultdict
+            bucket = defaultdict(lambda: {
+                'weight': 0.0,
+                'contraction_data': {},  # orig_id -> orig Connection
+                'ligands': [], 'lig_seen': set(),
+                'nts': [], 'nt_seen': set(),
+                'putative': [], 'put_seen': set(),
+                'receptors': {},
+            })
+            for u, v, k, edge_data in self.edges(keys=True, data=True):
+                fu = rename_map.get(u.name, u.name)
+                fv = rename_map.get(v.name, v.name)
+                if fu == fv and not self_loops:
+                    continue
+                ct = edge_data.get('connection_type', 'chemical-synapse')
+                b = bucket[(fu, fv, ct)]
+                b['weight'] += float(edge_data.get('weight', 1) or 0)
+                # The connections dict on a NervousSystem is a custom
+                # ``ConnectionGroup`` and has no ``.get`` method — fall
+                # back to membership-check + bracket lookup.
+                if (u, v, k) in self.connections:
+                    orig_conn = self.connections[(u, v, k)]
+                    b['contraction_data'][orig_conn._id] = orig_conn
+                # Union list-valued edge metadata (order-preserving dedupe).
+                for lig in (edge_data.get('ligands') or []):
+                    key = lig if isinstance(lig, str) else repr(lig)
+                    if key not in b['lig_seen']:
+                        b['lig_seen'].add(key)
+                        b['ligands'].append(lig)
+                for nt in (edge_data.get('neurotransmitters') or []):
+                    key = nt if isinstance(nt, str) else repr(nt)
+                    if key not in b['nt_seen']:
+                        b['nt_seen'].add(key)
+                        b['nts'].append(nt)
+                for pair in (edge_data.get('putative_neurotrasmitter_receptors') or []):
+                    key = tuple(pair) if isinstance(pair, (list, tuple)) else pair
+                    if key not in b['put_seen']:
+                        b['put_seen'].add(key)
+                        b['putative'].append(pair)
+                receptors = edge_data.get('receptors')
+                if isinstance(receptors, dict):
+                    for rk, rv in receptors.items():
+                        b['receptors'].setdefault(rk, rv)
+
+            for (fu, fv, ct), b in bucket.items():
+                src = folded.neurons[fu]
+                dst = folded.neurons[fv]
+                new_conn = Connection(src, dst, connection_type=ct, weight=b['weight'])
+                new_conn.set_property('contraction_data', dict(b['contraction_data']))
+                if b['ligands']:
+                    new_conn.set_property('ligands', list(b['ligands']))
+                if b['nts']:
+                    new_conn.set_property('neurotransmitters', list(b['nts']))
+                if b['putative']:
+                    new_conn.set_property('putative_neurotrasmitter_receptors', list(b['putative']))
+                if b['receptors']:
+                    new_conn.set_property('receptors', dict(b['receptors']))
+                folded.connections[(src, dst, new_conn.uid)] = new_conn
+        else:
+            raise ValueError(f"Unknown data mode for fold_network: {data!r}")
+
+        # ---------------------------------------------------------------
+        # Step 6: attach constituent subgraphs and mirror merge-track
+        # attrs to the nx node dict (same shape contract_neurons +
+        # _attach_constituent_subgraphs produce on the legacy path).
+        # ---------------------------------------------------------------
+        for cname, subg in constituent_subgraphs.items():
+            if cname not in folded.neurons:
+                continue
+            merged_neuron = folded.neurons[cname]
+            merged_neuron.constituent_subgraph = subg
+            folded.nodes[merged_neuron]['constituent_subgraph'] = subg
+            # Mirror constituents + MERGE_TRACK_ATTRS to nx node dict so
+            # subsequent ``deep_with_data`` copies propagate them
+            # (matches the mirror block at the bottom of contract_neurons).
+            folded.nodes[merged_neuron]['constituents'] = merged_neuron.constituents
+            for attr in MERGE_TRACK_ATTRS:
+                if hasattr(merged_neuron, attr):
+                    folded.nodes[merged_neuron][attr] = getattr(merged_neuron, attr)
+
+        return folded
 
 
             # if data == 'collect':

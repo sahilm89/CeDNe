@@ -7,13 +7,22 @@ __license__ = "MIT"
 import pickle
 from pathlib import Path
 from .io import generate_random_string, load_pickle
-from .source import Citable
+from .source import (
+    CEDNE_SOFTWARE_CITATION,
+    CEDNE_SOFTWARE_CITATION_KEY,
+    Citable,
+)
 
 class Animal(Citable):
     ''' This is a full animal class'''
     def __init__(self, species = '', name='', stage='', sex='', genotype='', **kwargs):
         ''' Initializes an Organism class'''
         Citable.__init__(self)  # provides self.citations = {}
+        # Every CeDNe Animal carries a self-citation for the CeDNe software so
+        # that downstream consumers (notebooks, web UI references panel,
+        # exported provenance manifests) automatically attribute CeDNe.
+        if CEDNE_SOFTWARE_CITATION_KEY not in self.citations:
+            self.citations[CEDNE_SOFTWARE_CITATION_KEY] = CEDNE_SOFTWARE_CITATION
         self.species = species
         self.name = name
         self.stage = stage

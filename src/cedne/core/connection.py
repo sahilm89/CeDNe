@@ -74,7 +74,7 @@ class Connection(Citable):
 
         self._id = (pre, post, self.uid)
         self.connection_type = connection_type
-        
+
 
         self.pre.out_connections[self._id] = self
         self.post.in_connections[self._id] = self

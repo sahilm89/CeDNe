@@ -54,22 +54,44 @@ ALLOWED_MODULE_PREFIXES = [
     # neuropeptide, transcriptome). Pandas's pickle protocol pulls in many internal
     # classes (Series, DataFrame, BlockManager, several Index types) and the set
     # shifts across pandas minor versions, so an explicit class allowlist would be
-    # brittle. Wildcard prefix here mirrors networkx's risk profile — pandas has no
-    # widely-published __reduce__ RCE gadgets, but tightening this is on the
-    # backlog alongside narrowing networkx/cedne.
+    # brittle. We keep the wildcard for now but pair it with the DENY rules below
+    # to block the known expression-evaluation gadgets (pandas.eval / pandas.query)
+    # that would otherwise execute arbitrary Python during unpickling. A full
+    # explicit pandas type allowlist is still on the backlog.
     "pandas",
 ]
 
+# Denies override the allow-prefix above. Used to block callable gadgets that
+# could trigger arbitrary code execution if reached via a crafted pickle.
+DENIED_MODULE_PREFIXES = (
+    "pandas.core.computation",  # pandas.eval lives here; whole subsystem evaluates expressions
+    "pandas.io.pickle",         # to_pickle/read_pickle helpers — refuse chaining via unpickle
+)
+DENIED_QUALIFIED_NAMES = {
+    ("pandas", "eval"),     # top-level re-export of pandas.core.computation.eval.eval
+    ("pandas", "query"),    # similar expression-evaluation entry point
+}
+
 class RestrictedUnpickler(pickle.Unpickler):
     def find_class(self, module, name):
+        # Deny known dangerous callables first, even if they fall under an allowed prefix.
+        if (module, name) in DENIED_QUALIFIED_NAMES:
+            raise pickle.UnpicklingError(
+                f"global '{module}.{name}' is denied (expression-evaluation gadget)"
+            )
+        if any(module == prefix or module.startswith(prefix + ".") for prefix in DENIED_MODULE_PREFIXES):
+            raise pickle.UnpicklingError(
+                f"global '{module}.{name}' is denied (module under {DENIED_MODULE_PREFIXES})"
+            )
+
         # Allow fully qualified safe classes
         if (module, name) in ALLOWED_CLASSES:
             return getattr(__import__(module, fromlist=[name]), name)
-        
+
         # Allow all classes from whitelisted module prefixes (like cedne.*)
         if any(module == prefix or module.startswith(prefix + ".") for prefix in ALLOWED_MODULE_PREFIXES):
             return getattr(__import__(module, fromlist=[name]), name)
-        
+
         # Otherwise, reject
         raise pickle.UnpicklingError(f"global '{module}.{name}' is forbidden")
     

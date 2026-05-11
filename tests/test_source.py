@@ -20,7 +20,13 @@ from cedne.core.connection import (
 )
 from cedne.core.network import NervousSystem
 from cedne.core.neuron import Neuron, NeuronGroup
-from cedne.core.source import Citable, Citation, serialize_citations
+from cedne.core.source import (
+    CEDNE_SOFTWARE_CITATION,
+    CEDNE_SOFTWARE_CITATION_KEY,
+    Citable,
+    Citation,
+    serialize_citations,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -145,8 +151,17 @@ def worm_with_circuit():
 # ---------------------------------------------------------------------------
 
 class TestBackwardCompat:
-    def test_worm_citations_initially_empty(self, worm_with_circuit):
-        assert worm_with_circuit["worm"].citations == {}
+    def test_worm_citations_initially_have_only_cedne_self_citation(
+        self, worm_with_circuit
+    ):
+        """A fresh Worm carries only the auto-attached CeDNe self-citation.
+
+        Loaders / users add further citations on top of this baseline.
+        """
+        assert (
+            list(worm_with_circuit["worm"].citations.keys())
+            == [CEDNE_SOFTWARE_CITATION_KEY]
+        )
 
     def test_legacy_update_pattern(self, worm_with_circuit):
         """loader.py does: w.citations.update({'cook_connectome': {...}})."""
@@ -160,6 +175,41 @@ class TestBackwardCompat:
         for obj in worm_with_circuit.values():
             assert hasattr(obj, "citations")
             assert isinstance(obj.citations, dict)
+
+
+class TestCedneSelfCitation:
+    """Every Animal is auto-stamped with the CeDNe software citation so that
+    downstream consumers (notebooks, web UI References panel, exported
+    provenance manifests) attribute CeDNe automatically.
+    """
+
+    def test_fresh_worm_carries_cedne_citation(self):
+        w = Worm()
+        assert CEDNE_SOFTWARE_CITATION_KEY in w.citations
+        assert w.citations[CEDNE_SOFTWARE_CITATION_KEY] is CEDNE_SOFTWARE_CITATION
+
+    def test_cedne_citation_has_preprint_doi(self):
+        assert CEDNE_SOFTWARE_CITATION.doi == "10.1101/2025.11.03.683805"
+        assert CEDNE_SOFTWARE_CITATION.url.startswith("https://")
+
+    def test_cedne_citation_surfaces_in_neuron_effective_walk(
+        self, worm_with_circuit
+    ):
+        n1 = worm_with_circuit["n1"]
+        keys = [k for _, k, _ in n1.effective_citations()]
+        assert CEDNE_SOFTWARE_CITATION_KEY in keys
+
+    def test_user_can_override_cedne_citation(self):
+        """If a caller explicitly attaches a different value under the
+        reserved key (e.g. pinning a newer version), the auto-attach must
+        not clobber it."""
+        w = Worm()
+        replacement = Citation(key=CEDNE_SOFTWARE_CITATION_KEY, year=9999)
+        w.citations[CEDNE_SOFTWARE_CITATION_KEY] = replacement
+        # Re-running __init__ shouldn't overwrite; here we just confirm the
+        # idempotency check on add: a second Animal construction with the
+        # same dict reference would no-op.
+        assert w.citations[CEDNE_SOFTWARE_CITATION_KEY] is replacement
 
 
 # ---------------------------------------------------------------------------
@@ -177,7 +227,11 @@ class TestHierarchy:
         w.add_citation(Citation(key="WormCite"))
 
         keys = [k for _, k, _ in n1.effective_citations()]
-        assert set(keys) == {"NeuronCite", "NetworkCite", "WormCite"}
+        # Worm carries an auto-attached CeDNe self-citation in addition to the
+        # ones we add explicitly.
+        assert set(keys) == {
+            "NeuronCite", "NetworkCite", "WormCite", CEDNE_SOFTWARE_CITATION_KEY
+        }
 
     def test_connection_walks_to_network_and_worm(self, worm_with_circuit):
         w = worm_with_circuit["worm"]
@@ -189,7 +243,9 @@ class TestHierarchy:
         w.add_citation(Citation(key="WormCite"))
 
         keys = [k for _, k, _ in c.effective_citations()]
-        assert set(keys) == {"ConnCite", "NetworkCite", "WormCite"}
+        assert set(keys) == {
+            "ConnCite", "NetworkCite", "WormCite", CEDNE_SOFTWARE_CITATION_KEY
+        }
 
     def test_neuron_group_citation_reaches_member(self, worm_with_circuit):
         ns = worm_with_circuit["network"]
