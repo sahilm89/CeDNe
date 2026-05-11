@@ -585,10 +585,49 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         assert isinstance(fold_by, dict), "Enter a dictionary with neuron class\
             names as keys and the neurons to fold as values. If there is only one\
                 neuron in the list of values, the neuron will be renamed to the key."
-        
-        graph_copy = self.copy(copy_type='deep_with_data', name=name)
+
         if exceptions is None:
             exceptions = []
+
+        # Capture per-fold constituent subgraphs from the *pre-fold*
+        # graph BEFORE any contraction mutates the working copy. Each
+        # captured subnetwork holds the originally-selected set + all
+        # internal edges + per-element attributes, so drill-down can
+        # reconstruct the un-folded state without walking graph history.
+        #
+        # Why we capture at fold granularity (not the internal
+        # contract_neurons pair-wise steps): the fold is the user-level
+        # primitive. Hierarchy depth and provenance should count folds.
+        # A single fold of N neurons is one hierarchy level, irrespective
+        # of how many pair-wise contractions implement it internally.
+        #
+        # ``_silent=True`` keeps the per-fold subnetwork copies out of
+        # the animal log — only the fold_network event is user-relevant.
+        constituent_subgraphs = {}
+        for merged_nodename, nodes_to_fold in fold_by.items():
+            if len(nodes_to_fold) <= 1:
+                continue
+            present = [
+                n for n in nodes_to_fold
+                if n not in exceptions and n in self.neurons
+            ]
+            if len(present) <= 1:
+                continue
+            try:
+                constituent_subgraphs[merged_nodename] = self.subnetwork(
+                    neuron_names=present,
+                    name=f"Constituents of {merged_nodename}",
+                    _silent=True,
+                )
+            except Exception:
+                # Defensive: a subnetwork failure must not block the fold.
+                pass
+
+        graph_copy = self.copy(copy_type='deep_with_data', name=name)
+        # Internal pair-wise contractions are an implementation detail
+        # of the fold — pass ``_silent=True`` so the animal log only
+        # carries the user-level fold_network event, not N-1 noisy
+        # contract_neurons events per fold.
         for merged_nodename, nodes_to_fold in fold_by.items():
             if len(nodes_to_fold) >1:
                 merged_node = nodes_to_fold[0]
@@ -596,17 +635,32 @@ class NervousSystem(nx.MultiDiGraph, Citable):
                     npair = (merged_node, nodes_to_fold[j])
                     if not npair[0] in exceptions and not npair[1] in exceptions:
                         #self.contract_neurons(npair, merged_nodename, data=data)
-                        graph_copy.contract_neurons(npair, merged_nodename, data=data, self_loops=self_loops)
+                        graph_copy.contract_neurons(npair, merged_nodename,
+                                                   data=data, self_loops=self_loops,
+                                                   _silent=True)
                         merged_node = merged_nodename
             else:
                 graph_copy.neurons[nodes_to_fold[0]].name = merged_nodename
-        
+
         graph_copy.update_network()
         graph_copy.update_neurons()
         graph_copy.reassign_connections()
-        
+
+        def _attach_constituent_subgraphs(result_graph):
+            """Pin each captured pre-fold subgraph onto its surviving
+            merged neuron in ``result_graph``. Set both the python
+            attribute and the nodes-dict mirror so the subgraph
+            propagates through subsequent deep_with_data copies
+            (matching the existing constituents pattern)."""
+            for merged_name, subg in constituent_subgraphs.items():
+                if merged_name not in result_graph.neurons:
+                    continue
+                merged_neuron = result_graph.neurons[merged_name]
+                merged_neuron.constituent_subgraph = subg
+                result_graph.nodes[merged_neuron]['constituent_subgraph'] = subg
 
         if data == 'collect':
+            _attach_constituent_subgraphs(graph_copy)
             return graph_copy
         if data == 'clean':
             parsed_conns = {}
@@ -614,7 +668,12 @@ class NervousSystem(nx.MultiDiGraph, Citable):
                 if (e[0],e[1], conn.connection_type) not in parsed_conns:
                     parsed_conns[(e[0],e[1], conn.connection_type)] = []
                 parsed_conns[(e[0],e[1], conn.connection_type)].append(conn)
-            contracted_graph = graph_copy.contract_connections(parsed_conns)
+            # Internal cleanup step of the fold — silent so the log
+            # only shows the fold_network event the user actually
+            # initiated, not the parallel-edge merge that happens
+            # underneath.
+            contracted_graph = graph_copy.contract_connections(parsed_conns, _silent=True)
+            _attach_constituent_subgraphs(contracted_graph)
             return contracted_graph
 
 
@@ -854,6 +913,15 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         for attr in MERGE_TRACK_ATTRS:
             if hasattr(src, attr):
                 self.nodes[src][attr] = getattr(src, attr)
+
+        # NOTE on provenance: pair-wise contraction is an implementation
+        # detail of folding. We deliberately do NOT attach a
+        # ``constituent_subgraph`` here — that record belongs at the
+        # user-level operation (``fold_network``), which captures the
+        # full flat subgraph of the originally-selected set on the
+        # resulting merged neuron. Counting pair-wise steps would
+        # over-count hierarchy depth (a single fold of N neurons would
+        # look like N-1 nested levels rather than 1).
 
         # ----- Existing edge-contraction flow ------------------------------
         for _cid, conn in src.get_connections().items():

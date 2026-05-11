@@ -167,7 +167,14 @@ def record(op: str) -> Callable:
 
     Reserved kwargs consumed by the decorator (not forwarded to the wrapped
     function): ``_citations=[...]`` for citations introduced by this op,
-    ``_actor=...`` for the user/agent that triggered it.
+    ``_actor=...`` for the user/agent that triggered it,
+    ``_silent=True`` to invoke the recorded function WITHOUT appending an
+    Event to the animal log — used by internal callers that compose
+    recorded operations (e.g. ``contract_neurons`` builds a pre-merge
+    subgraph via ``subnetwork``; that internal copy is an implementation
+    detail of the contraction, not a user-initiated subnetwork op, so
+    surfacing it on the log would mislead consumers about what the
+    user actually did).
     """
 
     def deco(fn: Callable) -> Callable:
@@ -175,7 +182,10 @@ def record(op: str) -> Callable:
         def wrapper(*args, **kwargs):
             citations = kwargs.pop("_citations", None) or []
             actor = kwargs.pop("_actor", None)
+            silent = kwargs.pop("_silent", False)
             result = fn(*args, **kwargs)
+            if silent:
+                return result
             target_obj = args[0] if args else None
             animal = _resolve_animal(target_obj)
             if animal is None:
