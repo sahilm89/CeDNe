@@ -922,6 +922,24 @@
         <span class="k">if</span> <span class="n">exceptions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">exceptions</span> <span class="o">=</span> <span class="p">[]</span>
 
+        <span class="c1"># Validate every fold&#39;s destination name BEFORE touching the</span>
+        <span class="c1"># graph. Renaming onto an unrelated existing neuron silently</span>
+        <span class="c1"># produces duplicate names that crash subsequent copies; the</span>
+        <span class="c1"># underlying ``contract_neurons`` has the same guard but</span>
+        <span class="c1"># surfacing the error at the fold level gives a clearer message</span>
+        <span class="c1"># and avoids partially applying a multi-fold dict.</span>
+        <span class="k">for</span> <span class="n">merged_nodename</span><span class="p">,</span> <span class="n">nodes_to_fold</span> <span class="ow">in</span> <span class="n">fold_by</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">merged_nodename</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span>
+                <span class="ow">and</span> <span class="n">merged_nodename</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">nodes_to_fold</span>
+            <span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Cannot fold into &#39;</span><span class="si">{</span><span class="n">merged_nodename</span><span class="si">}</span><span class="s2">&#39;: a neuron with &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;that name already exists in the network and is not &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;one of the neurons being folded &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">nodes_to_fold</span><span class="p">)</span><span class="si">!r}</span><span class="s2">).&quot;</span>
+                <span class="p">)</span>
+
         <span class="c1"># Capture per-fold constituent subgraphs from the *pre-fold*</span>
         <span class="c1"># graph BEFORE any contraction mutates the working copy. Each</span>
         <span class="c1"># captured subnetwork holds the originally-selected set + all</span>
@@ -1196,6 +1214,23 @@
         <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">source_name</span><span class="p">]</span>
         <span class="n">tgt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">target_name</span><span class="p">]</span>
 
+        <span class="c1"># Refuse to rename onto an unrelated existing neuron. Without this</span>
+        <span class="c1"># check the rename `src.name = contracted_name` silently produces</span>
+        <span class="c1"># two neurons with the same name in the network (one being the</span>
+        <span class="c1"># surviving src, the other being whatever was already there),</span>
+        <span class="c1"># corrupting subsequent lookups and triggering &quot;already exists&quot;</span>
+        <span class="c1"># crashes deep inside `copy()` / `create_neurons_from`.</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">contracted_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span>
+            <span class="ow">and</span> <span class="n">contracted_name</span> <span class="o">!=</span> <span class="n">source_name</span>
+            <span class="ow">and</span> <span class="n">contracted_name</span> <span class="o">!=</span> <span class="n">target_name</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Cannot contract into &#39;</span><span class="si">{</span><span class="n">contracted_name</span><span class="si">}</span><span class="s2">&#39;: a neuron with &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;that name already exists in this network and isn&#39;t one of &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;the pair being merged (</span><span class="si">{</span><span class="n">source_name</span><span class="si">!r}</span><span class="s2">, </span><span class="si">{</span><span class="n">target_name</span><span class="si">!r}</span><span class="s2">).&quot;</span>
+            <span class="p">)</span>
+
         <span class="c1"># ----- Merge-provenance bookkeeping (new in Issue 10A) -------------</span>
         <span class="c1"># We track constituents on the surviving neuron explicitly, BEFORE</span>
         <span class="c1"># nx.contracted_nodes mutates the graph, because:</span>
@@ -1216,6 +1251,18 @@
             <span class="c1"># First merge for src — record its pre-merge identity.</span>
             <span class="c1"># src.name is still the original here (rename happens below).</span>
             <span class="n">src</span><span class="o">.</span><span class="n">constituents</span> <span class="o">=</span> <span class="p">{</span><span class="n">src</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">_snapshot</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">src</span><span class="o">.</span><span class="n">name</span><span class="p">)}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Re-merge: src is already a merged neuron. The dict it</span>
+            <span class="c1"># carries may be shared with previously-captured constituent</span>
+            <span class="c1"># subgraphs (``create_neurons_from`` propagates node attrs</span>
+            <span class="c1"># by reference, not deep copy, so the same dict is reachable</span>
+            <span class="c1"># through any nested ``constituent_subgraph`` taken before</span>
+            <span class="c1"># this contraction). The setdefault calls below mutate that</span>
+            <span class="c1"># dict in place; without taking ownership of a fresh copy</span>
+            <span class="c1"># first, the captured snapshot&#39;s view of its constituents</span>
+            <span class="c1"># would silently grow to include this fold&#39;s other inputs</span>
+            <span class="c1"># too — corrupting drill-down provenance.</span>
+            <span class="n">src</span><span class="o">.</span><span class="n">constituents</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">constituents</span><span class="p">)</span>
 
         <span class="c1"># Fold any constituents the target itself had from prior merges so</span>
         <span class="c1"># nested merges produce a flat list of original neurons.</span>
