@@ -589,6 +589,24 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         if exceptions is None:
             exceptions = []
 
+        # Validate every fold's destination name BEFORE touching the
+        # graph. Renaming onto an unrelated existing neuron silently
+        # produces duplicate names that crash subsequent copies; the
+        # underlying ``contract_neurons`` has the same guard but
+        # surfacing the error at the fold level gives a clearer message
+        # and avoids partially applying a multi-fold dict.
+        for merged_nodename, nodes_to_fold in fold_by.items():
+            if (
+                merged_nodename in self.neurons
+                and merged_nodename not in nodes_to_fold
+            ):
+                raise ValueError(
+                    f"Cannot fold into '{merged_nodename}': a neuron with "
+                    f"that name already exists in the network and is not "
+                    f"one of the neurons being folded "
+                    f"({list(nodes_to_fold)!r})."
+                )
+
         # Capture per-fold constituent subgraphs from the *pre-fold*
         # graph BEFORE any contraction mutates the working copy. Each
         # captured subnetwork holds the originally-selected set + all
@@ -854,6 +872,23 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         src = self.neurons[source_name]
         tgt = self.neurons[target_name]
 
+        # Refuse to rename onto an unrelated existing neuron. Without this
+        # check the rename `src.name = contracted_name` silently produces
+        # two neurons with the same name in the network (one being the
+        # surviving src, the other being whatever was already there),
+        # corrupting subsequent lookups and triggering "already exists"
+        # crashes deep inside `copy()` / `create_neurons_from`.
+        if (
+            contracted_name in self.neurons
+            and contracted_name != source_name
+            and contracted_name != target_name
+        ):
+            raise ValueError(
+                f"Cannot contract into '{contracted_name}': a neuron with "
+                f"that name already exists in this network and isn't one of "
+                f"the pair being merged ({source_name!r}, {target_name!r})."
+            )
+
         # ----- Merge-provenance bookkeeping (new in Issue 10A) -------------
         # We track constituents on the surviving neuron explicitly, BEFORE
         # nx.contracted_nodes mutates the graph, because:
@@ -874,6 +909,18 @@ class NervousSystem(nx.MultiDiGraph, Citable):
             # First merge for src — record its pre-merge identity.
             # src.name is still the original here (rename happens below).
             src.constituents = {src.name: _snapshot(src, src.name)}
+        else:
+            # Re-merge: src is already a merged neuron. The dict it
+            # carries may be shared with previously-captured constituent
+            # subgraphs (``create_neurons_from`` propagates node attrs
+            # by reference, not deep copy, so the same dict is reachable
+            # through any nested ``constituent_subgraph`` taken before
+            # this contraction). The setdefault calls below mutate that
+            # dict in place; without taking ownership of a fresh copy
+            # first, the captured snapshot's view of its constituents
+            # would silently grow to include this fold's other inputs
+            # too — corrupting drill-down provenance.
+            src.constituents = dict(src.constituents)
 
         # Fold any constituents the target itself had from prior merges so
         # nested merges produce a flat list of original neurons.
