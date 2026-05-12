@@ -326,25 +326,55 @@
     <span class="c1"># neuropeptide, transcriptome). Pandas&#39;s pickle protocol pulls in many internal</span>
     <span class="c1"># classes (Series, DataFrame, BlockManager, several Index types) and the set</span>
     <span class="c1"># shifts across pandas minor versions, so an explicit class allowlist would be</span>
-    <span class="c1"># brittle. Wildcard prefix here mirrors networkx&#39;s risk profile — pandas has no</span>
-    <span class="c1"># widely-published __reduce__ RCE gadgets, but tightening this is on the</span>
-    <span class="c1"># backlog alongside narrowing networkx/cedne.</span>
+    <span class="c1"># brittle. We keep the wildcard for now but pair it with the DENY rules below</span>
+    <span class="c1"># to block the known expression-evaluation gadgets (pandas.eval / pandas.query)</span>
+    <span class="c1"># that would otherwise execute arbitrary Python during unpickling. A full</span>
+    <span class="c1"># explicit pandas type allowlist is still on the backlog.</span>
     <span class="s2">&quot;pandas&quot;</span><span class="p">,</span>
 <span class="p">]</span>
 
+<span class="c1"># Denies override the allow-prefix above. Used to block callable gadgets that</span>
+<span class="c1"># could trigger arbitrary code execution if reached via a crafted pickle.</span>
+<span class="n">DENIED_MODULE_PREFIXES</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">&quot;pandas.core.computation&quot;</span><span class="p">,</span>  <span class="c1"># pandas.eval lives here; whole subsystem evaluates expressions</span>
+    <span class="s2">&quot;pandas.io.pickle&quot;</span><span class="p">,</span>  <span class="c1"># to_pickle/read_pickle helpers — refuse chaining via unpickle</span>
+<span class="p">)</span>
+<span class="n">DENIED_QUALIFIED_NAMES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">(</span><span class="s2">&quot;pandas&quot;</span><span class="p">,</span> <span class="s2">&quot;eval&quot;</span><span class="p">),</span>  <span class="c1"># top-level re-export of pandas.core.computation.eval.eval</span>
+    <span class="p">(</span><span class="s2">&quot;pandas&quot;</span><span class="p">,</span> <span class="s2">&quot;query&quot;</span><span class="p">),</span>  <span class="c1"># similar expression-evaluation entry point</span>
+<span class="p">}</span>
+
+
 <span class="k">class</span><span class="w"> </span><span class="nc">RestrictedUnpickler</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">Unpickler</span><span class="p">):</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">find_class</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">module</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="c1"># Deny known dangerous callables first, even if they fall under an allowed prefix.</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">in</span> <span class="n">DENIED_QUALIFIED_NAMES</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">pickle</span><span class="o">.</span><span class="n">UnpicklingError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;global &#39;</span><span class="si">{</span><span class="n">module</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; is denied (expression-evaluation gadget)&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span>
+            <span class="n">module</span> <span class="o">==</span> <span class="n">prefix</span> <span class="ow">or</span> <span class="n">module</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">prefix</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">prefix</span> <span class="ow">in</span> <span class="n">DENIED_MODULE_PREFIXES</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="n">pickle</span><span class="o">.</span><span class="n">UnpicklingError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;global &#39;</span><span class="si">{</span><span class="n">module</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; is denied (module under </span><span class="si">{</span><span class="n">DENIED_MODULE_PREFIXES</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
+
         <span class="c1"># Allow fully qualified safe classes</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">in</span> <span class="n">ALLOWED_CLASSES</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">__import__</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">fromlist</span><span class="o">=</span><span class="p">[</span><span class="n">name</span><span class="p">]),</span> <span class="n">name</span><span class="p">)</span>
-        
+
         <span class="c1"># Allow all classes from whitelisted module prefixes (like cedne.*)</span>
-        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">module</span> <span class="o">==</span> <span class="n">prefix</span> <span class="ow">or</span> <span class="n">module</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">prefix</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">prefix</span> <span class="ow">in</span> <span class="n">ALLOWED_MODULE_PREFIXES</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span>
+            <span class="n">module</span> <span class="o">==</span> <span class="n">prefix</span> <span class="ow">or</span> <span class="n">module</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">prefix</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">prefix</span> <span class="ow">in</span> <span class="n">ALLOWED_MODULE_PREFIXES</span>
+        <span class="p">):</span>
             <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="nb">__import__</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">fromlist</span><span class="o">=</span><span class="p">[</span><span class="n">name</span><span class="p">]),</span> <span class="n">name</span><span class="p">)</span>
-        
+
         <span class="c1"># Otherwise, reject</span>
         <span class="k">raise</span> <span class="n">pickle</span><span class="o">.</span><span class="n">UnpicklingError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;global &#39;</span><span class="si">{</span><span class="n">module</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; is forbidden&quot;</span><span class="p">)</span>
-    
+
+
 <span class="c1"># class RestrictedUnpickler(pickle.Unpickler):</span>
 <span class="c1">#     &quot;&quot;&quot;</span>
 <span class="c1">#     A custom unpickler that restricts the loading of certain modules and classes.</span>
@@ -363,11 +393,13 @@
 <span class="c1">#             return getattr(__import__(module, fromlist=[name]), name)</span>
 <span class="c1">#         raise pickle.UnpicklingError(f&quot;global &#39;{module}.{name}&#39; is forbidden&quot;)</span>
 
+
 <div class="viewcode-block" id="load_pickle">
 <a class="viewcode-back" href="../../../index.html#cedne.load_pickle">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">load_pickle</span><span class="p">(</span><span class="n">file</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39; Loading restricted pickles.&#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Loading restricted pickles.&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">RestrictedUnpickler</span><span class="p">(</span><span class="n">file</span><span class="p">)</span><span class="o">.</span><span class="n">load</span><span class="p">()</span></div>
+
 
 
 <div class="viewcode-block" id="load_worm">
@@ -384,9 +416,10 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="kn">from</span><span class="w"> </span><span class="nn">.animal</span><span class="w"> </span><span class="kn">import</span> <span class="n">Worm</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file</span><span class="p">:</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file</span><span class="p">:</span>
             <span class="c1"># return pickle.load(pickle_file)</span>
-            <span class="n">w</span><span class="o">=</span> <span class="n">load_pickle</span><span class="p">(</span><span class="n">pickle_file</span><span class="p">)</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="n">load_pickle</span><span class="p">(</span><span class="n">pickle_file</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">Worm</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Expected Worm object, got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">w</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">w</span>
@@ -395,7 +428,8 @@
     <span class="k">except</span> <span class="n">pickle</span><span class="o">.</span><span class="n">UnpicklingError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">pickle</span><span class="o">.</span><span class="n">UnpicklingError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to unpickle </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span></div>
 
-    
+
+
 <div class="viewcode-block" id="generate_random_string">
 <a class="viewcode-back" href="../../../index.html#cedne.generate_random_string">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">generate_random_string</span><span class="p">(</span><span class="n">length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -409,11 +443,13 @@
 <span class="sd">        str: A random string of the specified length.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">characters</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">ascii_letters</span> <span class="o">+</span> <span class="n">string</span><span class="o">.</span><span class="n">digits</span>
-    <span class="k">return</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">characters</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">length</span><span class="p">))</span></div>
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">characters</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">length</span><span class="p">))</span></div>
+
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">NetworkWriter</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39; Writes the network for saving.&#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Writes the network for saving.&quot;&quot;&quot;</span>
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initializes the NetworkWriter object.</span>
@@ -424,11 +460,11 @@
         <span class="n">OUTPUT_JSON</span> <span class="o">=</span> <span class="s2">&quot;generated_metadata.json&quot;</span>
         <span class="c1"># Connect to Neo4j database</span>
         <span class="c1"># graph_db = py2neo.Graph(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))</span>
-    
+
     <span class="k">def</span><span class="w"> </span><span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">w</span><span class="p">):</span>
         <span class="n">json_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_json</span><span class="p">(</span><span class="n">w</span><span class="p">)</span>
-        <span class="n">output_filename</span> <span class="o">=</span> <span class="s1">&#39;model/&#39;</span> <span class="o">+</span> <span class="n">w</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s1">&#39;.json&#39;</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_filename</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">output_filename</span> <span class="o">=</span> <span class="s2">&quot;model/&quot;</span> <span class="o">+</span> <span class="n">w</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;.json&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_filename</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">json_data</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">generate_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">w</span><span class="p">):</span>
@@ -445,13 +481,13 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">json_data</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;model_name&quot;</span><span class="p">:</span> <span class="n">w</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="s1">&#39;version&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-            <span class="s2">&quot;created_by&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="s1">&#39;author&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">&quot;created_by&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="s2">&quot;author&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
             <span class="s2">&quot;networks&quot;</span><span class="p">:</span> <span class="p">{},</span>
         <span class="p">}</span>
 
         <span class="k">for</span> <span class="n">net_name</span><span class="p">,</span> <span class="n">network</span> <span class="ow">in</span> <span class="n">w</span><span class="o">.</span><span class="n">networks</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="s1">&#39;to_dict&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="s2">&quot;to_dict&quot;</span><span class="p">):</span>
                 <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;networks&quot;</span><span class="p">][</span><span class="n">net_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">network</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
 
         <span class="k">return</span> <span class="n">json_data</span>

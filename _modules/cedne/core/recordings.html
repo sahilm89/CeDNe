@@ -273,18 +273,18 @@
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Trial-wise neural activity and stimulus-response analysis for CeDNe.</span>
 
-<span class="sd">This module defines classes for capturing and analyzing experimental recordings </span>
+<span class="sd">This module defines classes for capturing and analyzing experimental recordings</span>
 <span class="sd">from neurons. It includes:</span>
 
-<span class="sd">- `Trial`: Represents a single experimental recording for a neuron, such as </span>
-<span class="sd">  a calcium imaging time series. Trials are stored per-neuron in the `Neuron.trial` </span>
+<span class="sd">- `Trial`: Represents a single experimental recording for a neuron, such as</span>
+<span class="sd">  a calcium imaging time series. Trials are stored per-neuron in the `Neuron.trial`</span>
 <span class="sd">  dictionary and support signal preprocessing (e.g., bleaching correction).</span>
-<span class="sd">  </span>
+
 <span class="sd">- `StimResponse`: Encapsulates a stimulus-response pair recorded during a `Trial`,</span>
 <span class="sd">  and extracts a set of interpretable features from the response signal, including</span>
 <span class="sd">  max amplitude, onset time, area under the curve, and others.</span>
 
-<span class="sd">These classes are designed to support time-locked calcium imaging experiments </span>
+<span class="sd">These classes are designed to support time-locked calcium imaging experiments</span>
 <span class="sd">and help link dynamic neural activity to behavioral or stimulus-driven contexts.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
@@ -304,11 +304,12 @@
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">.neuron</span><span class="w"> </span><span class="kn">import</span> <span class="n">Neuron</span>
 
+
 <div class="viewcode-block" id="Trial">
 <a class="viewcode-back" href="../../../index.html#cedne.Trial">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Trial</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A class representing a single experimental recording for a neuron.</span>
-<span class="sd">    </span>
+
 <span class="sd">    This class handles the storage and basic processing of time series data recorded</span>
 <span class="sd">    from a neuron during an experimental trial. It supports operations like data</span>
 <span class="sd">    storage, bleaching correction, and basic signal processing.</span>
@@ -320,7 +321,8 @@
 <span class="sd">        _data (NDArray): The actual recording data.</span>
 <span class="sd">        metadata (Dict): Dictionary containing trial metadata.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">neuron</span><span class="p">:</span> <span class="s1">&#39;Neuron&#39;</span><span class="p">,</span> <span class="n">trialnum</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">neuron</span><span class="p">:</span> <span class="s2">&quot;Neuron&quot;</span><span class="p">,</span> <span class="n">trialnum</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a new Trial instance.</span>
 
 <span class="sd">        Args:</span>
@@ -333,12 +335,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">NDArray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">behavior</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Optional back-reference to Behavior object</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s1">&#39;trial_number&#39;</span><span class="p">:</span> <span class="n">trialnum</span><span class="p">,</span>
-            <span class="s1">&#39;neuron_id&#39;</span><span class="p">:</span> <span class="nb">id</span><span class="p">(</span><span class="n">neuron</span><span class="p">),</span>
-            <span class="s1">&#39;sampling_rate&#39;</span><span class="p">:</span> <span class="n">F_SAMPLE</span><span class="p">,</span>
-            <span class="s1">&#39;processing_history&#39;</span><span class="p">:</span> <span class="p">[]</span>
+            <span class="s2">&quot;trial_number&quot;</span><span class="p">:</span> <span class="n">trialnum</span><span class="p">,</span>
+            <span class="s2">&quot;neuron_id&quot;</span><span class="p">:</span> <span class="nb">id</span><span class="p">(</span><span class="n">neuron</span><span class="p">),</span>
+            <span class="s2">&quot;sampling_rate&quot;</span><span class="p">:</span> <span class="n">F_SAMPLE</span><span class="p">,</span>
+            <span class="s2">&quot;processing_history&quot;</span><span class="p">:</span> <span class="p">[],</span>
         <span class="p">}</span>
-
 
     <span class="nd">@property</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">recording</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
@@ -367,13 +368,13 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-        
+
         <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Recording data must be a 1D array&quot;</span><span class="p">)</span>
-            
+
         <span class="k">if</span> <span class="n">discard</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Discard cannot be negative&quot;</span><span class="p">)</span>
-            
+
         <span class="k">if</span> <span class="n">discard</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">discard_points</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">discard</span> <span class="o">*</span> <span class="n">F_SAMPLE</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">discard_points</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
@@ -414,8 +415,9 @@
 
 <div class="viewcode-block" id="Trial.filter_signal">
 <a class="viewcode-back" href="../../../index.html#cedne.Trial.filter_signal">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">filter_signal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filter_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;lowpass&#39;</span><span class="p">,</span> <span class="n">cutoff_freq</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
-                     <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">filter_signal</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">filter_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;lowpass&quot;</span><span class="p">,</span> <span class="n">cutoff_freq</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span> <span class="n">order</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply a Butterworth filter to the recording data.</span>
 
 <span class="sd">        Args:</span>
@@ -433,21 +435,28 @@
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cutoff_freq</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
             <span class="n">cutoff_freq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">cutoff_freq</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">cutoff_freq</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">cutoff_freq</span> <span class="o">&gt;=</span> <span class="n">nyquist</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cutoff frequencies must be between 0 and nyquist frequency&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Cutoff frequencies must be between 0 and nyquist frequency&quot;</span>
+                <span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">cutoff_freq</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">cutoff_freq</span> <span class="o">&gt;=</span> <span class="n">nyquist</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cutoff frequency must be between 0 and nyquist frequency&quot;</span><span class="p">)</span>
-                
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Cutoff frequency must be between 0 and nyquist frequency&quot;</span>
+                <span class="p">)</span>
+
         <span class="n">normalized_cutoff</span> <span class="o">=</span> <span class="n">cutoff_freq</span> <span class="o">/</span> <span class="n">nyquist</span>
 
-        <span class="k">if</span> <span class="n">filter_type</span> <span class="o">==</span> <span class="s1">&#39;lowpass&#39;</span><span class="p">:</span>
-            <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">butter</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">normalized_cutoff</span><span class="p">,</span> <span class="n">btype</span><span class="o">=</span><span class="s1">&#39;low&#39;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">filter_type</span> <span class="o">==</span> <span class="s1">&#39;highpass&#39;</span><span class="p">:</span>
-            <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">butter</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">normalized_cutoff</span><span class="p">,</span> <span class="n">btype</span><span class="o">=</span><span class="s1">&#39;high&#39;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">filter_type</span> <span class="o">==</span> <span class="s1">&#39;bandpass&#39;</span><span class="p">:</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">normalized_cutoff</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">normalized_cutoff</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">filter_type</span> <span class="o">==</span> <span class="s2">&quot;lowpass&quot;</span><span class="p">:</span>
+            <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">butter</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">normalized_cutoff</span><span class="p">,</span> <span class="n">btype</span><span class="o">=</span><span class="s2">&quot;low&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">filter_type</span> <span class="o">==</span> <span class="s2">&quot;highpass&quot;</span><span class="p">:</span>
+            <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">butter</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">normalized_cutoff</span><span class="p">,</span> <span class="n">btype</span><span class="o">=</span><span class="s2">&quot;high&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">filter_type</span> <span class="o">==</span> <span class="s2">&quot;bandpass&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">normalized_cutoff</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">))</span>
+                <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">normalized_cutoff</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span>
+            <span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Bandpass filter requires two cutoff frequencies&quot;</span><span class="p">)</span>
-            <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">butter</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">normalized_cutoff</span><span class="p">,</span> <span class="n">btype</span><span class="o">=</span><span class="s1">&#39;band&#39;</span><span class="p">)</span>
+            <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">butter</span><span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">normalized_cutoff</span><span class="p">,</span> <span class="n">btype</span><span class="o">=</span><span class="s2">&quot;band&quot;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid filter type: </span><span class="si">{</span><span class="n">filter_type</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
@@ -456,7 +465,7 @@
 
 <div class="viewcode-block" id="Trial.smooth_signal">
 <a class="viewcode-back" href="../../../index.html#cedne.Trial.smooth_signal">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">smooth_signal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;moving&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">smooth_signal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;moving&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Smooth the recording signal using various methods.</span>
 
 <span class="sd">        Args:</span>
@@ -469,12 +478,12 @@
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: If method is invalid or if no recording data has been set.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;moving&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;moving&quot;</span><span class="p">:</span>
             <span class="n">window</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">window_size</span><span class="p">)</span> <span class="o">/</span> <span class="n">window_size</span>
-            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">,</span> <span class="n">window</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;same&#39;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;gaussian&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">convolve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">,</span> <span class="n">window</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;same&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;gaussian&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">gaussian_filter1d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">,</span> <span class="n">window_size</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;median&#39;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;median&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">signal</span><span class="o">.</span><span class="n">medfilt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">,</span> <span class="n">window_size</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid smoothing method: </span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
@@ -482,7 +491,9 @@
 
 <div class="viewcode-block" id="Trial.normalize_signal">
 <a class="viewcode-back" href="../../../index.html#cedne.Trial.normalize_signal">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">normalize_signal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;minmax&#39;</span><span class="p">,</span> <span class="n">baseline_window</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">normalize_signal</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;minmax&quot;</span><span class="p">,</span> <span class="n">baseline_window</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Normalize the recording signal using various methods.</span>
 
 <span class="sd">        Args:</span>
@@ -495,15 +506,17 @@
 <span class="sd">        Raises:</span>
 <span class="sd">            ValueError: If method is invalid or if no recording data has been set.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;minmax&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;minmax&quot;</span><span class="p">:</span>
             <span class="n">min_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">)</span>
             <span class="n">max_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">)</span>
             <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span> <span class="o">-</span> <span class="n">min_val</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">max_val</span> <span class="o">-</span> <span class="n">min_val</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;zscore&#39;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;zscore&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">))</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;baseline&#39;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;baseline&quot;</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">baseline_window</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;baseline_window must be provided for baseline normalization&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;baseline_window must be provided for baseline normalization&quot;</span>
+                <span class="p">)</span>
             <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">baseline_window</span>
             <span class="n">baseline</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">])</span>
             <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span> <span class="o">-</span> <span class="n">baseline</span><span class="p">)</span> <span class="o">/</span> <span class="n">baseline</span>
@@ -513,8 +526,9 @@
 
 <div class="viewcode-block" id="Trial.detect_peaks">
 <a class="viewcode-back" href="../../../index.html#cedne.Trial.detect_peaks">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">detect_peaks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">height</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-                    <span class="n">distance</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">detect_peaks</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">height</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">distance</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Detect peaks in the recording signal.</span>
 
 <span class="sd">        Args:</span>
@@ -529,9 +543,15 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">distance</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">distance</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`distance` must be greater or equal to 1&quot;</span><span class="p">)</span>
-            
-        <span class="n">peaks</span><span class="p">,</span> <span class="n">properties</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">find_peaks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">,</span> <span class="n">distance</span><span class="o">=</span><span class="n">distance</span><span class="p">)</span>
-        <span class="n">peak_heights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">[</span><span class="n">peaks</span><span class="p">]</span> <span class="k">if</span> <span class="s1">&#39;peak_heights&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">properties</span> <span class="k">else</span> <span class="n">properties</span><span class="p">[</span><span class="s1">&#39;peak_heights&#39;</span><span class="p">]</span>
+
+        <span class="n">peaks</span><span class="p">,</span> <span class="n">properties</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">find_peaks</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="n">height</span><span class="p">,</span> <span class="n">distance</span><span class="o">=</span><span class="n">distance</span>
+        <span class="p">)</span>
+        <span class="n">peak_heights</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">[</span><span class="n">peaks</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s2">&quot;peak_heights&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">properties</span>
+            <span class="k">else</span> <span class="n">properties</span><span class="p">[</span><span class="s2">&quot;peak_heights&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
         <span class="k">return</span> <span class="n">peaks</span><span class="p">,</span> <span class="n">peak_heights</span></div>
 
 
@@ -555,20 +575,20 @@
 <span class="sd">            ValueError: If no recording data has been set.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">{</span>
-            <span class="s1">&#39;mean&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">),</span>
-            <span class="s1">&#39;std&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">),</span>
-            <span class="s1">&#39;median&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">),</span>
-            <span class="s1">&#39;min&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">),</span>
-            <span class="s1">&#39;max&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">),</span>
-            <span class="s1">&#39;skewness&#39;</span><span class="p">:</span> <span class="n">ss</span><span class="o">.</span><span class="n">skew</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">),</span>
-            <span class="s1">&#39;kurtosis&#39;</span><span class="p">:</span> <span class="n">ss</span><span class="o">.</span><span class="n">kurtosis</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">),</span>
-            <span class="s1">&#39;rms&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">)))</span>
+            <span class="s2">&quot;mean&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">),</span>
+            <span class="s2">&quot;std&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">),</span>
+            <span class="s2">&quot;median&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">),</span>
+            <span class="s2">&quot;min&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">),</span>
+            <span class="s2">&quot;max&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">),</span>
+            <span class="s2">&quot;skewness&quot;</span><span class="p">:</span> <span class="n">ss</span><span class="o">.</span><span class="n">skew</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">),</span>
+            <span class="s2">&quot;kurtosis&quot;</span><span class="p">:</span> <span class="n">ss</span><span class="o">.</span><span class="n">kurtosis</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">),</span>
+            <span class="s2">&quot;rms&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">))),</span>
         <span class="p">}</span></div>
 
 
 <div class="viewcode-block" id="Trial.compute_power_spectrum">
 <a class="viewcode-back" href="../../../index.html#cedne.Trial.compute_power_spectrum">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">compute_power_spectrum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;hann&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_power_spectrum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hann&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the power spectrum of the recording.</span>
 
 <span class="sd">        Args:</span>
@@ -604,16 +624,18 @@
 
         <span class="n">signal_power</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">[</span><span class="n">sig_start</span><span class="p">:</span><span class="n">sig_end</span><span class="p">]))</span>
         <span class="n">noise_power</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recording</span><span class="p">[</span><span class="n">noise_start</span><span class="p">:</span><span class="n">noise_end</span><span class="p">]))</span>
-        
+
         <span class="k">if</span> <span class="n">noise_power</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
-        
+            <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
+
         <span class="k">return</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">signal_power</span> <span class="o">/</span> <span class="n">noise_power</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Trial.segment_signal">
 <a class="viewcode-back" href="../../../index.html#cedne.Trial.segment_signal">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">segment_signal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">min_duration</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">segment_signal</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">threshold</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">min_duration</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Segment the signal into regions above threshold.</span>
 
 <span class="sd">        Args:</span>
@@ -686,11 +708,13 @@
 <span class="sd">            operation: Name of the processing operation.</span>
 <span class="sd">            parameters: Dictionary of parameters used in the operation.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s1">&#39;processing_history&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
-            <span class="s1">&#39;timestamp&#39;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
-            <span class="s1">&#39;operation&#39;</span><span class="p">:</span> <span class="n">operation</span><span class="p">,</span>
-            <span class="s1">&#39;parameters&#39;</span><span class="p">:</span> <span class="n">parameters</span>
-        <span class="p">})</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">[</span><span class="s2">&quot;processing_history&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;timestamp&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">(),</span>
+                <span class="s2">&quot;operation&quot;</span><span class="p">:</span> <span class="n">operation</span><span class="p">,</span>
+                <span class="s2">&quot;parameters&quot;</span><span class="p">:</span> <span class="n">parameters</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Trial.validate_data">
@@ -710,19 +734,19 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">False</span>
-        
+
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
             <span class="k">return</span> <span class="kc">False</span>
-            
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">False</span>
-            
+
         <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
             <span class="k">return</span> <span class="kc">False</span>
-            
+
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">False</span>
-            
+
         <span class="k">return</span> <span class="kc">True</span></div>
 
 
@@ -760,11 +784,12 @@
         <span class="n">stability</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">segment_means</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">segment_means</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="p">{</span>
-            <span class="s1">&#39;noise_level&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">noise_level</span><span class="p">),</span>
-            <span class="s1">&#39;artifact_count&#39;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">artifacts</span><span class="p">),</span>
-            <span class="s1">&#39;signal_stability&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">stability</span><span class="p">)</span>
+            <span class="s2">&quot;noise_level&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">noise_level</span><span class="p">),</span>
+            <span class="s2">&quot;artifact_count&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">artifacts</span><span class="p">),</span>
+            <span class="s2">&quot;signal_stability&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">stability</span><span class="p">),</span>
         <span class="p">}</span></div>
 </div>
+
 
 
 <div class="viewcode-block" id="StimResponse">
@@ -796,8 +821,10 @@
 <span class="sd">        7: Positive response area</span>
 <span class="sd">        8: Absolute area under the curve</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">:</span> <span class="n">Trial</span><span class="p">,</span> <span class="n">stimulus</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">response</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> 
-                <span class="n">baseline_samples</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">trial</span><span class="p">:</span> <span class="n">Trial</span><span class="p">,</span> <span class="n">stimulus</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">response</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">baseline_samples</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a StimResponse instance.</span>
 
 <span class="sd">        Args:</span>
@@ -811,13 +838,13 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">stimulus</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Stimulus and response must be numpy arrays&quot;</span><span class="p">)</span>
-            
+
         <span class="k">if</span> <span class="n">stimulus</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">response</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Stimulus and response must be 1-dimensional&quot;</span><span class="p">)</span>
-            
+
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">stimulus</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">response</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Stimulus and response must have the same length&quot;</span><span class="p">)</span>
-            
+
         <span class="k">if</span> <span class="n">baseline_samples</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">response</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Baseline samples exceeds response length&quot;</span><span class="p">)</span>
 
@@ -826,9 +853,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">feature</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">neuron</span> <span class="o">=</span> <span class="n">trial</span><span class="o">.</span><span class="n">neuron</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">f_sample</span> <span class="o">=</span> <span class="n">F_SAMPLE</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">sampling_time</span> <span class="o">=</span> <span class="mf">1.</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">f_sample</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sampling_time</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">f_sample</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">baseline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">response</span><span class="p">[:</span><span class="n">baseline_samples</span><span class="p">]</span>
-        
+
         <span class="c1"># Extract all features</span>
         <span class="k">for</span> <span class="n">feature_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">9</span><span class="p">):</span>  <span class="c1"># 9 features total</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">feature</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extract_feature</span><span class="p">(</span><span class="n">feature_index</span><span class="p">)</span>
@@ -917,7 +944,7 @@
 <span class="sd">            float: Area under the curve in amplitude-seconds.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">undersampling</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">response</span><span class="p">[::</span><span class="n">bin_size</span><span class="p">]</span>
-        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">undersampling</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sampling_time</span><span class="o">*</span><span class="n">bin_size</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">undersampling</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sampling_time</span> <span class="o">*</span> <span class="n">bin_size</span><span class="p">))</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_absolute_area_under_the_curve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bin_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the absolute area under the response curve.</span>
@@ -929,7 +956,7 @@
 <span class="sd">            float: Absolute area under the curve in amplitude-seconds.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">undersampling</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">response</span><span class="p">[::</span><span class="n">bin_size</span><span class="p">])</span>
-        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">undersampling</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sampling_time</span><span class="o">*</span><span class="n">bin_size</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">undersampling</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sampling_time</span> <span class="o">*</span> <span class="n">bin_size</span><span class="p">))</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_area_under_the_curve_to_peak</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bin_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the area under the curve up to the peak response.</span>
@@ -942,11 +969,15 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">undersampling</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">response</span><span class="p">[::</span><span class="n">bin_size</span><span class="p">]</span>
         <span class="n">max_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">undersampling</span><span class="p">)</span>
-        <span class="n">window_to_peak</span> <span class="o">=</span> <span class="n">undersampling</span><span class="p">[:</span><span class="n">max_index</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
-        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">window_to_peak</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sampling_time</span><span class="o">*</span><span class="n">bin_size</span><span class="p">))</span>
+        <span class="n">window_to_peak</span> <span class="o">=</span> <span class="n">undersampling</span><span class="p">[:</span> <span class="n">max_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">window_to_peak</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sampling_time</span> <span class="o">*</span> <span class="n">bin_size</span><span class="p">))</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_find_onset_time</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="n">threshold_std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span> 
-                        <span class="n">absolute_threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_find_onset_time</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">window_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">threshold_std</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span>
+        <span class="n">absolute_threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Find the response onset time using a sliding window approach.</span>
 
 <span class="sd">        For calcium imaging data, this method uses a robust detection approach that:</span>
@@ -967,20 +998,20 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">baseline_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">baseline</span><span class="p">)</span>
         <span class="n">baseline_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">baseline</span><span class="p">)</span>
-        
+
         <span class="c1"># Calculate threshold based on provided method</span>
         <span class="k">if</span> <span class="n">absolute_threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">threshold</span> <span class="o">=</span> <span class="n">absolute_threshold</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Use statistical threshold</span>
             <span class="n">threshold</span> <span class="o">=</span> <span class="n">baseline_mean</span> <span class="o">+</span> <span class="n">threshold_std</span> <span class="o">*</span> <span class="n">baseline_std</span>
-        
+
         <span class="c1"># Use a sliding window to find when response consistently exceeds threshold</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">response</span><span class="p">)</span> <span class="o">-</span> <span class="n">window_size</span><span class="p">):</span>
-            <span class="n">window</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">response</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="n">window_size</span><span class="p">]</span>
+            <span class="n">window</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">response</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">window_size</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">window</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">threshold</span><span class="p">:</span>
                 <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sampling_time</span><span class="p">)</span>
-        
+
         <span class="c1"># If no onset found, return nan</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
 
@@ -1006,7 +1037,7 @@
             <span class="n">scale</span> <span class="o">=</span> <span class="n">abs_area</span> <span class="o">/</span> <span class="n">signed_total</span>
             <span class="n">pos_area</span> <span class="o">*=</span> <span class="n">scale</span>
             <span class="n">neg_area</span> <span class="o">*=</span> <span class="n">scale</span>
-        
+
         <span class="k">return</span> <span class="n">pos_area</span><span class="p">,</span> <span class="n">neg_area</span>
 
 <div class="viewcode-block" id="StimResponse.get_response_characteristics">
@@ -1026,7 +1057,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">baseline_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">baseline</span><span class="p">)</span>
         <span class="n">baseline_std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">baseline</span><span class="p">)</span>
-        
+
         <span class="c1"># Calculate peak amplitude relative to baseline</span>
         <span class="c1"># First subtract baseline from the entire response</span>
         <span class="n">response_minus_baseline</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">response</span> <span class="o">-</span> <span class="n">baseline_mean</span>
@@ -1034,36 +1065,45 @@
         <span class="n">max_abs_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">response_minus_baseline</span><span class="p">))</span>
         <span class="c1"># Use the actual value at that index</span>
         <span class="n">peak_amplitude</span> <span class="o">=</span> <span class="n">response_minus_baseline</span><span class="p">[</span><span class="n">max_abs_idx</span><span class="p">]</span>
-        
+
         <span class="n">onset_time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_onset_time</span><span class="p">()</span>
-        
+
         <span class="c1"># Find response end (when signal returns to baseline)</span>
         <span class="n">end_threshold</span> <span class="o">=</span> <span class="n">baseline_mean</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">baseline_std</span>
         <span class="n">response_end</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">response</span> <span class="o">&lt;=</span> <span class="n">end_threshold</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">response_end</span> <span class="o">=</span> <span class="n">response_end</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">response_end</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">response</span><span class="p">)</span>
-        
-        <span class="n">duration</span> <span class="o">=</span> <span class="p">(</span><span class="n">response_end</span> <span class="o">-</span> <span class="n">onset_time</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sampling_time</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">onset_time</span><span class="p">)</span> <span class="k">else</span> <span class="mf">0.0</span>
+
+        <span class="n">duration</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span><span class="n">response_end</span> <span class="o">-</span> <span class="n">onset_time</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sampling_time</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">onset_time</span><span class="p">)</span>
+            <span class="k">else</span> <span class="mf">0.0</span>
+        <span class="p">)</span>
         <span class="n">integral</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_area_under_the_curve</span><span class="p">()</span>
-        
+
         <span class="c1"># Calculate signal-to-noise ratio</span>
         <span class="n">signal_power</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">response</span> <span class="o">-</span> <span class="n">baseline_mean</span><span class="p">))</span>
         <span class="n">noise_power</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">baseline</span> <span class="o">-</span> <span class="n">baseline_mean</span><span class="p">))</span>
-        <span class="n">snr</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">signal_power</span> <span class="o">/</span> <span class="n">noise_power</span><span class="p">)</span> <span class="k">if</span> <span class="n">noise_power</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
-        
+        <span class="n">snr</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="mi">10</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">signal_power</span> <span class="o">/</span> <span class="n">noise_power</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">noise_power</span> <span class="o">&gt;</span> <span class="mi">0</span>
+            <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+
         <span class="k">return</span> <span class="p">{</span>
-            <span class="s1">&#39;amplitude&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">peak_amplitude</span><span class="p">),</span>
-            <span class="s1">&#39;duration&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">duration</span><span class="p">),</span>
-            <span class="s1">&#39;latency&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">onset_time</span><span class="p">),</span>
-            <span class="s1">&#39;integral&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">integral</span><span class="p">),</span>
-            <span class="s1">&#39;baseline_mean&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">baseline_mean</span><span class="p">),</span>
-            <span class="s1">&#39;baseline_std&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">baseline_std</span><span class="p">),</span>
-            <span class="s1">&#39;signal_to_noise&#39;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">snr</span><span class="p">)</span>
+            <span class="s2">&quot;amplitude&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">peak_amplitude</span><span class="p">),</span>
+            <span class="s2">&quot;duration&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">duration</span><span class="p">),</span>
+            <span class="s2">&quot;latency&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">onset_time</span><span class="p">),</span>
+            <span class="s2">&quot;integral&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">integral</span><span class="p">),</span>
+            <span class="s2">&quot;baseline_mean&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">baseline_mean</span><span class="p">),</span>
+            <span class="s2">&quot;baseline_std&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">baseline_std</span><span class="p">),</span>
+            <span class="s2">&quot;signal_to_noise&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">snr</span><span class="p">),</span>
         <span class="p">}</span></div>
 </div>
 
 
+
 <span class="k">def</span><span class="w"> </span><span class="nf">_linear_transform</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">minvalue</span><span class="p">,</span> <span class="n">maxvalue</span><span class="p">):</span>
-    <span class="k">return</span> <span class="p">(</span><span class="n">value</span> <span class="o">-</span> <span class="n">minvalue</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">maxvalue</span> <span class="o">-</span> <span class="n">minvalue</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">value</span> <span class="o">-</span> <span class="n">minvalue</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">maxvalue</span> <span class="o">-</span> <span class="n">minvalue</span><span class="p">)</span>
 </pre></div>
 
                 </article>

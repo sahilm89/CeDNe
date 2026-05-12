@@ -279,15 +279,26 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">generate_random_string</span><span class="p">,</span> <span class="n">load_pickle</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.source</span><span class="w"> </span><span class="kn">import</span> <span class="n">Citable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.source</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">CEDNE_SOFTWARE_CITATION</span><span class="p">,</span>
+    <span class="n">CEDNE_SOFTWARE_CITATION_KEY</span><span class="p">,</span>
+    <span class="n">Citable</span><span class="p">,</span>
+<span class="p">)</span>
+
 
 <div class="viewcode-block" id="Animal">
 <a class="viewcode-back" href="../../../index.html#cedne.Animal">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Animal</span><span class="p">(</span><span class="n">Citable</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39; This is a full animal class&#39;&#39;&#39;</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">species</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">sex</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">genotype</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&#39;&#39;&#39; Initializes an Organism class&#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;This is a full animal class&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">species</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">sex</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">genotype</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes an Organism class&quot;&quot;&quot;</span>
         <span class="n">Citable</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>  <span class="c1"># provides self.citations = {}</span>
+        <span class="c1"># Every CeDNe Animal carries a self-citation for the CeDNe software so</span>
+        <span class="c1"># that downstream consumers (notebooks, web UI references panel,</span>
+        <span class="c1"># exported provenance manifests) automatically attribute CeDNe.</span>
+        <span class="k">if</span> <span class="n">CEDNE_SOFTWARE_CITATION_KEY</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">citations</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">citations</span><span class="p">[</span><span class="n">CEDNE_SOFTWARE_CITATION_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="n">CEDNE_SOFTWARE_CITATION</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">species</span> <span class="o">=</span> <span class="n">species</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">stage</span> <span class="o">=</span> <span class="n">stage</span>
@@ -303,28 +314,27 @@
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_property</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
 
-
 <div class="viewcode-block" id="Animal.save">
 <a class="viewcode-back" href="../../../index.html#cedne.Animal.save">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_path</span><span class="p">,</span> <span class="n">file_format</span><span class="o">=</span><span class="s1">&#39;cedne&#39;</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_path</span><span class="p">,</span> <span class="n">file_format</span><span class="o">=</span><span class="s2">&quot;cedne&quot;</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Saves the Organism object to a pickle file at the specified file path.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            file_path (str): The path to the pickle file.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">file_format</span> <span class="o">==</span> <span class="s1">&#39;cedne&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">file_format</span> <span class="o">==</span> <span class="s2">&quot;cedne&quot;</span><span class="p">:</span>
             <span class="n">output_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">output_path</span><span class="o">.</span><span class="n">suffix</span><span class="p">:</span>
-                <span class="n">output_path</span> <span class="o">=</span> <span class="n">output_path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s1">&#39;.cedne&#39;</span><span class="p">)</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file</span><span class="p">:</span>
+                <span class="n">output_path</span> <span class="o">=</span> <span class="n">output_path</span><span class="o">.</span><span class="n">with_suffix</span><span class="p">(</span><span class="s2">&quot;.cedne&quot;</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file</span><span class="p">:</span>
                 <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pickle_file</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">file_format</span> <span class="o">==</span> <span class="s1">&#39;full&#39;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="n">file_format</span> <span class="o">==</span> <span class="s2">&quot;full&quot;</span><span class="p">:</span>
             <span class="k">pass</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Only pickle format is supported.&quot;</span><span class="p">)</span></div>
 
-    
+
 <div class="viewcode-block" id="Animal.set_property">
 <a class="viewcode-back" href="../../../index.html#cedne.Animal.set_property">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">set_property</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
@@ -337,7 +347,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
 
-    
+
 <div class="viewcode-block" id="Animal.add_context">
 <a class="viewcode-back" href="../../../index.html#cedne.Animal.add_context">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">add_context</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -362,11 +372,11 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">contexts</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Context &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; not found.&quot;</span><span class="p">)</span>
-        
+
         <span class="c1"># Clear active_context if it&#39;s the one being removed</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">active_context</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">active_context</span> <span class="o">=</span> <span class="kc">None</span>
-            
+
         <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">contexts</span><span class="p">[</span><span class="n">name</span><span class="p">]</span></div>
 
 
@@ -390,7 +400,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">set_active_context</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set the active context by name.</span>
-<span class="sd">        </span>
+
 <span class="sd">        Args:</span>
 <span class="sd">            name (str): The name of the context to set as active.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -407,11 +417,15 @@
 </div>
 
 
+
 <div class="viewcode-block" id="Worm">
 <a class="viewcode-back" href="../../../index.html#cedne.Worm">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Worm</span><span class="p">(</span><span class="n">Animal</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39; This is an explicit Worm class, a container for network(s).&#39;&#39;&#39;</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s1">&#39;Day-1 Adult&#39;</span><span class="p">,</span> <span class="n">sex</span><span class="o">=</span><span class="s1">&#39;Hermaphrodite&#39;</span><span class="p">,</span> <span class="n">genotype</span><span class="o">=</span><span class="s1">&#39;N2&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;This is an explicit Worm class, a container for network(s).&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s2">&quot;Day-1 Adult&quot;</span><span class="p">,</span> <span class="n">sex</span><span class="o">=</span><span class="s2">&quot;Hermaphrodite&quot;</span><span class="p">,</span> <span class="n">genotype</span><span class="o">=</span><span class="s2">&quot;N2&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initializes a Worm object.</span>
 
@@ -429,15 +443,31 @@
 <span class="sd">            None</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="p">:</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Worm-&#39;</span> <span class="o">+</span> <span class="n">generate_random_string</span><span class="p">()</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">species</span><span class="o">=</span><span class="s1">&#39;Caenorhabditis elegans&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="n">stage</span><span class="p">,</span> <span class="n">sex</span><span class="o">=</span><span class="n">sex</span><span class="p">,</span> <span class="n">genotype</span><span class="o">=</span><span class="n">genotype</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+            <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;Worm-&quot;</span> <span class="o">+</span> <span class="n">generate_random_string</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">species</span><span class="o">=</span><span class="s2">&quot;Caenorhabditis elegans&quot;</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">stage</span><span class="o">=</span><span class="n">stage</span><span class="p">,</span>
+            <span class="n">sex</span><span class="o">=</span><span class="n">sex</span><span class="p">,</span>
+            <span class="n">genotype</span><span class="o">=</span><span class="n">genotype</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
 
 
 <div class="viewcode-block" id="Fly">
 <a class="viewcode-back" href="../../../index.html#cedne.Fly">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">Fly</span><span class="p">(</span><span class="n">Animal</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39; This is an explicit Fly class, a container for network(s).&#39;&#39;&#39;</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="s1">&#39;Day-7 Adult&#39;</span><span class="p">,</span> <span class="n">sex</span><span class="o">=</span><span class="s1">&#39;Female&#39;</span><span class="p">,</span> <span class="n">genotype</span><span class="o">=</span><span class="s1">&#39;w1118 x Canton-S G1&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;This is an explicit Fly class, a container for network(s).&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="n">stage</span><span class="o">=</span><span class="s2">&quot;Day-7 Adult&quot;</span><span class="p">,</span>
+        <span class="n">sex</span><span class="o">=</span><span class="s2">&quot;Female&quot;</span><span class="p">,</span>
+        <span class="n">genotype</span><span class="o">=</span><span class="s2">&quot;w1118 x Canton-S G1&quot;</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initializes a Fly object.</span>
 
@@ -455,8 +485,14 @@
 <span class="sd">            None</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="p">:</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Fly-&#39;</span> <span class="o">+</span> <span class="n">generate_random_string</span><span class="p">()</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">species</span><span class="o">=</span><span class="s1">&#39;Drosophila melanogaster&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">stage</span><span class="o">=</span><span class="n">stage</span><span class="p">,</span> <span class="n">sex</span><span class="o">=</span><span class="n">sex</span><span class="p">,</span> <span class="n">genotype</span><span class="o">=</span><span class="n">genotype</span><span class="p">)</span></div>
+            <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;Fly-&quot;</span> <span class="o">+</span> <span class="n">generate_random_string</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">species</span><span class="o">=</span><span class="s2">&quot;Drosophila melanogaster&quot;</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">stage</span><span class="o">=</span><span class="n">stage</span><span class="p">,</span>
+            <span class="n">sex</span><span class="o">=</span><span class="n">sex</span><span class="p">,</span>
+            <span class="n">genotype</span><span class="o">=</span><span class="n">genotype</span><span class="p">,</span>
+        <span class="p">)</span></div>
 
 
 
@@ -471,7 +507,7 @@
 <span class="sd">        Worm: The loaded Worm object.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pickle_file</span><span class="p">:</span>
             <span class="c1"># return pickle.load(pickle_file)</span>
             <span class="k">return</span> <span class="n">load_pickle</span><span class="p">(</span><span class="n">pickle_file</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>

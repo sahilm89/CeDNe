@@ -712,11 +712,11 @@ value: The value of the property.</p>
 <dd><p>Make a network with the neurons.</p>
 <dl class="simple">
 <dt>Args:</dt><dd><dl class="simple">
-<dt>neurons: </dt><dd><p>The file containing neuron information</p>
+<dt>neurons:</dt><dd><p>The file containing neuron information</p>
 </dd>
-<dt>adj: </dt><dd><p>The adjacency matrix</p>
+<dt>adj:</dt><dd><p>The adjacency matrix</p>
 </dd>
-<dt>label: </dt><dd><p>The label for the network</p>
+<dt>label:</dt><dd><p>The label for the network</p>
 </dd>
 </dl>
 </dd>
@@ -730,15 +730,15 @@ value: The value of the property.</p>
 <dt>Creates a set of Neuron objects based on the given labels,</dt><dd><p>types, categories, modalities, and positions.</p>
 </dd>
 <dt>Args:</dt><dd><dl class="simple">
-<dt>labels (list): </dt><dd><p>A list of labels for the neurons.</p>
+<dt>labels (list):</dt><dd><p>A list of labels for the neurons.</p>
 </dd>
-<dt>neuron_types (list, optional): </dt><dd><p>A list of types for the neurons. Defaults to None.</p>
+<dt>neuron_types (list, optional):</dt><dd><p>A list of types for the neurons. Defaults to None.</p>
 </dd>
-<dt>categories (list, optional): </dt><dd><p>A list of categories for the neurons. Defaults to None.</p>
+<dt>categories (list, optional):</dt><dd><p>A list of categories for the neurons. Defaults to None.</p>
 </dd>
-<dt>modalities (list, optional): </dt><dd><p>A list of modalities for the neurons. Defaults to None.</p>
+<dt>modalities (list, optional):</dt><dd><p>A list of modalities for the neurons. Defaults to None.</p>
 </dd>
-<dt>positions (dict, optional): </dt><dd><p>A dictionary mapping labels to positions. Defaults to None.</p>
+<dt>positions (dict, optional):</dt><dd><p>A dictionary mapping labels to positions. Defaults to None.</p>
 </dd>
 </dl>
 </dd>
@@ -759,9 +759,9 @@ value: The value of the property.</p>
 <dd><p>Creates a set of Neuron objects based on the given network.</p>
 <dl class="simple">
 <dt>Args:</dt><dd><dl class="simple">
-<dt>network (Network): </dt><dd><p>A Network object.</p>
+<dt>network (Network):</dt><dd><p>A Network object.</p>
 </dd>
-<dt>data (bool, optional): </dt><dd><p>A flag indicating whether to include data in the Neuron objects. Defaults to False.</p>
+<dt>data (bool, optional):</dt><dd><p>A flag indicating whether to include data in the Neuron objects. Defaults to False.</p>
 </dd>
 </dl>
 </dd>
@@ -793,9 +793,9 @@ data as values.</p>
 <dd><p>Creates a set of Connection objects based on the given network.</p>
 <dl class="simple">
 <dt>Args:</dt><dd><dl class="simple">
-<dt>network (Network): </dt><dd><p>A Network object.</p>
+<dt>network (Network):</dt><dd><p>A Network object.</p>
 </dd>
-<dt>data (bool, optional): </dt><dd><p>A flag indicating whether to include data in the Connection objects.                    Defaults to False.</p>
+<dt>data (bool, optional):</dt><dd><p>A flag indicating whether to include data in the Connection objects.                    Defaults to False.</p>
 </dd>
 </dl>
 </dd>
@@ -912,38 +912,52 @@ names as keys.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cedne.NervousSystem.fold_network">
-<span class="sig-name descname"><span class="pre">fold_network</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fold_by</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'collect'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exceptions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">self_loops</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/network.html#NervousSystem.fold_network"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NervousSystem.fold_network" title="Link to this definition">#</a></dt>
-<dd><p>Fold the network based on a filter.</p>
-<p>&lt;TODO&gt;</p>
-<p>!!! The fold_by can also take Neuron Group objects as input.</p>
-<p>&lt;/TODO&gt;</p>
+<span class="sig-name descname"><span class="pre">fold_network</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fold_by</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'collect'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exceptions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">self_loops</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">legacy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/network.html#NervousSystem.fold_network"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NervousSystem.fold_network" title="Link to this definition">#</a></dt>
+<dd><p>Fold the network based on a partition.</p>
 <dl class="simple">
 <dt>Args:</dt><dd><dl class="simple">
-<dt>fold_by (tuple): A tuple of length 2 specifying the neurons to fold.</dt><dd><p>The first element is the neurons to fold, and the second element
-is the neurons that are exempt from folding.
-The tuple can contain any neuron name as a string.</p>
+<dt>fold_by (dict[str, list[str]]):</dt><dd><p>Mapping from each merged-neuron name to the list of original
+neuron names that should collapse into it. Singleton lists
+are treated as renames.</p>
 </dd>
-<dt>data (str, optional): The data to use for folding. Defaults to ‘collect’.</dt><dd><dl class="simple">
-<dt>Available options are:</dt><dd><ul class="simple">
-<li><dl class="simple">
-<dt>‘collect’: Collect the data together from all neurons in the fold_by</dt><dd><p>tuple, but keep them separate.</p>
+<dt>name (str, optional):</dt><dd><p>Name for the resulting NervousSystem.</p>
 </dd>
-</dl>
-</li>
-<li><p>‘union’ : Union the data from all neurons in the fold_by tuple.</p></li>
-<li><p>‘intersect’: Intersect the data from all neurons in the fold_by tuple.</p></li>
+<dt>data (str, optional): One of:</dt><dd><ul class="simple">
+<li><p>‘collect’: Preserve every original edge as a separate
+parallel in the folded view (default).</p></li>
+<li><p>‘clean’: Sum weights of parallel edges per
+<code class="docutils literal notranslate"><span class="pre">(folded_pre,</span> <span class="pre">folded_post,</span> <span class="pre">connection_type)</span></code> and union
+list-valued edge metadata (ligands, neurotransmitters,
+putative receptors, receptor dicts).</p></li>
 </ul>
 </dd>
-</dl>
+<dt>exceptions (list[str], optional):</dt><dd><p>Neuron names that should NOT be folded into their class —
+they pass through to the folded view under their original
+names.</p>
+</dd>
+<dt>self_loops (bool, optional):</dt><dd><p>If False, intra-class edges (i.e. edges whose endpoints
+both belong to the same merged class) are dropped from
+the result. Defaults to True.</p>
+</dd>
+<dt>legacy (bool, optional):</dt><dd><p>Selects between two implementations that should be
+behaviourally equivalent. Default <code class="docutils literal notranslate"><span class="pre">False</span></code> uses the
+batch path which builds the folded view directly from
+the partition map in O(V + E). Set <code class="docutils literal notranslate"><span class="pre">True</span></code> to use the
+pre-batch implementation that does N-1 pair-wise
+<code class="docutils literal notranslate"><span class="pre">contract_neurons</span></code> calls per class (O(class_size ×
+growing_supernode_degree) per class — unusable at
+scale). Preserved during the rollout so callers can
+bisect parity issues, and scheduled for removal once
+the fast path has soaked.</p>
 </dd>
 </dl>
 </dd>
-<dt>Returns:</dt><dd><p>None</p>
-</dd>
-<dt>Raises:</dt><dd><p>AssertionError: If the length of fold_by is not 2.</p>
-</dd>
-<dt>Notes:</dt><dd><p>This function folds the network by contracting the specified neurons.
-The neurons specified in exceptions will not be folded.</p>
+<dt>Returns:</dt><dd><p>NervousSystem: The folded graph. Each merged neuron carries
+<code class="docutils literal notranslate"><span class="pre">constituents</span></code>, <code class="docutils literal notranslate"><span class="pre">is_merged</span></code>, <code class="docutils literal notranslate"><span class="pre">constituent_subgraph</span></code> and
+the merge-policy-resolved <code class="docutils literal notranslate"><span class="pre">MERGE_TRACK_ATTRS</span></code>. Both code
+paths produce structurally equivalent NervousSystem objects;
+see <code class="docutils literal notranslate"><span class="pre">_fold_network_batch</span></code> for the precise preservation
+contract.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -1049,7 +1063,7 @@ silently inheriting one constituent’s type.</p></li>
 <dd><p>Copies data from another nervous system to this one.</p>
 <dl class="simple">
 <dt>Args:</dt><dd><dl class="simple">
-<dt>nervous_system (NervousSystem): </dt><dd><p>The nervous system to copy data from.</p>
+<dt>nervous_system (NervousSystem):</dt><dd><p>The nervous system to copy data from.</p>
 </dd>
 </dl>
 </dd>
@@ -1082,7 +1096,7 @@ silently inheriting one constituent’s type.</p></li>
 <dd><p>Returns a subgraph view of the current network based on the specified conditions.</p>
 <dl class="simple">
 <dt>Parameters:</dt><dd><dl class="simple">
-<dt>neurons_have (dict): </dt><dd><p>A dictionary of neuron attributes and their corresponding values.
+<dt>neurons_have (dict):</dt><dd><p>A dictionary of neuron attributes and their corresponding values.
 The subgraph will only include neurons that have all the specified attributes
 and values. Defaults to an empty dictionary.</p>
 </dd>
@@ -1090,7 +1104,7 @@ and values. Defaults to an empty dictionary.</p>
 values. The subgraph will only include connections that have all the specified
 attributes and values. Defaults to an empty dictionary.</p>
 </dd>
-<dt>condition (str): </dt><dd><p>The condition to apply when filtering neurons and connections.
+<dt>condition (str):</dt><dd><p>The condition to apply when filtering neurons and connections.
 Can be ‘AND’ or ‘OR’. Default is ‘AND’.</p>
 </dd>
 </dl>
@@ -1107,13 +1121,13 @@ the specified conditions.</p>
 <dd><p>Returns a deep copy of the Nervous System object.</p>
 <dl class="simple">
 <dt>Parameters:</dt><dd><dl class="simple">
-<dt>as_view (bool): </dt><dd><p>If True, the copy will be a view of the original graph.
+<dt>as_view (bool):</dt><dd><p>If True, the copy will be a view of the original graph.
 Default is False.</p>
 </dd>
 </dl>
 </dd>
 <dt>Returns:</dt><dd><dl class="simple">
-<dt>object: </dt><dd><p>a deep copy of the Nervous System object.</p>
+<dt>object:</dt><dd><p>a deep copy of the Nervous System object.</p>
 </dd>
 </dl>
 </dd>
@@ -1156,7 +1170,7 @@ Default is False.</p>
 <dd><p>Exports the graph to the specified path.</p>
 <dl class="simple">
 <dt>Parameters:</dt><dd><dl class="simple">
-<dt>path (str): </dt><dd><p>The path to save the exported graph.</p>
+<dt>path (str):</dt><dd><p>The path to save the exported graph.</p>
 </dd>
 </dl>
 </dd>

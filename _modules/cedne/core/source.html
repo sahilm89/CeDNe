@@ -270,8 +270,7 @@
                 <article class="bd-article">
                   
   <h1>Source code for cedne.core.source</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Provenance and citation infrastructure for CeDNe.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">&quot;&quot;&quot;Provenance and citation infrastructure for CeDNe.&quot;&quot;&quot;</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">asdict</span><span class="p">,</span> <span class="n">fields</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
@@ -316,6 +315,26 @@
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">d</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">valid_keys</span><span class="p">})</span></div>
 </div>
 
+
+
+<span class="c1"># Canonical self-citation for the CeDNe software. Auto-attached to every</span>
+<span class="c1"># Animal at construction so any consumer that walks ``effective_citations``</span>
+<span class="c1"># (notebooks, the web UI&#39;s References panel, exported provenance manifests)</span>
+<span class="c1"># sees that CeDNe was used to build the result.</span>
+<span class="n">CEDNE_SOFTWARE_CITATION_KEY</span> <span class="o">=</span> <span class="s2">&quot;CeDNe_2025&quot;</span>
+
+<span class="n">CEDNE_SOFTWARE_CITATION</span> <span class="o">=</span> <span class="n">Citation</span><span class="p">(</span>
+    <span class="n">key</span><span class="o">=</span><span class="n">CEDNE_SOFTWARE_CITATION_KEY</span><span class="p">,</span>
+    <span class="n">title</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;CeDNe: A multi-scale computational framework for modeling &quot;</span>
+        <span class="s2">&quot;structure-function relationships in the C. elegans nervous system&quot;</span>
+    <span class="p">),</span>
+    <span class="n">authors</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Moza, Sahil&quot;</span><span class="p">,</span> <span class="s2">&quot;Zhang, Yun&quot;</span><span class="p">],</span>
+    <span class="n">year</span><span class="o">=</span><span class="mi">2025</span><span class="p">,</span>
+    <span class="n">doi</span><span class="o">=</span><span class="s2">&quot;10.1101/2025.11.03.683805&quot;</span><span class="p">,</span>
+    <span class="n">url</span><span class="o">=</span><span class="s2">&quot;https://www.biorxiv.org/content/10.1101/2025.11.03.683805v1&quot;</span><span class="p">,</span>
+    <span class="n">notes</span><span class="o">=</span><span class="s2">&quot;Please cite the CeDNe preprint if you use CeDNe in your work.&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 
 
 <div class="viewcode-block" id="serialize_citations">

@@ -273,22 +273,25 @@
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Mapping relationships across nervous systems in CeDNe.</span>
 
-<span class="sd">This module defines data structures for comparing and aligning neural networks, </span>
+<span class="sd">This module defines data structures for comparing and aligning neural networks,</span>
 <span class="sd">such as between trained and naive worms, males and hermaphrodites, or different datasets.</span>
 
 <span class="sd">Key class:</span>
-<span class="sd">- `Mapping`: Represents a correspondence between neurons or subgraphs </span>
+<span class="sd">- `Mapping`: Represents a correspondence between neurons or subgraphs</span>
 <span class="sd">  across two `NervousSystem` objects.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.neuron</span><span class="w"> </span><span class="kn">import</span> <span class="n">Neuron</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.connection</span><span class="w"> </span><span class="kn">import</span> <span class="n">Connection</span>
+
+
 <span class="k">class</span><span class="w"> </span><span class="nc">Map</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39; This class represents a map between two entities. It can be used to map between </span>
-<span class="sd">    sets of nodes, edges or graphs. For example, it can be used to map neurotransmitters or </span>
-<span class="sd">    neuropeptides to their corresponding receptors, protein-protein interactions, or </span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;This class represents a map between two entities. It can be used to map between</span>
+<span class="sd">    sets of nodes, edges or graphs. For example, it can be used to map neurotransmitters or</span>
+<span class="sd">    neuropeptides to their corresponding receptors, protein-protein interactions, or</span>
 <span class="sd">    abstract motifs to graphs etc.</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapping_dict</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize a directed graph representing a map.</span>
@@ -301,7 +304,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_property</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
-    
+
     <span class="k">def</span><span class="w"> </span><span class="nf">set_property</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set a property of the map.</span>
@@ -320,10 +323,13 @@
 <span class="sd">            The value of the property.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+
+
 <span class="k">class</span><span class="w"> </span><span class="nc">NodeMap</span><span class="p">(</span><span class="n">Map</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    This class represents a map between two nodes.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapping_dict</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize a directed graph representing a map between two sets of nodes.</span>
@@ -333,11 +339,16 @@
 <span class="sd">            kwargs (dict, optional): Additional keyword arguments.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">mapping_dict</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+            <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+        <span class="p">)</span>
+
 
 <span class="k">class</span><span class="w"> </span><span class="nc">EdgeMap</span><span class="p">(</span><span class="n">Map</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    This class represents a map between two sets of edges.&quot;&quot;&quot;</span>
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapping_dict</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize a directed graph representing a map between two sets of edges.</span>
@@ -347,14 +358,19 @@
 <span class="sd">            kwargs (dict, optional): Additional keyword arguments.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">mapping_dict</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+            <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+        <span class="p">)</span>
+
 
 <div class="viewcode-block" id="GraphMap">
 <a class="viewcode-back" href="../../../index.html#cedne.GraphMap">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">GraphMap</span><span class="p">(</span><span class="n">Map</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot; </span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    This class represents a map between two graphs.&quot;&quot;&quot;</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapping_dict</span><span class="p">,</span> <span class="n">graph_1</span><span class="p">,</span> <span class="n">graph_2</span><span class="p">,</span> <span class="n">map_type</span> <span class="o">=</span> <span class="s1">&#39;node&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapping_dict</span><span class="p">,</span> <span class="n">graph_1</span><span class="p">,</span> <span class="n">graph_2</span><span class="p">,</span> <span class="n">map_type</span><span class="o">=</span><span class="s2">&quot;node&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize a directed graph representing a map between two graphs.</span>
 
@@ -372,31 +388,38 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">graph_1</span> <span class="o">=</span> <span class="n">graph_1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">graph_2</span> <span class="o">=</span> <span class="n">graph_2</span>
         <span class="k">for</span> <span class="n">item_1</span><span class="p">,</span> <span class="n">item_2</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span>  <span class="n">map_type</span> <span class="o">==</span> <span class="s1">&#39;node&#39;</span><span class="p">:</span>
-                <span class="k">if</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">item_1</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item_1</span><span class="p">,</span> <span class="n">Neuron</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">item_2</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item_2</span><span class="p">,</span> <span class="n">Neuron</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">map_type</span> <span class="o">==</span> <span class="s2">&quot;node&quot;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">item_1</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item_1</span><span class="p">,</span> <span class="n">Neuron</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span>
+                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">item_2</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item_2</span><span class="p">,</span> <span class="n">Neuron</span><span class="p">)</span>
+                <span class="p">):</span>
                     <span class="k">if</span> <span class="n">item_1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph_1</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
                         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Node </span><span class="si">{</span><span class="n">item_1</span><span class="si">}</span><span class="s2"> not found in graph_1&quot;</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">item_2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph_2</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
                         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Node </span><span class="si">{</span><span class="n">item_2</span><span class="si">}</span><span class="s2"> not found in graph_2&quot;</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Nodes must be of type str or Neuron&quot;</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">map_type</span> <span class="o">==</span> <span class="s1">&#39;edge&#39;</span><span class="p">:</span>
-                <span class="k">if</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">item_1</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span> <span class="p">(</span><span class="n">item_1</span><span class="p">,</span> <span class="n">Connection</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">item_2</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span> <span class="p">(</span><span class="n">item_2</span><span class="p">,</span> <span class="n">Connection</span><span class="p">)):</span>
+            <span class="k">elif</span> <span class="n">map_type</span> <span class="o">==</span> <span class="s2">&quot;edge&quot;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">item_1</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item_1</span><span class="p">,</span> <span class="n">Connection</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span>
+                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">item_2</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item_2</span><span class="p">,</span> <span class="n">Connection</span><span class="p">)</span>
+                <span class="p">):</span>
                     <span class="k">if</span> <span class="n">item_1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph_1</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
                         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Edge </span><span class="si">{</span><span class="n">item_1</span><span class="si">}</span><span class="s2"> not found in graph_1&quot;</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">item_2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph_2</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
                         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Edge </span><span class="si">{</span><span class="n">item_2</span><span class="si">}</span><span class="s2"> not found in graph_2&quot;</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Edges must be of type tuple or Connection&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mapping_cardinality</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
-        <span class="k">if</span> <span class="n">map_type</span> <span class="o">==</span> <span class="s1">&#39;node&#39;</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mapping_cardinality</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+            <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mapping_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">map_type</span> <span class="o">==</span> <span class="s2">&quot;node&quot;</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">mapping_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                <span class="n">graph_1</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="s1">&#39;map&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mapping_dict</span><span class="p">[</span><span class="n">node</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">map_type</span> <span class="o">==</span> <span class="s1">&#39;edge&#39;</span><span class="p">:</span>
+                <span class="n">graph_1</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="s2">&quot;map&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mapping_dict</span><span class="p">[</span><span class="n">node</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">map_type</span> <span class="o">==</span> <span class="s2">&quot;edge&quot;</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">mapping_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                <span class="n">graph_1</span><span class="o">.</span><span class="n">edges</span><span class="p">[</span><span class="n">edge</span><span class="p">][</span><span class="s1">&#39;map&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mapping_dict</span><span class="p">[</span><span class="n">edge</span><span class="p">]</span>
-                <span class="k">for</span> <span class="n">j</span><span class="p">,</span><span class="n">node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">edge</span><span class="p">):</span>
-                    <span class="n">graph_1</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="s1">&#39;map&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mapping_dict</span><span class="p">[</span><span class="n">edge</span><span class="p">][</span><span class="n">j</span><span class="p">]</span></div>
+                <span class="n">graph_1</span><span class="o">.</span><span class="n">edges</span><span class="p">[</span><span class="n">edge</span><span class="p">][</span><span class="s2">&quot;map&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mapping_dict</span><span class="p">[</span><span class="n">edge</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">edge</span><span class="p">):</span>
+                    <span class="n">graph_1</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="s2">&quot;map&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mapping_dict</span><span class="p">[</span><span class="n">edge</span><span class="p">][</span><span class="n">j</span><span class="p">]</span></div>
 
 </pre></div>
 
