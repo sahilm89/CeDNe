@@ -1,18 +1,18 @@
 """
 Trial-wise neural activity and stimulus-response analysis for CeDNe.
 
-This module defines classes for capturing and analyzing experimental recordings 
+This module defines classes for capturing and analyzing experimental recordings
 from neurons. It includes:
 
-- `Trial`: Represents a single experimental recording for a neuron, such as 
-  a calcium imaging time series. Trials are stored per-neuron in the `Neuron.trial` 
+- `Trial`: Represents a single experimental recording for a neuron, such as
+  a calcium imaging time series. Trials are stored per-neuron in the `Neuron.trial`
   dictionary and support signal preprocessing (e.g., bleaching correction).
-  
+
 - `StimResponse`: Encapsulates a stimulus-response pair recorded during a `Trial`,
   and extracts a set of interpretable features from the response signal, including
   max amplitude, onset time, area under the curve, and others.
 
-These classes are designed to support time-locked calcium imaging experiments 
+These classes are designed to support time-locked calcium imaging experiments
 and help link dynamic neural activity to behavioral or stimulus-driven contexts.
 """
 
@@ -32,9 +32,10 @@ from .config import F_SAMPLE
 if TYPE_CHECKING:
     from .neuron import Neuron
 
+
 class Trial:
     """A class representing a single experimental recording for a neuron.
-    
+
     This class handles the storage and basic processing of time series data recorded
     from a neuron during an experimental trial. It supports operations like data
     storage, bleaching correction, and basic signal processing.
@@ -46,7 +47,8 @@ class Trial:
         _data (NDArray): The actual recording data.
         metadata (Dict): Dictionary containing trial metadata.
     """
-    def __init__(self, neuron: 'Neuron', trialnum: int) -> None:
+
+    def __init__(self, neuron: "Neuron", trialnum: int) -> None:
         """Initialize a new Trial instance.
 
         Args:
@@ -59,12 +61,11 @@ class Trial:
         self._data: Optional[NDArray] = None
         self.behavior = None  # Optional back-reference to Behavior object
         self.metadata: Dict[str, Any] = {
-            'trial_number': trialnum,
-            'neuron_id': id(neuron),
-            'sampling_rate': F_SAMPLE,
-            'processing_history': []
+            "trial_number": trialnum,
+            "neuron_id": id(neuron),
+            "sampling_rate": F_SAMPLE,
+            "processing_history": [],
         }
-
 
     @property
     def recording(self) -> NDArray:
@@ -93,13 +94,13 @@ class Trial:
         """
         if not isinstance(data, np.ndarray):
             data = np.array(data)
-        
+
         if data.ndim != 1:
             raise ValueError("Recording data must be a 1D array")
-            
+
         if discard < 0:
             raise ValueError("Discard cannot be negative")
-            
+
         if discard > 0:
             discard_points = int(discard * F_SAMPLE)
             if discard_points >= len(data):
@@ -132,8 +133,9 @@ class Trial:
         """
         return np.arange(len(self.recording)) / F_SAMPLE
 
-    def filter_signal(self, filter_type: str = 'lowpass', cutoff_freq: float = 10.0,
-                     order: int = 4) -> NDArray:
+    def filter_signal(
+        self, filter_type: str = "lowpass", cutoff_freq: float = 10.0, order: int = 4
+    ) -> NDArray:
         """Apply a Butterworth filter to the recording data.
 
         Args:
@@ -151,27 +153,34 @@ class Trial:
         if isinstance(cutoff_freq, (list, tuple)):
             cutoff_freq = np.array(cutoff_freq)
             if np.any(cutoff_freq <= 0) or np.any(cutoff_freq >= nyquist):
-                raise ValueError("Cutoff frequencies must be between 0 and nyquist frequency")
+                raise ValueError(
+                    "Cutoff frequencies must be between 0 and nyquist frequency"
+                )
         else:
             if cutoff_freq <= 0 or cutoff_freq >= nyquist:
-                raise ValueError("Cutoff frequency must be between 0 and nyquist frequency")
-                
+                raise ValueError(
+                    "Cutoff frequency must be between 0 and nyquist frequency"
+                )
+
         normalized_cutoff = cutoff_freq / nyquist
 
-        if filter_type == 'lowpass':
-            b, a = signal.butter(order, normalized_cutoff, btype='low')
-        elif filter_type == 'highpass':
-            b, a = signal.butter(order, normalized_cutoff, btype='high')
-        elif filter_type == 'bandpass':
-            if not isinstance(normalized_cutoff, (list, tuple, np.ndarray)) or len(normalized_cutoff) != 2:
+        if filter_type == "lowpass":
+            b, a = signal.butter(order, normalized_cutoff, btype="low")
+        elif filter_type == "highpass":
+            b, a = signal.butter(order, normalized_cutoff, btype="high")
+        elif filter_type == "bandpass":
+            if (
+                not isinstance(normalized_cutoff, (list, tuple, np.ndarray))
+                or len(normalized_cutoff) != 2
+            ):
                 raise ValueError("Bandpass filter requires two cutoff frequencies")
-            b, a = signal.butter(order, normalized_cutoff, btype='band')
+            b, a = signal.butter(order, normalized_cutoff, btype="band")
         else:
             raise ValueError(f"Invalid filter type: {filter_type}")
 
         return signal.filtfilt(b, a, self.recording)
 
-    def smooth_signal(self, window_size: int = 5, method: str = 'moving') -> NDArray:
+    def smooth_signal(self, window_size: int = 5, method: str = "moving") -> NDArray:
         """Smooth the recording signal using various methods.
 
         Args:
@@ -184,17 +193,19 @@ class Trial:
         Raises:
             ValueError: If method is invalid or if no recording data has been set.
         """
-        if method == 'moving':
+        if method == "moving":
             window = np.ones(window_size) / window_size
-            return np.convolve(self.recording, window, mode='same')
-        elif method == 'gaussian':
+            return np.convolve(self.recording, window, mode="same")
+        elif method == "gaussian":
             return gaussian_filter1d(self.recording, window_size)
-        elif method == 'median':
+        elif method == "median":
             return signal.medfilt(self.recording, window_size)
         else:
             raise ValueError(f"Invalid smoothing method: {method}")
 
-    def normalize_signal(self, method: str = 'minmax', baseline_window: Optional[tuple] = None) -> NDArray:
+    def normalize_signal(
+        self, method: str = "minmax", baseline_window: Optional[tuple] = None
+    ) -> NDArray:
         """Normalize the recording signal using various methods.
 
         Args:
@@ -207,23 +218,26 @@ class Trial:
         Raises:
             ValueError: If method is invalid or if no recording data has been set.
         """
-        if method == 'minmax':
+        if method == "minmax":
             min_val = np.min(self.recording)
             max_val = np.max(self.recording)
             return (self.recording - min_val) / (max_val - min_val)
-        elif method == 'zscore':
+        elif method == "zscore":
             return (self.recording - np.mean(self.recording)) / np.std(self.recording)
-        elif method == 'baseline':
+        elif method == "baseline":
             if baseline_window is None:
-                raise ValueError("baseline_window must be provided for baseline normalization")
+                raise ValueError(
+                    "baseline_window must be provided for baseline normalization"
+                )
             start, end = baseline_window
             baseline = np.mean(self.recording[start:end])
             return (self.recording - baseline) / baseline
         else:
             raise ValueError(f"Invalid normalization method: {method}")
 
-    def detect_peaks(self, height: Optional[float] = None,
-                    distance: Optional[int] = None) -> tuple[NDArray, NDArray]:
+    def detect_peaks(
+        self, height: Optional[float] = None, distance: Optional[int] = None
+    ) -> tuple[NDArray, NDArray]:
         """Detect peaks in the recording signal.
 
         Args:
@@ -238,9 +252,15 @@ class Trial:
         """
         if distance is not None and distance < 1:
             raise ValueError("`distance` must be greater or equal to 1")
-            
-        peaks, properties = signal.find_peaks(self.recording, height=height, distance=distance)
-        peak_heights = self.recording[peaks] if 'peak_heights' not in properties else properties['peak_heights']
+
+        peaks, properties = signal.find_peaks(
+            self.recording, height=height, distance=distance
+        )
+        peak_heights = (
+            self.recording[peaks]
+            if "peak_heights" not in properties
+            else properties["peak_heights"]
+        )
         return peaks, peak_heights
 
     def get_statistics(self) -> dict:
@@ -261,17 +281,17 @@ class Trial:
             ValueError: If no recording data has been set.
         """
         return {
-            'mean': np.mean(self.recording),
-            'std': np.std(self.recording),
-            'median': np.median(self.recording),
-            'min': np.min(self.recording),
-            'max': np.max(self.recording),
-            'skewness': ss.skew(self.recording),
-            'kurtosis': ss.kurtosis(self.recording),
-            'rms': np.sqrt(np.mean(np.square(self.recording)))
+            "mean": np.mean(self.recording),
+            "std": np.std(self.recording),
+            "median": np.median(self.recording),
+            "min": np.min(self.recording),
+            "max": np.max(self.recording),
+            "skewness": ss.skew(self.recording),
+            "kurtosis": ss.kurtosis(self.recording),
+            "rms": np.sqrt(np.mean(np.square(self.recording))),
         }
 
-    def compute_power_spectrum(self, window: str = 'hann') -> tuple[NDArray, NDArray]:
+    def compute_power_spectrum(self, window: str = "hann") -> tuple[NDArray, NDArray]:
         """Compute the power spectrum of the recording.
 
         Args:
@@ -304,13 +324,15 @@ class Trial:
 
         signal_power = np.mean(np.square(self.recording[sig_start:sig_end]))
         noise_power = np.mean(np.square(self.recording[noise_start:noise_end]))
-        
+
         if noise_power == 0:
-            return float('inf')
-        
+            return float("inf")
+
         return 10 * np.log10(signal_power / noise_power)
 
-    def segment_signal(self, threshold: float, min_duration: int = 10) -> List[tuple[int, int]]:
+    def segment_signal(
+        self, threshold: float, min_duration: int = 10
+    ) -> List[tuple[int, int]]:
         """Segment the signal into regions above threshold.
 
         Args:
@@ -374,11 +396,13 @@ class Trial:
             operation: Name of the processing operation.
             parameters: Dictionary of parameters used in the operation.
         """
-        self.metadata['processing_history'].append({
-            'timestamp': datetime.now().isoformat(),
-            'operation': operation,
-            'parameters': parameters
-        })
+        self.metadata["processing_history"].append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "operation": operation,
+                "parameters": parameters,
+            }
+        )
 
     def validate_data(self) -> bool:
         """Validate the recording data.
@@ -395,19 +419,19 @@ class Trial:
         """
         if self._data is None:
             return False
-        
+
         if not isinstance(self._data, np.ndarray):
             return False
-            
+
         if self._data.ndim != 1:
             return False
-            
+
         if not np.isfinite(self._data).all():
             return False
-            
+
         if len(self._data) == 0:
             return False
-            
+
         return True
 
     def get_quality_metrics(self) -> Dict[str, float]:
@@ -442,10 +466,11 @@ class Trial:
         stability = 1 - np.std(segment_means) / np.mean(segment_means)
 
         return {
-            'noise_level': float(noise_level),
-            'artifact_count': int(artifacts),
-            'signal_stability': float(stability)
+            "noise_level": float(noise_level),
+            "artifact_count": int(artifacts),
+            "signal_stability": float(stability),
         }
+
 
 class StimResponse:
     """A class representing a stimulus-response pair in a neural recording.
@@ -474,8 +499,10 @@ class StimResponse:
         7: Positive response area
         8: Absolute area under the curve
     """
-    def __init__(self, trial: Trial, stimulus: NDArray, response: NDArray, 
-                baseline_samples: int) -> None:
+
+    def __init__(
+        self, trial: Trial, stimulus: NDArray, response: NDArray, baseline_samples: int
+    ) -> None:
         """Initialize a StimResponse instance.
 
         Args:
@@ -489,13 +516,13 @@ class StimResponse:
         """
         if not isinstance(stimulus, np.ndarray) or not isinstance(response, np.ndarray):
             raise ValueError("Stimulus and response must be numpy arrays")
-            
+
         if stimulus.ndim != 1 or response.ndim != 1:
             raise ValueError("Stimulus and response must be 1-dimensional")
-            
+
         if len(stimulus) != len(response):
             raise ValueError("Stimulus and response must have the same length")
-            
+
         if baseline_samples >= len(response):
             raise ValueError("Baseline samples exceeds response length")
 
@@ -504,9 +531,9 @@ class StimResponse:
         self.feature: Dict[int, Any] = {}
         self.neuron = trial.neuron
         self.f_sample = F_SAMPLE
-        self.sampling_time = 1./self.f_sample
+        self.sampling_time = 1.0 / self.f_sample
         self.baseline = self.response[:baseline_samples]
-        
+
         # Extract all features
         for feature_index in range(9):  # 9 features total
             self.feature[feature_index] = self.extract_feature(feature_index)
@@ -592,7 +619,7 @@ class StimResponse:
             float: Area under the curve in amplitude-seconds.
         """
         undersampling = self.response[::bin_size]
-        return float(np.trapz(undersampling, dx=self.sampling_time*bin_size))
+        return float(np.trapz(undersampling, dx=self.sampling_time * bin_size))
 
     def _absolute_area_under_the_curve(self, bin_size: int = 5) -> float:
         """Calculate the absolute area under the response curve.
@@ -604,7 +631,7 @@ class StimResponse:
             float: Absolute area under the curve in amplitude-seconds.
         """
         undersampling = np.abs(self.response[::bin_size])
-        return float(np.trapz(undersampling, dx=self.sampling_time*bin_size))
+        return float(np.trapz(undersampling, dx=self.sampling_time * bin_size))
 
     def _area_under_the_curve_to_peak(self, bin_size: int = 10) -> float:
         """Calculate the area under the curve up to the peak response.
@@ -617,11 +644,15 @@ class StimResponse:
         """
         undersampling = self.response[::bin_size]
         max_index = np.argmax(undersampling)
-        window_to_peak = undersampling[:max_index+1]
-        return float(np.trapz(window_to_peak, dx=self.sampling_time*bin_size))
+        window_to_peak = undersampling[: max_index + 1]
+        return float(np.trapz(window_to_peak, dx=self.sampling_time * bin_size))
 
-    def _find_onset_time(self, window_size: int = 10, threshold_std: float = 2.0, 
-                        absolute_threshold: Optional[float] = None) -> float:
+    def _find_onset_time(
+        self,
+        window_size: int = 10,
+        threshold_std: float = 2.0,
+        absolute_threshold: Optional[float] = None,
+    ) -> float:
         """Find the response onset time using a sliding window approach.
 
         For calcium imaging data, this method uses a robust detection approach that:
@@ -642,20 +673,20 @@ class StimResponse:
         """
         baseline_mean = np.mean(self.baseline)
         baseline_std = np.std(self.baseline)
-        
+
         # Calculate threshold based on provided method
         if absolute_threshold is not None:
             threshold = absolute_threshold
         else:
             # Use statistical threshold
             threshold = baseline_mean + threshold_std * baseline_std
-        
+
         # Use a sliding window to find when response consistently exceeds threshold
         for i in range(len(self.response) - window_size):
-            window = self.response[i:i+window_size]
+            window = self.response[i : i + window_size]
             if np.mean(window) > threshold:
                 return float(i * self.sampling_time)
-        
+
         # If no onset found, return nan
         return np.nan
 
@@ -681,7 +712,7 @@ class StimResponse:
             scale = abs_area / signed_total
             pos_area *= scale
             neg_area *= scale
-        
+
         return pos_area, neg_area
 
     def get_response_characteristics(self) -> Dict[str, float]:
@@ -699,7 +730,7 @@ class StimResponse:
         """
         baseline_mean = np.mean(self.baseline)
         baseline_std = np.std(self.baseline)
-        
+
         # Calculate peak amplitude relative to baseline
         # First subtract baseline from the entire response
         response_minus_baseline = self.response - baseline_mean
@@ -707,31 +738,40 @@ class StimResponse:
         max_abs_idx = np.argmax(np.abs(response_minus_baseline))
         # Use the actual value at that index
         peak_amplitude = response_minus_baseline[max_abs_idx]
-        
+
         onset_time = self._find_onset_time()
-        
+
         # Find response end (when signal returns to baseline)
         end_threshold = baseline_mean + 2 * baseline_std
         response_end = np.where(self.response <= end_threshold)[0]
         response_end = response_end[-1] if len(response_end) > 0 else len(self.response)
-        
-        duration = (response_end - onset_time) * self.sampling_time if not np.isnan(onset_time) else 0.0
+
+        duration = (
+            (response_end - onset_time) * self.sampling_time
+            if not np.isnan(onset_time)
+            else 0.0
+        )
         integral = self._area_under_the_curve()
-        
+
         # Calculate signal-to-noise ratio
         signal_power = np.mean(np.square(self.response - baseline_mean))
         noise_power = np.mean(np.square(self.baseline - baseline_mean))
-        snr = 10 * np.log10(signal_power / noise_power) if noise_power > 0 else float('inf')
-        
+        snr = (
+            10 * np.log10(signal_power / noise_power)
+            if noise_power > 0
+            else float("inf")
+        )
+
         return {
-            'amplitude': float(peak_amplitude),
-            'duration': float(duration),
-            'latency': float(onset_time),
-            'integral': float(integral),
-            'baseline_mean': float(baseline_mean),
-            'baseline_std': float(baseline_std),
-            'signal_to_noise': float(snr)
+            "amplitude": float(peak_amplitude),
+            "duration": float(duration),
+            "latency": float(onset_time),
+            "integral": float(integral),
+            "baseline_mean": float(baseline_mean),
+            "baseline_std": float(baseline_std),
+            "signal_to_noise": float(snr),
         }
 
+
 def _linear_transform(value, minvalue, maxvalue):
-    return (value - minvalue)/(maxvalue - minvalue)
+    return (value - minvalue) / (maxvalue - minvalue)

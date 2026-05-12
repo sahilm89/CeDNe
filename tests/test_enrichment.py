@@ -50,7 +50,9 @@ def test_categorical_enrichment_against_network(neuron_enrichment_network):
     assert "q_value" in sensory
 
 
-def test_numeric_enrichment_uses_deterministic_size_matched_null(neuron_enrichment_network):
+def test_numeric_enrichment_uses_deterministic_size_matched_null(
+    neuron_enrichment_network,
+):
     _, _, group, _ = neuron_enrichment_network
 
     result = group_attribute_enrichment(
@@ -95,9 +97,15 @@ def test_connection_group_attribute_enrichment():
     net = NervousSystem()
     neurons = [Neuron(f"N{idx}", net) for idx in range(5)]
     chem = [
-        Connection(neurons[0], neurons[1], uid="c01", connection_type="chemical-synapse"),
-        Connection(neurons[1], neurons[2], uid="c12", connection_type="chemical-synapse"),
-        Connection(neurons[2], neurons[3], uid="c23", connection_type="chemical-synapse"),
+        Connection(
+            neurons[0], neurons[1], uid="c01", connection_type="chemical-synapse"
+        ),
+        Connection(
+            neurons[1], neurons[2], uid="c12", connection_type="chemical-synapse"
+        ),
+        Connection(
+            neurons[2], neurons[3], uid="c23", connection_type="chemical-synapse"
+        ),
     ]
     gap = [
         Connection(neurons[3], neurons[4], uid="g34", connection_type="gap-junction"),
@@ -108,7 +116,9 @@ def test_connection_group_attribute_enrichment():
     result = group_attribute_enrichment(group, "connection_type")
 
     assert result["element"] == "edge"
-    chemical = next(row for row in result["results"] if row["value"] == "chemical-synapse")
+    chemical = next(
+        row for row in result["results"] if row["value"] == "chemical-synapse"
+    )
     gap_row = next(row for row in result["results"] if row["value"] == "gap-junction")
     assert chemical["direction"] == "enriched"
     assert gap_row["direction"] == "depleted"
@@ -300,7 +310,9 @@ def connection_stress_network():
         ),
     ]
     group = ConnectionGroup(net, conns[:3], group_name="connection_stress_group")
-    comparison = ConnectionGroup(net, conns[3:], group_name="connection_stress_comparison")
+    comparison = ConnectionGroup(
+        net, conns[3:], group_name="connection_stress_comparison"
+    )
     return net, conns, group, comparison
 
 
@@ -314,22 +326,27 @@ def test_supported_non_set_modes_return_json_safe_results(stress_network, mode):
         "binary": "is_active",
     }[mode]
 
-    result = group_attribute_enrichment(group, attribute, mode=mode, n_resamples=25, random_state=1)
+    result = group_attribute_enrichment(
+        group, attribute, mode=mode, n_resamples=25, random_state=1
+    )
 
     assert result["mode"] == ("numeric" if mode == "auto" else mode)
     assert result["results"]
     assert_json_safe(result)
 
 
-@pytest.mark.parametrize("null_model", [
-    "network",
-    "full_network",
-    "full",
-    "size_matched",
-    "shuffled",
-    "permutation",
-    "sample",
-])
+@pytest.mark.parametrize(
+    "null_model",
+    [
+        "network",
+        "full_network",
+        "full",
+        "size_matched",
+        "shuffled",
+        "permutation",
+        "sample",
+    ],
+)
 def test_numeric_network_null_aliases_are_supported(stress_network, null_model):
     _, _, group, _ = stress_network
 
@@ -358,7 +375,9 @@ def test_alternative_controls_primary_p_value(stress_network, alternative):
 
     sensory = next(row for row in result["results"] if row["value"] == "sensory")
     expected = {
-        "two-sided": min(1.0, 2.0 * min(sensory["p_enrichment"], sensory["p_depletion"])),
+        "two-sided": min(
+            1.0, 2.0 * min(sensory["p_enrichment"], sensory["p_depletion"])
+        ),
         "greater": sensory["p_enrichment"],
         "less": sensory["p_depletion"],
     }[alternative]
@@ -373,7 +392,10 @@ def test_reference_group_can_be_object_or_name(stress_network):
 
     assert by_object["reference"]["name"] == "stress_comparison"
     assert by_name["reference"]["name"] == "stress_comparison"
-    assert by_object["results"][0]["reference_mean"] == by_name["results"][0]["reference_mean"]
+    assert (
+        by_object["results"][0]["reference_mean"]
+        == by_name["results"][0]["reference_mean"]
+    )
     assert net.groups["stress_comparison"] is comparison
 
 
@@ -386,13 +408,22 @@ def test_complement_reference_excludes_observed_group(stress_network):
     assert result["reference"]["size"] == 8
 
 
-@pytest.mark.parametrize("missing_policy, expected_missing, expected_unknown", [
-    ("exclude_and_report", 1, False),
-    ("missing_is_unknown", 0, True),
-])
-def test_categorical_missing_policy_semantics(stress_network, missing_policy, expected_missing, expected_unknown):
+@pytest.mark.parametrize(
+    "missing_policy, expected_missing, expected_unknown",
+    [
+        ("exclude_and_report", 1, False),
+        ("missing_is_unknown", 0, True),
+    ],
+)
+def test_categorical_missing_policy_semantics(
+    stress_network, missing_policy, expected_missing, expected_unknown
+):
     _, neurons, _, _ = stress_network
-    group = NeuronGroup(neurons[0].network, [neurons[10], neurons[11]], group_name=f"missing_{missing_policy}")
+    group = NeuronGroup(
+        neurons[0].network,
+        [neurons[10], neurons[11]],
+        group_name=f"missing_{missing_policy}",
+    )
 
     result = group_attribute_enrichment(
         group,
@@ -406,14 +437,19 @@ def test_categorical_missing_policy_semantics(stress_network, missing_policy, ex
     assert has_unknown is expected_unknown
 
 
-@pytest.mark.parametrize("missing_policy, expected_missing, expected_valid", [
-    # In set-membership mode, ["ACh"] is a valid known absence of "GABA".
-    # The empty list is missing only when the caller chooses exclude_and_report.
-    ("exclude_and_report", 1, 2),
-    ("empty_is_absent", 0, 3),
-    ("missing_is_absent", 0, 3),
-])
-def test_set_membership_missing_policy_semantics(connection_stress_network, missing_policy, expected_missing, expected_valid):
+@pytest.mark.parametrize(
+    "missing_policy, expected_missing, expected_valid",
+    [
+        # In set-membership mode, ["ACh"] is a valid known absence of "GABA".
+        # The empty list is missing only when the caller chooses exclude_and_report.
+        ("exclude_and_report", 1, 2),
+        ("empty_is_absent", 0, 3),
+        ("missing_is_absent", 0, 3),
+    ],
+)
+def test_set_membership_missing_policy_semantics(
+    connection_stress_network, missing_policy, expected_missing, expected_valid
+):
     _, _, group, _ = connection_stress_network
 
     result = group_attribute_enrichment(
@@ -430,15 +466,22 @@ def test_set_membership_missing_policy_semantics(connection_stress_network, miss
     assert row["observed_count"] == 1
 
 
-@pytest.mark.parametrize("missing_policy, expected_missing, expected_valid", [
-    ("exclude_and_report", 1, 2),
-    ("empty_is_absent", 0, 3),
-    ("missing_is_absent", 0, 3),
-])
-def test_binary_missing_policy_semantics(connection_stress_network, missing_policy, expected_missing, expected_valid):
+@pytest.mark.parametrize(
+    "missing_policy, expected_missing, expected_valid",
+    [
+        ("exclude_and_report", 1, 2),
+        ("empty_is_absent", 0, 3),
+        ("missing_is_absent", 0, 3),
+    ],
+)
+def test_binary_missing_policy_semantics(
+    connection_stress_network, missing_policy, expected_missing, expected_valid
+):
     _, conns, _, _ = connection_stress_network
     delattr(conns[2], "curated")
-    group = ConnectionGroup(conns[0].network, conns[:3], group_name=f"binary_{missing_policy}")
+    group = ConnectionGroup(
+        conns[0].network, conns[:3], group_name=f"binary_{missing_policy}"
+    )
 
     result = group_attribute_enrichment(
         group,
@@ -453,11 +496,15 @@ def test_binary_missing_policy_semantics(connection_stress_network, missing_poli
     assert row["value"] is True
 
 
-def test_set_membership_supports_dict_list_set_and_scalar_values(connection_stress_network):
+def test_set_membership_supports_dict_list_set_and_scalar_values(
+    connection_stress_network,
+):
     _, conns, _, _ = connection_stress_network
     conns[1].neuropeptides = {"FLP-18": 0}
     conns[2].neuropeptides = "FLP-18"
-    group = ConnectionGroup(conns[0].network, conns[:3], group_name="mixed_value_shapes")
+    group = ConnectionGroup(
+        conns[0].network, conns[:3], group_name="mixed_value_shapes"
+    )
 
     result = group_attribute_enrichment(
         group,
@@ -470,7 +517,9 @@ def test_set_membership_supports_dict_list_set_and_scalar_values(connection_stre
     assert result["results"][0]["observed_count"] == 2
 
 
-def test_eligible_filter_supports_expected_lists_and_actual_lists(connection_stress_network):
+def test_eligible_filter_supports_expected_lists_and_actual_lists(
+    connection_stress_network,
+):
     _, conns, group, _ = connection_stress_network
     conns[0].tags = ["curated", "synaptic"]
     conns[1].tags = ["synaptic"]
@@ -482,23 +531,29 @@ def test_eligible_filter_supports_expected_lists_and_actual_lists(connection_str
         mode="set_membership",
         value="GABA",
         missing_policy="empty_is_absent",
-        eligible_filter={"connection_type": ["chemical-synapse", "gap-junction"], "tags": "synaptic"},
+        eligible_filter={
+            "connection_type": ["chemical-synapse", "gap-junction"],
+            "tags": "synaptic",
+        },
     )
 
     assert result["observed"]["eligible_size"] == 2
     assert result["results"][0]["observed_count"] == 1
 
 
-@pytest.mark.parametrize("kwargs, message", [
-    ({"attribute": ""}, "attribute must be"),
-    ({"attribute": "type", "mode": "unsupported"}, "mode must be"),
-    ({"attribute": "type", "attribute_type": "bad"}, "attribute_type must be"),
-    ({"attribute": "type", "missing_policy": "bad"}, "missing_policy must be"),
-    ({"attribute": "type", "null_model": "bad"}, "null_model must be"),
-    ({"attribute": "type", "alternative": "bad"}, "alternative must be"),
-    ({"attribute": "type", "n_resamples": 0}, "n_resamples must be"),
-    ({"attribute": "type", "mode": "set_membership"}, "value is required"),
-])
+@pytest.mark.parametrize(
+    "kwargs, message",
+    [
+        ({"attribute": ""}, "attribute must be"),
+        ({"attribute": "type", "mode": "unsupported"}, "mode must be"),
+        ({"attribute": "type", "attribute_type": "bad"}, "attribute_type must be"),
+        ({"attribute": "type", "missing_policy": "bad"}, "missing_policy must be"),
+        ({"attribute": "type", "null_model": "bad"}, "null_model must be"),
+        ({"attribute": "type", "alternative": "bad"}, "alternative must be"),
+        ({"attribute": "type", "n_resamples": 0}, "n_resamples must be"),
+        ({"attribute": "type", "mode": "set_membership"}, "value is required"),
+    ],
+)
 def test_invalid_option_matrix_raises(stress_network, kwargs, message):
     _, _, group, _ = stress_network
 
@@ -506,12 +561,16 @@ def test_invalid_option_matrix_raises(stress_network, kwargs, message):
         group_attribute_enrichment(group, **kwargs)
 
 
-@pytest.mark.parametrize("missing_policy", ["empty_is_absent", "missing_is_absent", "missing_is_unknown"])
+@pytest.mark.parametrize(
+    "missing_policy", ["empty_is_absent", "missing_is_absent", "missing_is_unknown"]
+)
 def test_numeric_rejects_absence_style_missing_policies(stress_network, missing_policy):
     _, _, group, _ = stress_network
 
     with pytest.raises(ValueError, match="Numeric enrichment requires"):
-        group_attribute_enrichment(group, "score", mode="numeric", missing_policy=missing_policy)
+        group_attribute_enrichment(
+            group, "score", mode="numeric", missing_policy=missing_policy
+        )
 
 
 def test_invalid_reference_cases_raise(stress_network):
@@ -562,8 +621,12 @@ def test_categorical_value_present_only_in_observed_group_is_reported(stress_net
 
     result = group_attribute_enrichment(group, "annotation", reference=comparison)
 
-    observed_only = next(row for row in result["results"] if row["value"] == "observed_only")
-    reference_only = next(row for row in result["results"] if row["value"] == "reference_only")
+    observed_only = next(
+        row for row in result["results"] if row["value"] == "observed_only"
+    )
+    reference_only = next(
+        row for row in result["results"] if row["value"] == "reference_only"
+    )
     assert observed_only["reference_count"] == 0
     assert observed_only["direction"] == "enriched"
     assert reference_only["observed_count"] == 0
@@ -574,4 +637,6 @@ def test_public_alias_matches_primary_function(stress_network):
     from cedne.utils.enrichment import test_group_attribute_enrichment
 
     _, _, group, _ = stress_network
-    assert test_group_attribute_enrichment(group, "type") == group_attribute_enrichment(group, "type")
+    assert test_group_attribute_enrichment(group, "type") == group_attribute_enrichment(
+        group, "type"
+    )

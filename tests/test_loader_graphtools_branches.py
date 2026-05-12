@@ -43,7 +43,9 @@ def find_connection(network, pre, post, connection_type):
         ("male", "Male neurons, sorted by neuron"),
     ],
 )
-def test_getLigands_reads_expected_sheet_and_canonicalizes(monkeypatch, sex, sheet_name):
+def test_getLigands_reads_expected_sheet_and_canonicalizes(
+    monkeypatch, sex, sheet_name
+):
     calls = []
 
     def fake_read_excel(path, sheet_name=None, skiprows=None, engine=None):
@@ -202,8 +204,7 @@ def test_build_nervous_system_cites_default_neuropal_positions(tmp_path, monkeyp
         == "10.1186/s12859-022-04738-3"
     )
     assert (
-        nn.neurons["AVAL"].citations["Yemini2020"].doi
-        == "10.1016/j.cell.2020.12.012"
+        nn.neurons["AVAL"].citations["Yemini2020"].doi == "10.1016/j.cell.2020.12.012"
     )
     assert nn.neurons["AVBL"].citations == {}
 
@@ -275,7 +276,16 @@ def test_makeWorm_white_1986_loads_and_normalizes_edges(monkeypatch):
     assert find_connection(nn, "AVFR", "PVCL", "chemical-synapse").weight == 1
     assert find_connection(nn, "AVFL", "AVFR", "gap-junction").weight == 4
     assert find_connection(nn, "AVFR", "AVFL", "gap-junction").weight == 4
-    assert len([c for c in nn.connections.values() if c.connection_type == "chemical-synapse"]) == 2
+    assert (
+        len(
+            [
+                c
+                for c in nn.connections.values()
+                if c.connection_type == "chemical-synapse"
+            ]
+        )
+        == 2
+    )
 
 
 @pytest.mark.parametrize(
@@ -304,7 +314,9 @@ def test_make_pristionchus_selects_requested_specimen(
 
     assert animal.species == "Pristionchus pacificus"
     assert animal.specimen == expected_specimen
-    assert animal.citations["bumbarger_pharynx"] == loader.citations["bumbarger_pharynx"]
+    assert (
+        animal.citations["bumbarger_pharynx"] == loader.citations["bumbarger_pharynx"]
+    )
     assert set(nn.neurons) == {name for edge in expected_weights for name in edge}
     for (pre, post), weight in expected_weights.items():
         assert find_connection(nn, pre, post, "chemical-synapse").weight == weight
@@ -474,7 +486,10 @@ def test_make_platynereis_builds_fine_and_grouped_networks(monkeypatch):
     fine = animal.networks["neurons"]
     grouped = animal.networks["celltypes"]
 
-    assert animal.citations["veraszto_connectome"] == loader.citations["veraszto_connectome"]
+    assert (
+        animal.citations["veraszto_connectome"]
+        == loader.citations["veraszto_connectome"]
+    )
     assert "fragment" not in fine.neurons
     assert fine.neurons["ctA_1"].type == "ctA"
     assert fine.neurons["ctA_1"].category == "sensory"
@@ -508,7 +523,10 @@ def test_load_contactome_mirrors_weights_and_reports_skips(tmp_path):
     assert added == 2
     assert skipped == 1
     assert nn.weight_units == "nm^2"
-    assert nn.worm.citations["brittin_contactome"] == loader.citations["brittin_contactome"]
+    assert (
+        nn.worm.citations["brittin_contactome"]
+        == loader.citations["brittin_contactome"]
+    )
     assert find_connection(nn, "A", "B", "contact").weight == 5.0
     assert find_connection(nn, "B", "A", "contact").weight == 5.0
 
@@ -545,7 +563,15 @@ def test_loadNeuropeptides_builds_requested_worm_networks(monkeypatch):
         raise AssertionError(f"Unexpected csv path {path}")
 
     def fake_build_network(self, neuron_data, adj, label):
-        calls.append((self.name, neuron_data, label, adj["A"]["B"]["weight"], adj["B"]["A"]["weight"]))
+        calls.append(
+            (
+                self.name,
+                neuron_data,
+                label,
+                adj["A"]["B"]["weight"],
+                adj["B"]["A"]["weight"],
+            )
+        )
 
     monkeypatch.setattr(loader.pd, "read_csv", fake_read_csv)
     monkeypatch.setattr(NervousSystem, "build_network", fake_build_network)
@@ -555,7 +581,9 @@ def test_loadNeuropeptides_builds_requested_worm_networks(monkeypatch):
 
     assert calls == [("NP1", loader.cell_list, "NP1", 1, 2)]
     assert "NP1" in worm.networks
-    assert worm.citations["neuropeptide_atlas"] == loader.citations["neuropeptide_atlas"]
+    assert (
+        worm.citations["neuropeptide_atlas"] == loader.citations["neuropeptide_atlas"]
+    )
 
 
 def test_loadNeuropeptides_adds_requested_connections_to_network(monkeypatch):
@@ -582,7 +610,10 @@ def test_loadNeuropeptides_adds_requested_connections_to_network(monkeypatch):
     assert find_connection(nn, "A", "B", "NP1").weight == 1
     assert find_connection(nn, "B", "A", "NP1").weight == 2
     assert not any(conn.connection_type == "NP2" for conn in nn.connections.values())
-    assert nn.worm.citations["neuropeptide_atlas"] == loader.citations["neuropeptide_atlas"]
+    assert (
+        nn.worm.citations["neuropeptide_atlas"]
+        == loader.citations["neuropeptide_atlas"]
+    )
 
 
 def test_getNeuropeptideList_reads_pairs(monkeypatch):
@@ -612,10 +643,14 @@ def test_loadTranscripts_maps_grouped_and_special_case_neurons(monkeypatch):
         index=["gene0", "gene1"],
     )
 
-    monkeypatch.setattr(loader.pd, "read_csv", lambda *args, **kwargs: transcript_table.copy())
+    monkeypatch.setattr(
+        loader.pd, "read_csv", lambda *args, **kwargs: transcript_table.copy()
+    )
 
     nn = NervousSystem(Worm("transcripts"), network="Neutral")
-    nn.create_neurons(["AVAL", "AVAR", "AWCL", "AWCR", "VD1", "RMEL", "RMED", "DA09", "VC04"])
+    nn.create_neurons(
+        ["AVAL", "AVAR", "AWCL", "AWCR", "VD1", "RMEL", "RMED", "DA09", "VC04"]
+    )
 
     loader.loadTranscripts(nn, threshold=1)
 
@@ -680,18 +715,35 @@ def test_loadSynapticWeights_updates_known_and_missing_edges(monkeypatch):
 
     nn = NervousSystem(Worm("weights"), network="Neutral")
     nn.create_neurons(["A", "B", "C"])
-    nn.setup_connections({"pre": "A", "post": "B", "weight": 1}, "chemical-synapse", input_type="edge")
-    nn.setup_connections({"pre": "C", "post": "A", "weight": 2}, "chemical-synapse", input_type="edge")
+    nn.setup_connections(
+        {"pre": "A", "post": "B", "weight": 1}, "chemical-synapse", input_type="edge"
+    )
+    nn.setup_connections(
+        {"pre": "C", "post": "A", "weight": 2}, "chemical-synapse", input_type="edge"
+    )
 
-    wt_matrix = loader.loadSynapticWeights(nn)
+    # The new RuntimeWarning surfaces partial atlas coverage to the caller;
+    # the test must allow it (the warning is the contract).
+    with pytest.warns(RuntimeWarning, match="weight_inferred"):
+        wt_matrix = loader.loadSynapticWeights(nn)
 
     assert wt_matrix.loc["B", "A"] == 7.5
-    assert find_connection(nn, "A", "B", "chemical-synapse").weight == 7.5
-    assert np.isnan(find_connection(nn, "C", "A", "chemical-synapse").weight)
+    # Atlas-covered edge: weight updated to the predicted value, flagged inferred.
+    ab = find_connection(nn, "A", "B", "chemical-synapse")
+    assert ab.weight == 7.5
+    assert ab.weight_inferred is True
+    # Missing-from-atlas edge: structural weight preserved (was 2), flagged
+    # not-inferred. Critically NOT NaN — NaN here used to poison the simulator's
+    # weight matrix and produce silently-wrong rate trajectories.
+    ca = find_connection(nn, "C", "A", "chemical-synapse")
+    assert ca.weight == 2
+    assert ca.weight_inferred is False
     assert nn.worm.citations["sig_prop_atlas"] == loader.citations["sig_prop_atlas"]
 
 
-def test_load_atanas_populates_trials_and_behavior_with_existing_network(tmp_path, monkeypatch):
+def test_load_atanas_populates_trials_and_behavior_with_existing_network(
+    tmp_path, monkeypatch
+):
     control_dir = tmp_path / "Control"
     heat_dir = tmp_path / "Heat"
     control_dir.mkdir()
@@ -723,7 +775,10 @@ def test_load_atanas_populates_trials_and_behavior_with_existing_network(tmp_pat
     assert len(result["sessions"]) == 1
 
     session = result["sessions"][0]
-    assert session.context.experimental.experimental_conditions["source_file"] == "recording.json"
+    assert (
+        session.context.experimental.experimental_conditions["source_file"]
+        == "recording.json"
+    )
     assert session.behavior is not None
     assert np.allclose(session.behavior.timestamps, np.array([0.0, 30.0]))
     assert np.allclose(session.behavior.get_variable("velocity"), np.array([0.1, 0.2]))
@@ -735,8 +790,7 @@ def test_load_atanas_populates_trials_and_behavior_with_existing_network(tmp_pat
     assert set(nn.neurons["AVAL"].citations) == {"Atanas2023"}
     assert set(nn.neurons["AVBL"].citations) == {"Atanas2023"}
     assert (
-        nn.neurons["AVAL"].citations["Atanas2023"].doi
-        == "10.1016/j.cell.2023.07.035"
+        nn.neurons["AVAL"].citations["Atanas2023"].doi == "10.1016/j.cell.2023.07.035"
     )
     assert nn.neurons["AVCL"].citations == {}
 
@@ -782,20 +836,31 @@ def test_loadNeurotransmitters_populates_edges_and_preserves_gap_junctions(monke
     loader.loadNeurotransmitters(nn, sex="Male")
 
     assert nn.neurons["AVAL"]._preSynapse == ["Acetylcholine", "GABA"]
-    assert nn.neurons["AVBL"]._postSynapse == {"legacy": "Legacy", "acr-1": "Acetylcholine"}
+    assert nn.neurons["AVBL"]._postSynapse == {
+        "legacy": "Legacy",
+        "acr-1": "Acetylcholine",
+    }
     assert nn.neurons["AVCL"]._postSynapse == {}
 
     matched_conn = find_connection(nn, "AVAL", "AVBL", "chemical-synapse")
     fallback_conn = find_connection(nn, "AVAL", "AVCL", "chemical-synapse")
     gap_conn = find_connection(nn, "AVBL", "AVCL", "gap-junction")
 
-    assert matched_conn.putative_neurotrasmitter_receptors == [("Acetylcholine", "acr-1")]
+    assert matched_conn.putative_neurotrasmitter_receptors == [
+        ("Acetylcholine", "acr-1")
+    ]
     assert matched_conn.neurotransmitters == ["Acetylcholine"]
     assert fallback_conn.putative_neurotrasmitter_receptors == []
     assert fallback_conn.neurotransmitters == []
     assert not hasattr(gap_conn, "neurotransmitters")
-    assert nn.worm.citations["neurotransmitter_atlas"] == loader.citations["neurotransmitter_atlas"]
-    assert nn.worm.citations["altun_neurotransmitters_receptors"] == loader.citations["altun_neurotransmitters_receptors"]
+    assert (
+        nn.worm.citations["neurotransmitter_atlas"]
+        == loader.citations["neurotransmitter_atlas"]
+    )
+    assert (
+        nn.worm.citations["altun_neurotransmitters_receptors"]
+        == loader.citations["altun_neurotransmitters_receptors"]
+    )
     assert nn.worm.citations["cengen"] == loader.citations["cengen"]
 
 
@@ -856,7 +921,9 @@ def test_make_hypermotifs_contracts_requested_nodes():
         "3.2",
         "3.3",
     ]
-    assert sorted(hypermotif.edges(), key=lambda edge: (str(edge[0]), str(edge[1]))) == [
+    assert sorted(
+        hypermotif.edges(), key=lambda edge: (str(edge[0]), str(edge[1]))
+    ) == [
         ("1.1", "1.2"),
         ("1.2", "1.3-2.1"),
         ("1.3-2.1", "2.2"),

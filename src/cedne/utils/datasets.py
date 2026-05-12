@@ -35,7 +35,7 @@ import os
 import shutil
 import tempfile
 import zipfile
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -93,6 +93,7 @@ class DownloadSpec:
     `sha256` is verified on the downloaded archive itself, not on the
     extracted contents.
     """
+
     url: str
     target_relpath: str = ""
     sha256: Optional[str] = None
@@ -106,12 +107,15 @@ class DownloadSpec:
 @dataclass(frozen=True)
 class DatasetSpec:
     """Static metadata for an external dataset CeDNe loaders depend on."""
+
     key: str
     title: str
     expected_dir: Path
     citation: Optional[str] = None
     source_url: Optional[str] = None
-    license_note: str = "public"  # 'public', 'public-with-attribution', 'restricted: ...'
+    license_note: str = (
+        "public"  # 'public', 'public-with-attribution', 'restricted: ...'
+    )
     download_specs: tuple = ()  # tuple[DownloadSpec, ...]; empty = manual staging only
 
 
@@ -129,20 +133,22 @@ def _cengen_download_specs() -> tuple:
     tables by date — the ``021821_`` prefix in the URL is the cut date).
     """
     sha256_by_filename = {
-        "liberal_threshold1.csv":      "74ac7e400f3f841d8784946db67bdbc211598c8682020ef57730b29e564e0cb6",
-        "medium_threshold2.csv":       "de03fc03cacdf4c1aa7ffd7565df89135ed72eab68d0b3cf03f542932abc63c8",
+        "liberal_threshold1.csv": "74ac7e400f3f841d8784946db67bdbc211598c8682020ef57730b29e564e0cb6",
+        "medium_threshold2.csv": "de03fc03cacdf4c1aa7ffd7565df89135ed72eab68d0b3cf03f542932abc63c8",
         "conservative_threshold3.csv": "2454624b7b0409b8ce62c5687c431e0c9b9dd5f38148e0bc9b0fb48c26887236",
-        "stringent_threshold4.csv":    "478791be7f43d46e11cb751cf12016ae517d59b34db3325f29703646853df875",
+        "stringent_threshold4.csv": "478791be7f43d46e11cb751cf12016ae517d59b34db3325f29703646853df875",
     }
     out = []
     for url in cengen_links:
         local_name = url.split("/")[-1].split("021821_")[-1]
-        out.append(DownloadSpec(
-            url=url,
-            target_relpath=local_name,
-            sha256=sha256_by_filename.get(local_name),
-            description=f"CENGEN threshold table ({local_name})",
-        ))
+        out.append(
+            DownloadSpec(
+                url=url,
+                target_relpath=local_name,
+                sha256=sha256_by_filename.get(local_name),
+                description=f"CENGEN threshold table ({local_name})",
+            )
+        )
     return tuple(out)
 
 
@@ -155,6 +161,7 @@ def _wormwiring(filename: str) -> str:
     in every spec literal.
     """
     from urllib.parse import quote
+
     return _WORMWIRING_SI_BASE + quote(filename)
 
 
@@ -168,24 +175,36 @@ def _cook_2019_download_specs() -> tuple:
     """
     fileinfo = [
         # (filename, sha256, description)
-        ("SI 2 Synapse adjacency matrices.xlsx",
-         "ae59aa8b4bdf8f12c3bf14bfb19e71225c3db0dbe42d9155e1f0bdf796d8f2e0",
-         "per-synapse adjacency matrices"),
-        ("SI 3 Synapse lists.xlsx",
-         "134e41df6a6159f79edd3514bfa37930c74646abc7f0b52bf07cbc1ccf9e17d8",
-         "synapse lists"),
-        ("SI 4 Cell lists.xlsx",
-         "f5c524407e196ba8045cfb86fb996d41730e4b899a7c24b0c525a4d2ad0a7376",
-         "cell lists"),
-        ("SI 5 Connectome adjacency matrices, corrected July 2020.xlsx",
-         "1f4fdbf84746b69b49a8da0816f52787860ce349b638dce37924ba80f90c70c9",
-         "connectome adjacency matrices (Cook male loader reads this)"),
-        ("SI 6 Cell class lists.xlsx",
-         "6a9d4d5f0568944a04b6f3b42959196bf9c2440dfc5fea4d805f195aaa3195bc",
-         "cell class lists"),
-        ("SI 7 Cell class connectome adjacency matrices, corrected July 2020.xlsx",
-         "df2ea697eb9f8805184c1f8a19ff6b69aad5a8d2346814fdb627493aec1f3376",
-         "cell-class connectome adjacency matrices"),
+        (
+            "SI 2 Synapse adjacency matrices.xlsx",
+            "ae59aa8b4bdf8f12c3bf14bfb19e71225c3db0dbe42d9155e1f0bdf796d8f2e0",
+            "per-synapse adjacency matrices",
+        ),
+        (
+            "SI 3 Synapse lists.xlsx",
+            "134e41df6a6159f79edd3514bfa37930c74646abc7f0b52bf07cbc1ccf9e17d8",
+            "synapse lists",
+        ),
+        (
+            "SI 4 Cell lists.xlsx",
+            "f5c524407e196ba8045cfb86fb996d41730e4b899a7c24b0c525a4d2ad0a7376",
+            "cell lists",
+        ),
+        (
+            "SI 5 Connectome adjacency matrices, corrected July 2020.xlsx",
+            "1f4fdbf84746b69b49a8da0816f52787860ce349b638dce37924ba80f90c70c9",
+            "connectome adjacency matrices (Cook male loader reads this)",
+        ),
+        (
+            "SI 6 Cell class lists.xlsx",
+            "6a9d4d5f0568944a04b6f3b42959196bf9c2440dfc5fea4d805f195aaa3195bc",
+            "cell class lists",
+        ),
+        (
+            "SI 7 Cell class connectome adjacency matrices, corrected July 2020.xlsx",
+            "df2ea697eb9f8805184c1f8a19ff6b69aad5a8d2346814fdb627493aec1f3376",
+            "cell-class connectome adjacency matrices",
+        ),
     ]
     return tuple(
         DownloadSpec(
@@ -207,11 +226,13 @@ def _atanas_download_specs() -> tuple:
     out = []
     for condition, filenames in atanas_links.items():
         for fname in filenames:
-            out.append(DownloadSpec(
-                url=atanas_link_prefix + fname,
-                target_relpath=f"{condition}/{fname}",
-                description=f"Atanas {condition} session ({fname})",
-            ))
+            out.append(
+                DownloadSpec(
+                    url=atanas_link_prefix + fname,
+                    target_relpath=f"{condition}/{fname}",
+                    description=f"Atanas {condition} session ({fname})",
+                )
+            )
     return tuple(out)
 
 
@@ -425,7 +446,10 @@ def _stream_download(url: str, dest: Path, *, chunk_size: int = 1 << 20) -> str:
     fd, tmp_name = tempfile.mkstemp(prefix=dest.name + ".", dir=str(dest.parent))
     tmp_path = Path(tmp_name)
     try:
-        with os.fdopen(fd, "wb") as out, requests.get(url, stream=True, timeout=60) as resp:
+        with (
+            os.fdopen(fd, "wb") as out,
+            requests.get(url, stream=True, timeout=60) as resp,
+        ):
             resp.raise_for_status()
             for chunk in resp.iter_content(chunk_size=chunk_size):
                 if not chunk:
@@ -481,7 +505,7 @@ def _extract_zip(
             if keep_under:
                 if not stripped.startswith(keep_under):
                     continue
-                stripped = stripped[len(keep_under):]
+                stripped = stripped[len(keep_under) :]
             if not stripped or stripped.endswith("/"):
                 continue  # directory entry; skip (mkdir is implicit on file write)
             target = (dest_dir / stripped).resolve()
@@ -502,9 +526,10 @@ def _extract_zip(
 @dataclass
 class DownloadResult:
     """Per-file outcome of a download_dataset() call."""
+
     spec: DownloadSpec
     target: Path
-    status: str        # 'downloaded' | 'skipped' | 'failed' | 'extracted'
+    status: str  # 'downloaded' | 'skipped' | 'failed' | 'extracted'
     sha256: Optional[str] = None  # actual sha256 of the file on disk after the op
     error: Optional[str] = None
     extracted_files: Optional[list] = None  # paths written by archive extraction
@@ -539,8 +564,7 @@ def download_dataset(
     """
     if key not in DATASET_REGISTRY:
         raise KeyError(
-            f"Unknown dataset key '{key}'. "
-            f"Known: {sorted(DATASET_REGISTRY)}"
+            f"Unknown dataset key '{key}'. " f"Known: {sorted(DATASET_REGISTRY)}"
         )
     spec = DATASET_REGISTRY[key]
     if not spec.download_specs:
@@ -561,14 +585,20 @@ def download_dataset(
         if not force and target.exists():
             actual = _sha256_of(target) if ds.sha256 else None
             if ds.sha256 and actual == ds.sha256:
-                log(f"  [skip]   {target.relative_to(spec.expected_dir)} (sha256 matches)")
-                results.append(DownloadResult(ds, target, 'skipped', sha256=actual))
+                log(
+                    f"  [skip]   {target.relative_to(spec.expected_dir)} (sha256 matches)"
+                )
+                results.append(DownloadResult(ds, target, "skipped", sha256=actual))
                 continue
             if ds.sha256 is None:
-                log(f"  [skip]   {target.relative_to(spec.expected_dir)} (already present, no sha256 registered)")
-                results.append(DownloadResult(ds, target, 'skipped'))
+                log(
+                    f"  [skip]   {target.relative_to(spec.expected_dir)} (already present, no sha256 registered)"
+                )
+                results.append(DownloadResult(ds, target, "skipped"))
                 continue
-            log(f"  [retry]  {target.relative_to(spec.expected_dir)} (existing sha256 differs)")
+            log(
+                f"  [retry]  {target.relative_to(spec.expected_dir)} (existing sha256 differs)"
+            )
         try:
             log(f"  [fetch]  {ds.url}")
             actual = _stream_download(ds.url, target)
@@ -576,30 +606,38 @@ def download_dataset(
                 target.unlink(missing_ok=True)
                 msg = f"sha256 mismatch: expected {ds.sha256}, got {actual}"
                 log(f"  [FAIL]   {ds.url}: {msg}")
-                results.append(DownloadResult(ds, target, 'failed', error=msg))
+                results.append(DownloadResult(ds, target, "failed", error=msg))
                 continue
             if is_archive:
                 extract_dir = spec.expected_dir / ds.extract_to
                 written = _extract_zip(
-                    target, extract_dir,
+                    target,
+                    extract_dir,
                     strip_prefix=ds.strip_prefix,
                     archive_keep_under=ds.archive_keep_under,
                 )
                 if not ds.extract_keep_archive:
                     target.unlink(missing_ok=True)
                 log(f"  [extract] {len(written)} file(s) into {extract_dir}")
-                results.append(DownloadResult(
-                    ds, target, 'extracted', sha256=actual,
-                    extracted_files=written,
-                ))
+                results.append(
+                    DownloadResult(
+                        ds,
+                        target,
+                        "extracted",
+                        sha256=actual,
+                        extracted_files=written,
+                    )
+                )
             else:
-                results.append(DownloadResult(ds, target, 'downloaded', sha256=actual))
+                results.append(DownloadResult(ds, target, "downloaded", sha256=actual))
         except Exception as e:
             log(f"  [FAIL]   {ds.url}: {e}")
-            results.append(DownloadResult(ds, target, 'failed', sha256=None, error=str(e)))
-    n_dl = sum(1 for r in results if r.status in ('downloaded', 'extracted'))
-    n_sk = sum(1 for r in results if r.status == 'skipped')
-    n_fl = sum(1 for r in results if r.status == 'failed')
+            results.append(
+                DownloadResult(ds, target, "failed", sha256=None, error=str(e))
+            )
+    n_dl = sum(1 for r in results if r.status in ("downloaded", "extracted"))
+    n_sk = sum(1 for r in results if r.status == "skipped")
+    n_fl = sum(1 for r in results if r.status == "failed")
     log(f"==> '{key}': {n_dl} downloaded, {n_sk} skipped, {n_fl} failed")
     return results
 
@@ -620,7 +658,9 @@ def download_all_public(
     summary = {}
     for key, spec in DATASET_REGISTRY.items():
         if not spec.download_specs:
-            log(f"==> Skipping '{key}': no registered download URLs (obtain from {spec.source_url or 'the citation'})")
+            log(
+                f"==> Skipping '{key}': no registered download URLs (obtain from {spec.source_url or 'the citation'})"
+            )
             summary[key] = []
             continue
         try:

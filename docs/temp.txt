@@ -1,8 +1,8 @@
-.. autoclass:: Worm 
+.. autoclass:: Worm
    :members:
    :undoc-members:
 
-.. autoclass:: NervousSystem 
+.. autoclass:: NervousSystem
    :members:
    :undoc-members:
 
@@ -25,5 +25,3 @@
 .. autoclass:: Trial
    :members:
    :undoc-members:
-
-

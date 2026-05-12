@@ -12,18 +12,34 @@ Modules:
 
 # Core modeling components
 from .core import (
-    Animal, Worm, Fly,
-    Cell, Neuron, NeuronGroup,
+    Animal,
+    Worm,
+    Fly,
+    Cell,
+    Neuron,
+    NeuronGroup,
     NervousSystem,
-    Connection, ChemicalSynapse, GapJunction, BulkConnection,
-    ConnectionGroup, Path,
-    Citation, Citable, serialize_citations,
-    Trial, StimResponse,
-    F_SAMPLE, RANDOM_SEED, RECURSION_LIMIT,
-    load_pickle, load_worm, generate_random_string,
+    Connection,
+    ChemicalSynapse,
+    GapJunction,
+    BulkConnection,
+    ConnectionGroup,
+    Path,
+    Citation,
+    Citable,
+    serialize_citations,
+    Trial,
+    StimResponse,
+    F_SAMPLE,
+    RANDOM_SEED,
+    RECURSION_LIMIT,
+    load_pickle,
+    load_worm,
+    generate_random_string,
     GraphMap,
     Behavior,
-    logger, configure_logging
+    logger,
+    configure_logging,
 )
 
 # Utility layer (plotting, analysis, loaders)
@@ -34,24 +50,38 @@ from . import analysis
 
 __all__ = [
     # Core models
-    "Animal", "Worm", "Fly",
-    "Cell", "Neuron", "NeuronGroup",
+    "Animal",
+    "Worm",
+    "Fly",
+    "Cell",
+    "Neuron",
+    "NeuronGroup",
     "NervousSystem",
-    "Connection", "ChemicalSynapse", "GapJunction", "BulkConnection",
-    "ConnectionGroup", "Path",
-    "Citation", "Citable", "serialize_citations",
-    "Trial", "StimResponse", "Behavior", "GraphMap",
-
+    "Connection",
+    "ChemicalSynapse",
+    "GapJunction",
+    "BulkConnection",
+    "ConnectionGroup",
+    "Path",
+    "Citation",
+    "Citable",
+    "serialize_citations",
+    "Trial",
+    "StimResponse",
+    "Behavior",
+    "GraphMap",
     # Config + I/O
-    "F_SAMPLE", "RANDOM_SEED", "RECURSION_LIMIT",
-    "load_pickle", "load_worm", "generate_random_string",
-
+    "F_SAMPLE",
+    "RANDOM_SEED",
+    "RECURSION_LIMIT",
+    "load_pickle",
+    "load_worm",
+    "generate_random_string",
     # Logging
-    "logger", "configure_logging",
-
+    "logger",
+    "configure_logging",
     # Utilities (as a namespace)
     "utils",
-
     # Analysis
     "analysis",
 ]

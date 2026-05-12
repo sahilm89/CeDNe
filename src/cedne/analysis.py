@@ -26,7 +26,9 @@ from scipy import linalg
 from scipy.sparse.linalg import svds
 
 
-def _truncated_svd(matrix: NDArray, n_components: int) -> Tuple[NDArray, NDArray, NDArray]:
+def _truncated_svd(
+    matrix: NDArray, n_components: int
+) -> Tuple[NDArray, NDArray, NDArray]:
     """Top-K SVD.
 
     Uses ``scipy.sparse.linalg.svds`` for ``k < min(M, N)``, which computes only
@@ -52,6 +54,7 @@ def _truncated_svd(matrix: NDArray, n_components: int) -> Tuple[NDArray, NDArray
 # ═══════════════════════════════════════════════════════════════════
 # State Space Analysis
 # ═══════════════════════════════════════════════════════════════════
+
 
 def compute_state_space(
     activity_matrix: NDArray,
@@ -103,10 +106,10 @@ def compute_state_space(
         # the explained-variance fractions remain comparable to the full-SVD
         # path (||X||_F^2 == sum of all sigma^2).
         U, S, Vt = _truncated_svd(activity_matrix, n_components)
-        loadings = U                                 # N × K
-        projections = (np.diag(S) @ Vt).T            # T × K
-        total_var = float((activity_matrix ** 2).sum())
-        explained = (S ** 2) / total_var if total_var > 0 else np.zeros(n_components)
+        loadings = U  # N × K
+        projections = (np.diag(S) @ Vt).T  # T × K
+        total_var = float((activity_matrix**2).sum())
+        explained = (S**2) / total_var if total_var > 0 else np.zeros(n_components)
         singular_values = S
 
     elif method == "pca":
@@ -115,33 +118,36 @@ def compute_state_space(
         U, S, Vt = _truncated_svd(centered, n_components)
         loadings = U
         projections = (np.diag(S) @ Vt).T
-        total_var = float((centered ** 2).sum())
-        explained = (S ** 2) / total_var if total_var > 0 else np.zeros(n_components)
+        total_var = float((centered**2).sum())
+        explained = (S**2) / total_var if total_var > 0 else np.zeros(n_components)
         singular_values = S
 
     elif method == "nmf":
         from sklearn.decomposition import NMF
+
         # NMF requires non-negative input
         X = activity_matrix.T  # (T × N) — sklearn convention
         X_nn = np.clip(X, 0, None)
         model = NMF(n_components=n_components, max_iter=500, random_state=42)
-        projections = model.fit_transform(X_nn)   # T × K
-        loadings = model.components_.T             # N × K
+        projections = model.fit_transform(X_nn)  # T × K
+        loadings = model.components_.T  # N × K
         # Approximate explained variance via reconstruction error
         reconstruction = projections @ model.components_
-        total_var = np.sum(X_nn ** 2)
+        total_var = np.sum(X_nn**2)
         residual_var = np.sum((X_nn - reconstruction) ** 2)
         total_explained = 1 - residual_var / total_var if total_var > 0 else 0.0
         # Split proportionally by component norm
-        comp_norms = np.sum(model.components_ ** 2, axis=1)
-        comp_fracs = comp_norms / comp_norms.sum() if comp_norms.sum() > 0 else np.ones(n_components) / n_components
+        comp_norms = np.sum(model.components_**2, axis=1)
+        comp_fracs = (
+            comp_norms / comp_norms.sum()
+            if comp_norms.sum() > 0
+            else np.ones(n_components) / n_components
+        )
         explained = comp_fracs * total_explained
         singular_values = np.sqrt(comp_norms)
 
     else:
-        raise ValueError(
-            f"Unknown method '{method}'. Use 'svd', 'pca', or 'nmf'."
-        )
+        raise ValueError(f"Unknown method '{method}'. Use 'svd', 'pca', or 'nmf'.")
 
     # Component-label prefix for axes/legends: PCA produces principal components
     # ("PC"), NMF produces non-negative factors ("Factor"), and a plain
@@ -165,6 +171,7 @@ def compute_state_space(
 # ═══════════════════════════════════════════════════════════════════
 # Dynamical Model Fitting
 # ═══════════════════════════════════════════════════════════════════
+
 
 def fit_var(
     activity_matrix: NDArray,
@@ -213,11 +220,11 @@ def fit_var(
 
     # Build regression matrices
     # Y = A @ X  where Y[:, t] = x(t+lag) and X[:, t] = [x(t+lag-1); ...; x(t)]
-    Y = activity_matrix[:, lag:]                  # N × (T - lag)
+    Y = activity_matrix[:, lag:]  # N × (T - lag)
     X_blocks = []
     for p in range(1, lag + 1):
         X_blocks.append(activity_matrix[:, lag - p : T - p])
-    X = np.vstack(X_blocks)                       # (N*lag) × (T - lag)
+    X = np.vstack(X_blocks)  # (N*lag) × (T - lag)
 
     # Ridge regression: A = Y @ X.T @ (X @ X.T + λI)^{-1}.
     # Use linalg.solve instead of forming the inverse explicitly — same result,
@@ -227,7 +234,7 @@ def fit_var(
     XXT = X @ X.T
     reg_matrix = regularizer * np.eye(N * lag)
     # Solve (XXT + λI) @ A.T = X @ Y.T  →  A = solve(...).T
-    A = linalg.solve(XXT + reg_matrix, X @ Y.T, assume_a='sym').T   # N × (N*lag)
+    A = linalg.solve(XXT + reg_matrix, X @ Y.T, assume_a="sym").T  # N × (N*lag)
 
     # Apply connectome mask if provided
     if connectome_mask is not None:
@@ -243,7 +250,7 @@ def fit_var(
     # Compute residuals and R²
     Y_hat = A @ X
     residuals = Y - Y_hat
-    ss_res = np.sum(residuals ** 2, axis=1)
+    ss_res = np.sum(residuals**2, axis=1)
     ss_tot = np.sum((Y - Y.mean(axis=1, keepdims=True)) ** 2, axis=1)
     r_squared = 1 - ss_res / np.maximum(ss_tot, 1e-12)
 
@@ -321,13 +328,13 @@ def fit_lds(
     centered = activity_matrix - mean
     U, S, Vt = linalg.svd(centered, full_matrices=False)
 
-    C = U[:, :K]                                    # N × K
-    z = np.diag(S[:K]) @ Vt[:K, :]                  # K × T  (initial latent)
-    A = np.eye(K) * 0.9                             # K × K  (stable init)
-    Q = np.eye(K) * 0.1                             # K × K
-    R = np.eye(N) * 0.1                             # N × N
-    z0 = z[:, 0]                                    # K,     initial state mean
-    P0 = np.eye(K)                                  # K × K  initial state cov
+    C = U[:, :K]  # N × K
+    z = np.diag(S[:K]) @ Vt[:K, :]  # K × T  (initial latent)
+    A = np.eye(K) * 0.9  # K × K  (stable init)
+    Q = np.eye(K) * 0.1  # K × K
+    R = np.eye(N) * 0.1  # N × N
+    z0 = z[:, 0]  # K,     initial state mean
+    P0 = np.eye(K)  # K × K  initial state cov
 
     ll_history = []
     converged = False
@@ -365,8 +372,9 @@ def fit_lds(
             # Log-likelihood contribution
             sign, logdet = np.linalg.slogdet(S_innov)
             if sign > 0:
-                log_lik += -0.5 * (N * np.log(2 * np.pi) + logdet +
-                                   innov @ S_inv @ innov)
+                log_lik += -0.5 * (
+                    N * np.log(2 * np.pi) + logdet + innov @ S_inv @ innov
+                )
 
             # Predict next step
             if t < T - 1:
@@ -394,21 +402,28 @@ def fit_lds(
             except linalg.LinAlgError:
                 J = P_filt[:, :, t] @ A.T @ linalg.pinv(P_pred[:, :, t + 1])
             z_smooth[:, t] = z_filt[:, t] + J @ (z_smooth[:, t + 1] - A @ z_filt[:, t])
-            P_smooth[:, :, t] = P_filt[:, :, t] + J @ (P_smooth[:, :, t + 1] - P_pred[:, :, t + 1]) @ J.T
+            P_smooth[:, :, t] = (
+                P_filt[:, :, t]
+                + J @ (P_smooth[:, :, t + 1] - P_pred[:, :, t + 1]) @ J.T
+            )
             Plag_smooth[:, :, t + 1] = P_smooth[:, :, t + 1] @ J.T
 
         # ── M-step ──
         # Sufficient statistics
-        Ez = z_smooth                                  # K × T
-        Ezz = np.zeros((K, K))                         # sum E[z_t z_t^T]
-        Ezz_prev = np.zeros((K, K))                    # sum E[z_{t-1} z_{t-1}^T]
-        Ezz_cross = np.zeros((K, K))                   # sum E[z_t z_{t-1}^T]
+        Ez = z_smooth  # K × T
+        Ezz = np.zeros((K, K))  # sum E[z_t z_t^T]
+        Ezz_prev = np.zeros((K, K))  # sum E[z_{t-1} z_{t-1}^T]
+        Ezz_cross = np.zeros((K, K))  # sum E[z_t z_{t-1}^T]
 
         for t in range(T):
             Ezz += P_smooth[:, :, t] + np.outer(z_smooth[:, t], z_smooth[:, t])
         for t in range(1, T):
-            Ezz_prev += P_smooth[:, :, t - 1] + np.outer(z_smooth[:, t - 1], z_smooth[:, t - 1])
-            Ezz_cross += Plag_smooth[:, :, t] + np.outer(z_smooth[:, t], z_smooth[:, t - 1])
+            Ezz_prev += P_smooth[:, :, t - 1] + np.outer(
+                z_smooth[:, t - 1], z_smooth[:, t - 1]
+            )
+            Ezz_cross += Plag_smooth[:, :, t] + np.outer(
+                z_smooth[:, t], z_smooth[:, t - 1]
+            )
 
         # Update A with regularization
         reg = regularizer * np.eye(K)
@@ -428,7 +443,7 @@ def fit_lds(
         Q = (Q + Q.T) / 2 + 1e-6 * np.eye(K)  # Symmetrize + regularize
 
         # Update C
-        Yz = activity_matrix @ Ez.T                   # N × K
+        Yz = activity_matrix @ Ez.T  # N × K
         try:
             C = Yz @ linalg.inv(Ezz)
         except linalg.LinAlgError:
@@ -461,6 +476,7 @@ def fit_lds(
 # ═══════════════════════════════════════════════════════════════════
 # Connectome Comparison
 # ═══════════════════════════════════════════════════════════════════
+
 
 def threshold_and_compare(
     A_fit: NDArray,
@@ -529,7 +545,11 @@ def threshold_and_compare(
 
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+    f1 = (
+        2 * precision * recall / (precision + recall)
+        if (precision + recall) > 0
+        else 0.0
+    )
     jaccard = tp / (tp + fp + fn) if (tp + fp + fn) > 0 else 0.0
 
     # Edge lists

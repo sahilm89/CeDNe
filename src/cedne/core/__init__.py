@@ -15,8 +15,12 @@ from .network import NervousSystem
 
 # Connections and edge logic
 from .connection import (
-    Connection, ChemicalSynapse, GapJunction, BulkConnection,
-    ConnectionGroup, Path
+    Connection,
+    ChemicalSynapse,
+    GapJunction,
+    BulkConnection,
+    ConnectionGroup,
+    Path,
 )
 
 # Provenance / citations
@@ -35,32 +39,43 @@ from .behavior import Behavior
 
 __all__ = [
     # Organisms
-    "Animal", "Worm", "Fly",
-    
+    "Animal",
+    "Worm",
+    "Fly",
     # Neuron model
-    "Cell", "Neuron", "NeuronGroup", "MERGED_TYPE", "MERGE_TRACK_ATTRS",
-    
+    "Cell",
+    "Neuron",
+    "NeuronGroup",
+    "MERGED_TYPE",
+    "MERGE_TRACK_ATTRS",
     # Network model
     "NervousSystem",
-    
     # Connections
-    "Connection", "ChemicalSynapse", "GapJunction", "BulkConnection",
-    "ConnectionGroup", "Path",
-
+    "Connection",
+    "ChemicalSynapse",
+    "GapJunction",
+    "BulkConnection",
+    "ConnectionGroup",
+    "Path",
     # Provenance
-    "Citation", "Citable", "serialize_citations",
-
+    "Citation",
+    "Citable",
+    "serialize_citations",
     # Recordings
-    "Trial", "StimResponse", "Session",
-    
+    "Trial",
+    "StimResponse",
+    "Session",
     # Graph mapping
     "GraphMap",
-
     # Behavior
     "Behavior",
-    
     # Utilities
-    "F_SAMPLE", "RANDOM_SEED", "RECURSION_LIMIT",
-    "load_pickle", "load_worm", "generate_random_string",
-    "logger", "configure_logging"
+    "F_SAMPLE",
+    "RANDOM_SEED",
+    "RECURSION_LIMIT",
+    "load_pickle",
+    "load_worm",
+    "generate_random_string",
+    "logger",
+    "configure_logging",
 ]

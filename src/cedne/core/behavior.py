@@ -28,11 +28,11 @@ if TYPE_CHECKING:
 
 class Behavior:
     """Behavioral data container for an organism.
-    
+
     Stores named behavioral time series (e.g., speed, heading, body curvature)
     with timestamps and metadata. Can be linked to `Session` and `Trial` objects
     for alignment between behavioral and neural data.
-    
+
     Attributes:
         worm: The worm object associated with this behavior.
         variables: Dict mapping variable names to 1-D numpy arrays.
@@ -54,21 +54,25 @@ class Behavior:
         self.variables: Dict[str, NDArray] = {}
         self.timestamps: Optional[NDArray] = None
         self.metadata: Dict[str, Any] = {
-            'sampling_rate': None,
-            'units': {},          # {"speed": "mm/s", "heading": "rad"}
-            'source_file': None,
+            "sampling_rate": None,
+            "units": {},  # {"speed": "mm/s", "heading": "rad"}
+            "source_file": None,
         }
-        self.session: Optional['Session'] = None
-        self.trials: List['Trial'] = []
+        self.session: Optional["Session"] = None
+        self.trials: List["Trial"] = []
 
         if self.worm.networks.get(network) is None:
             self.worm.networks[network] = self
 
     # ── Variable management ──
 
-    def add_variable(self, name: str, data: NDArray,
-                     timestamps: Optional[NDArray] = None,
-                     unit: Optional[str] = None) -> None:
+    def add_variable(
+        self,
+        name: str,
+        data: NDArray,
+        timestamps: Optional[NDArray] = None,
+        unit: Optional[str] = None,
+    ) -> None:
         """Add a named behavioral variable (1-D time series).
 
         Args:
@@ -85,7 +89,9 @@ class Behavior:
         if not isinstance(data, np.ndarray):
             data = np.asarray(data, dtype=np.float64)
         if data.ndim != 1:
-            raise ValueError(f"Behavioral variable '{name}' must be 1-D, got {data.ndim}-D")
+            raise ValueError(
+                f"Behavioral variable '{name}' must be 1-D, got {data.ndim}-D"
+            )
 
         # Handle timestamps
         if timestamps is not None:
@@ -93,8 +99,10 @@ class Behavior:
                 timestamps = np.asarray(timestamps, dtype=np.float64)
             if self.timestamps is None:
                 self.timestamps = timestamps
-                if self.metadata['sampling_rate'] is None and len(timestamps) > 1:
-                    self.metadata['sampling_rate'] = 1.0 / np.median(np.diff(timestamps))
+                if self.metadata["sampling_rate"] is None and len(timestamps) > 1:
+                    self.metadata["sampling_rate"] = 1.0 / np.median(
+                        np.diff(timestamps)
+                    )
             elif len(timestamps) != len(self.timestamps):
                 raise ValueError(
                     f"Timestamps length ({len(timestamps)}) doesn't match "
@@ -109,7 +117,7 @@ class Behavior:
 
         self.variables[name] = data
         if unit:
-            self.metadata['units'][name] = unit
+            self.metadata["units"][name] = unit
 
     def get_variable(self, name: str) -> NDArray:
         """Get a behavioral variable by name.
@@ -124,8 +132,10 @@ class Behavior:
             KeyError: If variable doesn't exist.
         """
         if name not in self.variables:
-            raise KeyError(f"Behavioral variable '{name}' not found. "
-                           f"Available: {list(self.variables.keys())}")
+            raise KeyError(
+                f"Behavioral variable '{name}' not found. "
+                f"Available: {list(self.variables.keys())}"
+            )
         return self.variables[name]
 
     @property
@@ -144,8 +154,9 @@ class Behavior:
 
     # ── Alignment ──
 
-    def align_to_neural(self, trial: 'Trial',
-                        method: str = "interpolate") -> Dict[str, NDArray]:
+    def align_to_neural(
+        self, trial: "Trial", method: str = "interpolate"
+    ) -> Dict[str, NDArray]:
         """Align behavioral data to a neural recording's time base.
 
         Resamples all behavioral variables to match the neural trial's timestamps.
@@ -164,7 +175,9 @@ class Behavior:
             ValueError: If behavioral timestamps are not set or trial has no data.
         """
         if self.timestamps is None:
-            raise ValueError("Behavioral timestamps not set. Call add_variable with timestamps first.")
+            raise ValueError(
+                "Behavioral timestamps not set. Call add_variable with timestamps first."
+            )
 
         neural_timestamps = trial.get_timestamps()
         aligned = {}
@@ -173,18 +186,22 @@ class Behavior:
             if method == "interpolate":
                 aligned[name] = np.interp(neural_timestamps, self.timestamps, data)
             elif method == "nearest":
-                indices = np.searchsorted(self.timestamps, neural_timestamps, side='left')
+                indices = np.searchsorted(
+                    self.timestamps, neural_timestamps, side="left"
+                )
                 indices = np.clip(indices, 0, len(data) - 1)
                 aligned[name] = data[indices]
             else:
-                raise ValueError(f"Unknown alignment method: '{method}'. "
-                                 f"Use 'interpolate' or 'nearest'.")
+                raise ValueError(
+                    f"Unknown alignment method: '{method}'. "
+                    f"Use 'interpolate' or 'nearest'."
+                )
 
         return aligned
 
     # ── Trial/Session linkage ──
 
-    def link_trial(self, trial: 'Trial') -> None:
+    def link_trial(self, trial: "Trial") -> None:
         """Link a Trial to this Behavior for cross-referencing.
 
         Also sets the trial's behavior back-reference.
@@ -196,7 +213,7 @@ class Behavior:
             self.trials.append(trial)
         trial.behavior = self
 
-    def link_session(self, session: 'Session') -> None:
+    def link_session(self, session: "Session") -> None:
         """Link a Session to this Behavior.
 
         Args:
@@ -213,16 +230,17 @@ class Behavior:
             Dict with variables, timestamps, and metadata.
         """
         result = {
-            'variables': {name: data.tolist() for name, data in self.variables.items()},
-            'metadata': self.metadata,
+            "variables": {name: data.tolist() for name, data in self.variables.items()},
+            "metadata": self.metadata,
         }
         if self.timestamps is not None:
-            result['timestamps'] = self.timestamps.tolist()
+            result["timestamps"] = self.timestamps.tolist()
         return result
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any],
-                  worm: Worm = None, network: str = "Neutral") -> 'Behavior':
+    def from_dict(
+        cls, data: Dict[str, Any], worm: Worm = None, network: str = "Neutral"
+    ) -> "Behavior":
         """Create a Behavior from a dictionary.
 
         Args:
@@ -235,17 +253,23 @@ class Behavior:
         """
         behavior = cls(worm=worm, network=network)
         timestamps = None
-        if 'timestamps' in data:
-            timestamps = np.asarray(data['timestamps'], dtype=np.float64)
-        if 'metadata' in data:
-            behavior.metadata.update(data['metadata'])
-        for name, values in data.get('variables', {}).items():
-            unit = behavior.metadata.get('units', {}).get(name)
-            behavior.add_variable(name, np.asarray(values, dtype=np.float64),
-                                  timestamps=timestamps, unit=unit)
+        if "timestamps" in data:
+            timestamps = np.asarray(data["timestamps"], dtype=np.float64)
+        if "metadata" in data:
+            behavior.metadata.update(data["metadata"])
+        for name, values in data.get("variables", {}).items():
+            unit = behavior.metadata.get("units", {}).get(name)
+            behavior.add_variable(
+                name,
+                np.asarray(values, dtype=np.float64),
+                timestamps=timestamps,
+                unit=unit,
+            )
         return behavior
 
     def __repr__(self) -> str:
-        return (f"Behavior(variables={self.variable_names}, "
-                f"n_timepoints={self.n_timepoints}, "
-                f"linked_trials={len(self.trials)})")
+        return (
+            f"Behavior(variables={self.variable_names}, "
+            f"n_timepoints={self.n_timepoints}, "
+            f"linked_trials={len(self.trials)})"
+        )

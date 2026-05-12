@@ -7,6 +7,32 @@ on:
     branches: [main]
 
 jobs:
+  # Code quality — runs ruff (lint + format check) as an informational signal.
+  # `continue-on-error: true` keeps it from blocking PRs while the existing
+  # ~279 ruff findings get cleaned up incrementally. Flip the flag once the
+  # baseline is green (tracked: TEST-P2-RUFFBASE in risk register).
+  code-quality:
+    name: Code Quality (Ruff)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        run: pip install "ruff==0.7.4"
+
+      - name: Lint with ruff
+        run: ruff check src/cedne tests
+
+      - name: Check formatting with ruff
+        run: ruff format --check src/cedne tests
+
   test:
     runs-on: ubuntu-latest
 

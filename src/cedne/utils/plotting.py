@@ -23,40 +23,38 @@ import matplotlib.patheffects as pe
 from matplotlib.patches import Wedge
 
 import networkx as nx
-from mpl_toolkits.mplot3d import Axes3D
 import textalloc as ta
 
-import os
 import warnings
-from pathlib import Path
-from cedne import Neuron 
+from cedne import Neuron
 
 try:
     from cedne import simulator
 except ImportError:
     simulator = None
 
-from tqdm import trange
 
 from .config import *
 from .graphtools import is_left_neuron
 import cmasher as cmr
 
-matplotlib.rcParams['font.family'] = 'Arial'
-matplotlib.rcParams['svg.fonttype'] = 'none'
+matplotlib.rcParams["font.family"] = "Arial"
+matplotlib.rcParams["svg.fonttype"] = "none"
 
 single_column = 90
 double_column = 180
 full_page = 170
-half_page = full_page/2
-font_size_big = 7 #pts
+half_page = full_page / 2
+font_size_big = 7  # pts
 font_size_mid = 6
 font_size_small = 5
 DPI = 600
 
+
 def mm_to_inches(fig_dims):
     fig_width_mm, fig_height_mm = fig_dims
     return (fig_width_mm / 25.4, fig_height_mm / 25.4)
+
 
 def simpleaxis(axes, every=False, outward=False):
     """
@@ -73,59 +71,71 @@ def simpleaxis(axes, every=False, outward=False):
     if not isinstance(axes, (list, np.ndarray)):
         axes = [axes]
     for ax in axes:
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        if (outward):
-            ax.spines['bottom'].set_position(('outward', 10))
-            ax.spines['left'].set_position(('outward', 10))
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        if outward:
+            ax.spines["bottom"].set_position(("outward", 10))
+            ax.spines["left"].set_position(("outward", 10))
         if every:
-            ax.spines['bottom'].set_visible(False)
-            ax.spines['left'].set_visible(False)
+            ax.spines["bottom"].set_visible(False)
+            ax.spines["left"].set_visible(False)
         ax.get_xaxis().tick_bottom()
         ax.get_yaxis().tick_left()
-        ax.set_title('')
+        ax.set_title("")
 
 
 def groupPosition(pos, type_cat):
-
-    x,y = zip(*pos.values())
+    x, y = zip(*pos.values())
     x = np.array(x)
     yax = sorted(set(y))[::-1]
 
     new_pos = {}
-    for i,yi in enumerate(yax):
-        new_pos[i] = [(xi,yi) for xi in sorted(x[np.where(y==yi)])]
+    for i, yi in enumerate(yax):
+        new_pos[i] = [(xi, yi) for xi in sorted(x[np.where(y == yi)])]
     # print([(i,len(v)) for (i,v) in new_pos.items()])
     # print(type_cat)
     pos2 = {}
     boxes = {}
-    order = ['sensory', 'interneuron', 'motorneuron']
+    order = ["sensory", "interneuron", "motorneuron"]
     box_height = 0.025
-    for i,o in enumerate(order):
+    for i, o in enumerate(order):
         boxes[o] = {}
-        j=0
+        j = 0
         if o in type_cat:
             sortedKeys = sorted(type_cat[o].keys())
             if o == "interneuron":
-                intOrder = ['layer 1 interneuron', 'layer 2 interneuron', 'layer 3 interneuron', 'category 4 interneuron', 'linker to pharynx', 'pharynx', 'endorgan']
+                intOrder = [
+                    "layer 1 interneuron",
+                    "layer 2 interneuron",
+                    "layer 3 interneuron",
+                    "category 4 interneuron",
+                    "linker to pharynx",
+                    "pharynx",
+                    "endorgan",
+                ]
                 sortedKeys = [intn for intn in intOrder if intn in sortedKeys]
                 # p = [sortedKeys[0]]
                 # print(p, sortedKeys)
                 # sortedKeys= sortedKeys[1:4] + p + [sortedKeys[4]]
-                
-            for cat in sortedKeys: 
+
+            for cat in sortedKeys:
                 cat_pos = []
                 # print(cat, len(new_pos[i]), len(type_cat[o][cat]))
                 for n in sorted(type_cat[o][cat]):
-                #print(n, cat, new_pos[i], i, j )
+                    # print(n, cat, new_pos[i], i, j )
                     pos2[n] = new_pos[i][j]
                     cat_pos.append(pos2[n])
-                    j+=1
-                boxes[o][cat] = [(cat_pos[0][0]-0.035, cat_pos[0][1]-(box_height/2)), (cat_pos[-1][0] - cat_pos[0][0]) + 0.07, box_height]
+                    j += 1
+                boxes[o][cat] = [
+                    (cat_pos[0][0] - 0.035, cat_pos[0][1] - (box_height / 2)),
+                    (cat_pos[-1][0] - cat_pos[0][0]) + 0.07,
+                    box_height,
+                ]
 
     return pos2, boxes
 
-def plot_spiral(neunet, save=False, figsize=(8,8), font_size=11):
+
+def plot_spiral(neunet, save=False, figsize=(8, 8), font_size=11):
     """
     Generates a spiral layout for the network.
 
@@ -139,46 +149,56 @@ def plot_spiral(neunet, save=False, figsize=(8,8), font_size=11):
     - pos (dict): A dictionary mapping node names to their positions in the graph.
     """
     node_size = 800
-    node_color = ['lightgray' for node in neunet.nodes]
+    node_color = ["lightgray" for node in neunet.nodes]
     edge_color = []
     edge_weight = []
-    for (u,v,attrib_dict) in list(neunet.edges.data()):
-        if 'color' in attrib_dict:
-            edge_color.append(attrib_dict['color'])
+    for u, v, attrib_dict in list(neunet.edges.data()):
+        if "color" in attrib_dict:
+            edge_color.append(attrib_dict["color"])
         else:
-            edge_color.append('gray') 
-        
-        if 'weight' in attrib_dict:
-            edge_weight.append(attrib_dict['weight'])
+            edge_color.append("gray")
+
+        if "weight" in attrib_dict:
+            edge_weight.append(attrib_dict["weight"])
         else:
             edge_weight.append(1)
 
     pos = nx.spiral_layout(neunet, equidistant=True, resolution=0.5)
 
     fig, ax = plt.subplots(figsize=figsize)
-    nx.draw(neunet, node_size=node_size, ax=ax, pos=pos, labels={node: node.name for node in neunet.nodes}, with_labels=True, node_color=node_color, edge_color=edge_color, font_size=font_size)
+    nx.draw(
+        neunet,
+        node_size=node_size,
+        ax=ax,
+        pos=pos,
+        labels={node: node.name for node in neunet.nodes},
+        with_labels=True,
+        node_color=node_color,
+        edge_color=edge_color,
+        font_size=font_size,
+    )
     if save:
         plt.savefig(save)
     plt.show()
     plt.close()
-    
+
     return pos
 
-def add_gapjn_symbols(ax, pos, edges, line_length=0.05, alpha=1, color='k'):
+
+def add_gapjn_symbols(ax, pos, edges, line_length=0.05, alpha=1, color="k"):
     for edge in edges:
         start, end = edge[0], edge[1]
         x1, y1 = pos[start]
         x2, y2 = pos[end]
-         
+
         # Calculate the midpoint of the edge
         mid_x, mid_y = (x1 + x2) / 2, (y1 + y2) / 2
 
         # Calculate direction vector and normalize it
         direction = np.array([x2 - x1, y2 - y1])
-        line_length = 0.02*np.linalg.norm(direction)
+        line_length = 0.02 * np.linalg.norm(direction)
         direction = direction / np.linalg.norm(direction)
 
-    
         # Calculate the perpendicular direction
         perp_direction = np.array([-direction[1], direction[0]])
 
@@ -186,47 +206,71 @@ def add_gapjn_symbols(ax, pos, edges, line_length=0.05, alpha=1, color='k'):
         line_start1 = np.array([mid_x, mid_y]) - (line_length / 2) * perp_direction
         line_end1 = np.array([mid_x, mid_y]) + (line_length / 2) * perp_direction
 
-        line_start2 = np.array([mid_x, mid_y]) - (line_length / 2) * perp_direction + direction * 0.02
-        line_end2 = np.array([mid_x, mid_y]) + (line_length / 2) * perp_direction + direction * 0.02
+        line_start2 = (
+            np.array([mid_x, mid_y])
+            - (line_length / 2) * perp_direction
+            + direction * 0.02
+        )
+        line_end2 = (
+            np.array([mid_x, mid_y])
+            + (line_length / 2) * perp_direction
+            + direction * 0.02
+        )
 
         # Draw the capacitor lines
-        ax.plot([line_start1[0], line_end1[0]], [line_start1[1], line_end1[1]], color=color, alpha=alpha, lw=2)
-        ax.plot([line_start2[0], line_end2[0]], [line_start2[1], line_end2[1]], color=color, alpha=alpha, lw=2)
+        ax.plot(
+            [line_start1[0], line_end1[0]],
+            [line_start1[1], line_end1[1]],
+            color=color,
+            alpha=alpha,
+            lw=2,
+        )
+        ax.plot(
+            [line_start2[0], line_end2[0]],
+            [line_start2[1], line_end2[1]],
+            color=color,
+            alpha=alpha,
+            lw=2,
+        )
 
-def add_neuropep_symbols(ax, pos, edges, node_size, color='k', crescent_radius=0.04, offset_factor=1.0):
+
+def add_neuropep_symbols(
+    ax, pos, edges, node_size, color="k", crescent_radius=0.04, offset_factor=1.0
+):
     # Get node positions
     node_radius = np.sqrt(node_size) / 220
     for edge in edges:
         source, target = edge[0], edge[1]
         source_pos = np.array(pos[source])
         target_pos = np.array(pos[target])
-        
+
         # Calculate direction vector
         direction = target_pos - source_pos
         norm = np.linalg.norm(direction)
         direction /= norm  # Normalize
-        
+
         # Calculate the position for the overlapping circles
-        outer_center = target_pos - (crescent_radius* 2 + node_radius)  * direction
+        outer_center = target_pos - (crescent_radius * 2 + node_radius) * direction
         inner_center = outer_center - offset_factor * crescent_radius * direction
-        
+
         # Draw the line
-        #ax.plot([source_pos[0], target_pos[0]], [source_pos[1], target_pos[1]], color=color, zorder=1)
-        
+        # ax.plot([source_pos[0], target_pos[0]], [source_pos[1], target_pos[1]], color=color, zorder=1)
+
         # Draw the inner circle (white) to create crescent effect
         inner_circle = Circle(inner_center, crescent_radius, color=color, zorder=2)
         ax.add_patch(inner_circle)
-        
+
         # Draw the outer circle (colored) to create crescent effect
-        outer_circle = Circle(outer_center, crescent_radius, color='white', zorder=3)
+        outer_circle = Circle(outer_center, crescent_radius, color="white", zorder=3)
         ax.add_patch(outer_circle)
 
-def add_circular_arrowheads(ax, pos, edges, node_size, scale_factor=0.001, color='k'):
+
+def add_circular_arrowheads(ax, pos, edges, node_size, scale_factor=0.001, color="k"):
     for edge in edges:
         start, end = edge[0], edge[1]
         x1, y1 = pos[start]
         x2, y2 = pos[end]
-        
+
         # # Calculate direction vector and normalize it
         # direction = np.array([x2 - x1, y2 - y1])
         # direction = direction / np.linalg.norm(direction)
@@ -255,8 +299,23 @@ def add_circular_arrowheads(ax, pos, edges, node_size, scale_factor=0.001, color
         circle = Circle(circle_center, radius, color=color, zorder=2)
         ax.add_patch(circle)
 
-def plot_shell(neunet, center=None, shells=None, save=False, figsize=mm_to_inches((single_column/4,single_column/4)), edge_color_dict=None, edge_alpha_dict=None,\
-                node_color_dict=None, edge_labels=False, handles=None, fontsize=font_size_mid, width_logbase=2, title=None, node_size=300):
+
+def plot_shell(
+    neunet,
+    center=None,
+    shells=None,
+    save=False,
+    figsize=mm_to_inches((single_column / 4, single_column / 4)),
+    edge_color_dict=None,
+    edge_alpha_dict=None,
+    node_color_dict=None,
+    edge_labels=False,
+    handles=None,
+    fontsize=font_size_mid,
+    width_logbase=2,
+    title=None,
+    node_size=300,
+):
     """
     Generates a shell layout for the network.
 
@@ -269,36 +328,60 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=mm_to_inche
     MAX_LENGTH_FOR_STRAIGHT_TEXT = 20
     arc_rad = 0.1
     # node_size = 800
-    arrow_size=node_size/20
-    rotation = 0 #45
-        
+    arrow_size = node_size / 20
+    rotation = 0  # 45
+
     if shells is None:
         if isinstance(center, str):
             assert center in neunet.neurons
-            shells = [[neunet.neurons[center]], [neu for nname,neu in neunet.neurons.items() if nname !=center]]
+            shells = [
+                [neunet.neurons[center]],
+                [neu for nname, neu in neunet.neurons.items() if nname != center],
+            ]
         elif isinstance(center, list):
-            #print(center, neunet.neurons.keys(), [c in neunet.neurons.keys() for c in center])
-            assert all([c in neunet.neurons.keys() or isinstance(c, Neuron) for c in center])
+            # print(center, neunet.neurons.keys(), [c in neunet.neurons.keys() for c in center])
+            assert all(
+                [c in neunet.neurons.keys() or isinstance(c, Neuron) for c in center]
+            )
             new_center = [c if c in neunet.neurons.keys() else c.name for c in center]
-            shells = [[neunet.neurons[c] for c in new_center], [neu for nname,neu in neunet.neurons.items() if nname not in new_center]]
+            shells = [
+                [neunet.neurons[c] for c in new_center],
+                [
+                    neu
+                    for nname, neu in neunet.neurons.items()
+                    if nname not in new_center
+                ],
+            ]
         elif isinstance(center, Neuron):
-            shells = [[neunet.neurons[center.name]], [neu for nname,neu in neunet.neurons.items() if nname != center.name]]
+            shells = [
+                [neunet.neurons[center.name]],
+                [neu for nname, neu in neunet.neurons.items() if nname != center.name],
+            ]
         else:
             raise ValueError("center must be a neuron name or a list of neuron names")
     if node_color_dict is None:
-        node_color = ['lightgray' if not hasattr(node, 'color') else node.color for node in neunet.nodes]
+        node_color = [
+            "lightgray" if not hasattr(node, "color") else node.color
+            for node in neunet.nodes
+        ]
     else:
         node_color = [node_color_dict[node] for node in neunet.nodes]
 
     if edge_color_dict is None:
-        edge_color_dict = {edge:'gray' if not hasattr(edge, 'color') else edge.color for edge in neunet.edges}
+        edge_color_dict = {
+            edge: "gray" if not hasattr(edge, "color") else edge.color
+            for edge in neunet.edges
+        }
     if edge_alpha_dict is None:
-        edge_alpha_dict = {edge:1 if not hasattr(edge, 'alpha') else edge.alpha for edge in neunet.edges}
+        edge_alpha_dict = {
+            edge: 1 if not hasattr(edge, "alpha") else edge.alpha
+            for edge in neunet.edges
+        }
 
     if edge_labels:
         edge_labels = {edge: edge.weight for edge in neunet.edges}
     else:
-        edge_labels = {edge: '' for edge in neunet.edges}
+        edge_labels = {edge: "" for edge in neunet.edges}
     # edge_color = []
     # edge_weight = []
     # for (u,v,attrib_dict) in list(neunet.edges.data()):
@@ -306,58 +389,123 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=mm_to_inche
     #     edge_weight.append(attrib_dict['weight'])
 
     pos = nx.shell_layout(neunet, nlist=shells, scale=2)
-    fig, ax = plt.subplots(figsize=figsize, layout='constrained')
-    ax.set_aspect('equal', 'datalim', anchor='C')
+    fig, ax = plt.subplots(figsize=figsize, layout="constrained")
+    ax.set_aspect("equal", "datalim", anchor="C")
     # print(len(pos))
     # print([(n, pos[neu]) for (n,neu) in neunet.neurons.items()])
     # nx.draw(neunet, node_size = 800, ax=ax, pos=pos, with_labels=False, node_color = node_color, edge_color=edge_color)
-    node_c = nx.draw_networkx_nodes(neunet, pos=pos, node_size = node_size, ax=ax, node_color = node_color)
-    node_c.set_clip_on(False)           
-    node_c.set_zorder(5)                
+    node_c = nx.draw_networkx_nodes(
+        neunet, pos=pos, node_size=node_size, ax=ax, node_color=node_color
+    )
+    node_c.set_clip_on(False)
+    node_c.set_zorder(5)
 
     if len(neunet.connections.keys()):
-        for edge,connection in neunet.connections.items():
+        for edge, connection in neunet.connections.items():
             edge_color = edge_color_dict[edge]
             edge_alpha = edge_alpha_dict[edge]
-            if connection.connection_type == 'chemical-synapse':
+            if connection.connection_type == "chemical-synapse":
                 if (edge[1], edge[0]) in neunet.edges():
                     rad = arc_rad
                 else:
                     rad = 0.0
-                width = 1 + np.log2(connection.weight)/np.log2(width_logbase)
-                nx.draw_networkx_edges(neunet, pos=pos, edgelist=[edge], node_size=node_size, connectionstyle=f'arc3,rad={rad}', arrows=True, arrowstyle='-|>', arrowsize=arrow_size, edge_color=edge_color, alpha=edge_alpha, width=width, ax=ax)
+                width = 1 + np.log2(connection.weight) / np.log2(width_logbase)
+                nx.draw_networkx_edges(
+                    neunet,
+                    pos=pos,
+                    edgelist=[edge],
+                    node_size=node_size,
+                    connectionstyle=f"arc3,rad={rad}",
+                    arrows=True,
+                    arrowstyle="-|>",
+                    arrowsize=arrow_size,
+                    edge_color=edge_color,
+                    alpha=edge_alpha,
+                    width=width,
+                    ax=ax,
+                )
                 # add_circular_arrowheads(ax, pos, edges=[edge], node_size=node_size, color='k')
                 # add_half_circle_arrowheads(ax, pos, edges=[edge], node_size=node_size, color='k')
-            elif connection.connection_type == 'gap-junction':
-                width = 1 + np.log2(connection.weight)/np.log2(width_logbase)
-                nx.draw_networkx_edges(neunet, pos=pos, edgelist=[edge], node_size=node_size, connectionstyle='arc3,rad=0.0', arrowstyle='-', arrowsize=arrow_size, edge_color='k', alpha=edge_alpha, width=width, ax=ax)
-                add_gapjn_symbols(ax, pos, edges=[edge], alpha=edge_alpha, color='k')
+            elif connection.connection_type == "gap-junction":
+                width = 1 + np.log2(connection.weight) / np.log2(width_logbase)
+                nx.draw_networkx_edges(
+                    neunet,
+                    pos=pos,
+                    edgelist=[edge],
+                    node_size=node_size,
+                    connectionstyle="arc3,rad=0.0",
+                    arrowstyle="-",
+                    arrowsize=arrow_size,
+                    edge_color="k",
+                    alpha=edge_alpha,
+                    width=width,
+                    ax=ax,
+                )
+                add_gapjn_symbols(ax, pos, edges=[edge], alpha=edge_alpha, color="k")
             else:
-                width = 1 + np.log2(connection.weight)/np.log2(width_logbase)
-                nx.draw_networkx_edges(neunet, pos=pos, edgelist=[edge], node_size=node_size, connectionstyle='arc3,rad=0.0', arrowstyle='-', arrowsize=arrow_size, edge_color='k', alpha=edge_alpha, width=width, ax=ax)
+                width = 1 + np.log2(connection.weight) / np.log2(width_logbase)
+                nx.draw_networkx_edges(
+                    neunet,
+                    pos=pos,
+                    edgelist=[edge],
+                    node_size=node_size,
+                    connectionstyle="arc3,rad=0.0",
+                    arrowstyle="-",
+                    arrowsize=arrow_size,
+                    edge_color="k",
+                    alpha=edge_alpha,
+                    width=width,
+                    ax=ax,
+                )
                 add_neuropep_symbols(ax, pos, edges=[edge], node_size=node_size)
-                #add_neuropep_symbols(ax, pos, edges=[edge], alpha=edge_alpha, color='k')
+                # add_neuropep_symbols(ax, pos, edges=[edge], alpha=edge_alpha, color='k')
             if edge_labels:
-                nx.draw_networkx_edge_labels(neunet, pos=pos, edge_labels=edge_labels, ax=ax)
+                nx.draw_networkx_edge_labels(
+                    neunet, pos=pos, edge_labels=edge_labels, ax=ax
+                )
     else:
-        nx.draw_networkx_edges(neunet, pos=pos, node_size=node_size, arrows=True, arrowstyle='-|>', arrowsize=20, ax=ax)
+        nx.draw_networkx_edges(
+            neunet,
+            pos=pos,
+            node_size=node_size,
+            arrows=True,
+            arrowstyle="-|>",
+            arrowsize=20,
+            ax=ax,
+        )
 
     for node, (x, y) in pos.items():
         label = str(node.name)
-        if len(label)>4 and len(pos)>MAX_LENGTH_FOR_STRAIGHT_TEXT:
-            if (x>0 and y>0) or (x<0 and y<0):
-                plt.text(x, y, label, fontsize=fontsize, rotation=rotation, ha='center', va='center')
-            elif (x>0 and y<0) or (x<0 and y>0):
-                plt.text(x, y, label, fontsize=fontsize, rotation=-rotation, ha='center', va='center')
+        if len(label) > 4 and len(pos) > MAX_LENGTH_FOR_STRAIGHT_TEXT:
+            if (x > 0 and y > 0) or (x < 0 and y < 0):
+                plt.text(
+                    x,
+                    y,
+                    label,
+                    fontsize=fontsize,
+                    rotation=rotation,
+                    ha="center",
+                    va="center",
+                )
+            elif (x > 0 and y < 0) or (x < 0 and y > 0):
+                plt.text(
+                    x,
+                    y,
+                    label,
+                    fontsize=fontsize,
+                    rotation=-rotation,
+                    ha="center",
+                    va="center",
+                )
             else:
-                plt.text(x, y, label, fontsize=fontsize, ha='center', va='center')
+                plt.text(x, y, label, fontsize=fontsize, ha="center", va="center")
         else:
-            plt.text(x, y, label, fontsize=fontsize, ha='center', va='center')
-    
-    plt.axis('off')
+            plt.text(x, y, label, fontsize=fontsize, ha="center", va="center")
+
+    plt.axis("off")
     if handles:
-        fig.legend(handles=handles,loc='outside center right')
-    
+        fig.legend(handles=handles, loc="outside center right")
+
     for txt in ax.texts:
         txt.set_zorder(60)
     if save:
@@ -365,15 +513,31 @@ def plot_shell(neunet, center=None, shells=None, save=False, figsize=mm_to_inche
             plt.savefig(save, transparent=True, bbox_inches="tight", pad_inches=0.02)
         elif isinstance(save, bool):
             OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-            outfile = OUTPUT_DIR / ( '_'.join([n.name for n in shells[0]]) + '.svg')
+            outfile = OUTPUT_DIR / ("_".join([n.name for n in shells[0]]) + ".svg")
             plt.savefig(outfile, transparent=True, bbox_inches="tight", pad_inches=0.02)
-    #plt.show()
+    # plt.show()
     if title:
         fig.suptitle(title, fontsize=font_size_mid)
     return fig
-    
-    
-def plot_layered(interesting_conns, neunet, nodeColors=None, node_alpha=0.8, edgeColors = None, save=False, title='', extraNodes=[], extraEdges=[], pos=[], mark_anatomical=False, colorbar=False, fontsize=8, figsize=(40,4), node_size=2000):
+
+
+def plot_layered(
+    interesting_conns,
+    neunet,
+    nodeColors=None,
+    node_alpha=0.8,
+    edgeColors=None,
+    save=False,
+    title="",
+    extraNodes=[],
+    extraEdges=[],
+    pos=[],
+    mark_anatomical=False,
+    colorbar=False,
+    fontsize=8,
+    figsize=(40, 4),
+    node_size=2000,
+):
     """
     Generates a graph visualization of a given neural network. Change this function to make more streamlined.
 
@@ -392,154 +556,198 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, node_alpha=0.8, edg
     Returns:
     - pos (dict): A dictionary mapping node names to their positions in the graph.
     """
-    classcolor = 'green'
+    classcolor = "green"
 
     G = nx.Graph()
     G.add_edges_from(interesting_conns)
     if edgeColors is None:
-        edge_color=[]
+        edge_color = []
     elif isinstance(edgeColors, str):
         edge_color = [edgeColors for e in interesting_conns]
     elif len(edgeColors) == len(interesting_conns):
-        if all (isinstance(ec, str) for ec in edgeColors):
+        if all(isinstance(ec, str) for ec in edgeColors):
             edge_color = [ec for ec in edgeColors]
-        elif all (isinstance(ec, float) for ec in edgeColors):
-            #cmap2 = sns.diverging_palette(220, 20, as_cmap=True)
-            cmap = plt.get_cmap('PuOr')
+        elif all(isinstance(ec, float) for ec in edgeColors):
+            # cmap2 = sns.diverging_palette(220, 20, as_cmap=True)
+            cmap = plt.get_cmap("PuOr")
             max_color = max(np.abs(edgeColors))
-            norm = matplotlib.colors.Normalize(vmin=-max_color,vmax=max_color)
+            norm = matplotlib.colors.Normalize(vmin=-max_color, vmax=max_color)
             m = cm.ScalarMappable(norm=norm, cmap=cmap)
             edge_color = [m.to_rgba(col) for col in edgeColors]
     else:
-        raise ValueError('edge_colors must either be a string or a list of strings or floats \
-            of the same length as interesting_conns')
-    
+        raise ValueError(
+            "edge_colors must either be a string or a list of strings or floats \
+            of the same length as interesting_conns"
+        )
+
     if nodeColors is None:
-        node_color=[]
+        node_color = []
     elif isinstance(nodeColors, list):
-        if all (isinstance(nc, str) for nc in nodeColors):
+        if all(isinstance(nc, str) for nc in nodeColors):
             node_color = [nc for nc in nodeColors]
     elif isinstance(nodeColors, dict):
-        cmap2 = plt.get_cmap('RdYlGn')
-        norm2 = matplotlib.colors.Normalize(vmin=-1.5,vmax=1.5)
+        cmap2 = plt.get_cmap("RdYlGn")
+        norm2 = matplotlib.colors.Normalize(vmin=-1.5, vmax=1.5)
         o = cm.ScalarMappable(norm=norm2, cmap=cmap2)
 
     if mark_anatomical:
-        for i,e in enumerate(G.edges):
-            u,v= e[0], e[1]
-            if neunet.has_edge(neunet.neurons[u], neunet.neurons[v]) or neunet.has_edge(neunet.neurons[v], neunet.neurons[u]):
-                if (neunet.neurons[u], neunet.neurons[v], 'gapjn') in neunet.edges or (neunet.neurons[v], neunet.neurons[u], 'gapjn') in neunet.edges:
-                    edge_color[i] = 'k'
+        for i, e in enumerate(G.edges):
+            u, v = e[0], e[1]
+            if neunet.has_edge(neunet.neurons[u], neunet.neurons[v]) or neunet.has_edge(
+                neunet.neurons[v], neunet.neurons[u]
+            ):
+                if (neunet.neurons[u], neunet.neurons[v], "gapjn") in neunet.edges or (
+                    neunet.neurons[v],
+                    neunet.neurons[u],
+                    "gapjn",
+                ) in neunet.edges:
+                    edge_color[i] = "k"
                 else:
-                    edge_color[i] = 'blue'
+                    edge_color[i] = "blue"
 
     edge_labels = {}
-    neuronTypes = ['motorneuron', 'interneuron', 'sensory']
-    node_color = {'sensory': [], 'interneuron':[], 'motorneuron':[]}
-    node_alpha = {'sensory': [], 'interneuron':[], 'motorneuron':[]}
+    neuronTypes = ["motorneuron", "interneuron", "sensory"]
+    node_color = {"sensory": [], "interneuron": [], "motorneuron": []}
+    node_alpha = {"sensory": [], "interneuron": [], "motorneuron": []}
 
     edgeList_1, edgeList_2 = [], []
     colors_1, colors_2 = [], []
-    node_shapes = {'sensory': 'o', 'interneuron':'s', 'motorneuron':'H'}
-    node_types = {'sensory': [], 'interneuron':[], 'motorneuron':[]}
-    #node_shapes = {'sensory': [], 'interneuron':[], 'motorneuron':[]}
-    
+    node_shapes = {"sensory": "o", "interneuron": "s", "motorneuron": "H"}
+    node_types = {"sensory": [], "interneuron": [], "motorneuron": []}
+    # node_shapes = {'sensory': [], 'interneuron':[], 'motorneuron':[]}
+
     edges_within = []
     edges_across = []
     color_within = []
     color_across = []
-    for e,c in zip(G.edges, edge_color):
+    for e, c in zip(G.edges, edge_color):
         if neunet.neurons[e[0]].type == neunet.neurons[e[1]].type:
             edges_within.append(e)
             color_within.append(c)
         else:
             edges_across.append(e)
-            color_across.append(c) 
-            
+            color_across.append(c)
+
     if len(extraEdges):
         G.add_edges_from(extraEdges)
-    
+
     oriNodes = tuple(G.nodes)
     for n in extraNodes:
-        if not n in G.nodes:
+        if n not in G.nodes:
             G.add_node(n)
 
     # if not len(extraNodes):
     #     nodelist = G.nodes
     # else:
     #     nodelist = extraNodes
-    categories = {} 
+    categories = {}
     for n in G.nodes:
         # print(n)
         if n in oriNodes:
             if n in nodeColors.keys():
-                #print("Y", n, nodeColors.keys())
+                # print("Y", n, nodeColors.keys())
                 if nodeColors is not None:
                     if isinstance(nodeColors[n], str):
                         node_color[neunet.neurons[n].type].append(nodeColors[n])
                     elif isinstance(nodeColors[n], float):
-                        node_color[neunet.neurons[n].type].append(o.to_rgba(nodeColors[n]))
+                        node_color[neunet.neurons[n].type].append(
+                            o.to_rgba(nodeColors[n])
+                        )
                     else:
-                        raise ValueError('node_colors must either be a string or a list of strings or floats \
-                            of the same length as nodelist')
+                        raise ValueError(
+                            "node_colors must either be a string or a list of strings or floats \
+                            of the same length as nodelist"
+                        )
                 else:
                     node_color[neunet.neurons[n].type].append(nodeColors[n])
                     node_alpha[neunet.neurons[n].type].append(0.8)
             else:
-                #print(n, nodeColors.keys())
-                node_color[neunet.neurons[n].type].append('lightgray') 
+                # print(n, nodeColors.keys())
+                node_color[neunet.neurons[n].type].append("lightgray")
                 node_alpha[neunet.neurons[n].type].append(0.8)
             node_types[neunet.neurons[n].type].append(n)
         # else:
         #     node_color[nn.neurons[n].type].append("None")
         #     node_alpha[nn.neurons[n].type].append(None)
         categories[n] = (neunet.neurons[n].type, neunet.neurons[n].category)
-        nx.set_node_attributes(G, {n:{"layer":neuronTypes.index(neunet.neurons[n].type)}})
+        nx.set_node_attributes(
+            G, {n: {"layer": neuronTypes.index(neunet.neurons[n].type)}}
+        )
         # print(n, neuronTypes.index(neunet.neurons[n].type))
-        #G.nodes[n].layer = nn.neurons[n].type 
+        # G.nodes[n].layer = nn.neurons[n].type
     print(G.nodes())
     cats = set(categories.values())
     type_cat = {}
-    for n,cat in categories.items():
+    for n, cat in categories.items():
         cat_alt = cat[1]
-        if not cat[0] in type_cat:
-            type_cat[cat[0]] = {cat_alt:[n]}
+        if cat[0] not in type_cat:
+            type_cat[cat[0]] = {cat_alt: [n]}
         else:
-            if not cat_alt in type_cat[cat[0]]:
+            if cat_alt not in type_cat[cat[0]]:
                 type_cat[cat[0]][cat_alt] = [n]
             else:
-                type_cat[cat[0]][cat_alt].append(n) 
+                type_cat[cat[0]][cat_alt].append(n)
 
-    array_op = lambda x, sx: np.array([x[0]*sx, x[1]])
-    sx=2
-    #pos =  nx.spring_layout(G, k=1, iterations=70)# 
-    
+    array_op = lambda x, sx: np.array([x[0] * sx, x[1]])
+    sx = 2
+    # pos =  nx.spring_layout(G, k=1, iterations=70)#
+
     if not len(pos):
-        pos =  nx.multipartite_layout(G,subset_key="layer", align='horizontal')
+        pos = nx.multipartite_layout(G, subset_key="layer", align="horizontal")
         # print(pos)
-        pos = {p:array_op(pos[p],sx) for p in pos}
+        pos = {p: array_op(pos[p], sx) for p in pos}
         print(pos)
         pos, boxes = groupPosition(pos, type_cat)
 
-    #print(edges_within, edges_across)
+    # print(edges_within, edges_across)
     fig, ax = plt.subplots(figsize=figsize)
-    #edge_color = 'k'
-    #nx.draw(G, node_size = 1000, ax=ax, pos=pos, with_labels=True, edge_color=edge_color, node_color = node_color)#, width=weights, font_size=12)
-    #plotNodes = []
+    # edge_color = 'k'
+    # nx.draw(G, node_size = 1000, ax=ax, pos=pos, with_labels=True, edge_color=edge_color, node_color = node_color)#, width=weights, font_size=12)
+    # plotNodes = []
     for type in node_types:
-        nx.draw_networkx_nodes(node_types[type], node_shape=node_shapes[type], node_size = node_size, ax=ax, pos=pos, node_color = node_color[type],  linewidths=1, alpha=node_alpha)#node_alpha[type]))#, width=weights, font_size=12)
+        nx.draw_networkx_nodes(
+            node_types[type],
+            node_shape=node_shapes[type],
+            node_size=node_size,
+            ax=ax,
+            pos=pos,
+            node_color=node_color[type],
+            linewidths=1,
+            alpha=node_alpha,
+        )  # node_alpha[type]))#, width=weights, font_size=12)
     for node, (x, y) in pos.items():
         label = str(node)
-        if len(label)>3:
-            plt.text(x, y, label, fontsize=fontsize, rotation=45, ha='center', va='center')
+        if len(label) > 3:
+            plt.text(
+                x, y, label, fontsize=fontsize, rotation=45, ha="center", va="center"
+            )
         else:
-            plt.text(x, y, label, fontsize=fontsize, ha='center', va='center')
+            plt.text(x, y, label, fontsize=fontsize, ha="center", va="center")
 
     # nx.draw_networkx_labels(G, pos=pos, labels={o:o for o in oriNodes if len(o)<4}, ax=ax, font_size=20)
     # nx.draw_networkx_labels(G, pos=pos, labels={o:o for o in oriNodes if len(o)>3}, ax=ax, font_size=20, rotation=45)
-    #nx.draw_networkx_edges(G, edgelist=interesting_conns, ax=ax, pos=pos, edge_color=edge_color, node_size = node_size, arrows=True, connectionstyle='arc3, rad=0.3', width=2)#colors_2, style='--')
-    nx.draw_networkx_edges(G, edgelist=edges_within, ax=ax, pos=pos, edge_color=color_within, node_size = node_size, width=2, arrows=True, connectionstyle='arc3, rad=0.3')#colors_2, style='--')
-    nx.draw_networkx_edges(G, edgelist=edges_across, ax=ax, pos=pos, edge_color=color_across, node_size = node_size, width=2, arrows=True)#, connectionstyle='arc3, rad=0.3')#colors_2, style='--')
+    # nx.draw_networkx_edges(G, edgelist=interesting_conns, ax=ax, pos=pos, edge_color=edge_color, node_size = node_size, arrows=True, connectionstyle='arc3, rad=0.3', width=2)#colors_2, style='--')
+    nx.draw_networkx_edges(
+        G,
+        edgelist=edges_within,
+        ax=ax,
+        pos=pos,
+        edge_color=color_within,
+        node_size=node_size,
+        width=2,
+        arrows=True,
+        connectionstyle="arc3, rad=0.3",
+    )  # colors_2, style='--')
+    nx.draw_networkx_edges(
+        G,
+        edgelist=edges_across,
+        ax=ax,
+        pos=pos,
+        edge_color=color_across,
+        node_size=node_size,
+        width=2,
+        arrows=True,
+    )  # , connectionstyle='arc3, rad=0.3')#colors_2, style='--')
 
     within_extra = []
     across_extra = []
@@ -548,41 +756,68 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, node_alpha=0.8, edg
             within_extra.append(e)
         else:
             across_extra.append(e)
-    
-    nx.draw_networkx_edges(G, edgelist = within_extra, ax=ax, edge_color='gray', pos=pos, alpha=0.2, width=1, arrows=True, connectionstyle='arc3, rad=0.3')
-    nx.draw_networkx_edges(G, edgelist = across_extra, ax=ax, edge_color='gray', pos=pos, alpha=0.2, width=1)
-    #nx.draw_networkx_edge_labels(G, pos, label_pos=0.5, edge_labels=edge_labels, ax=ax)
+
+    nx.draw_networkx_edges(
+        G,
+        edgelist=within_extra,
+        ax=ax,
+        edge_color="gray",
+        pos=pos,
+        alpha=0.2,
+        width=1,
+        arrows=True,
+        connectionstyle="arc3, rad=0.3",
+    )
+    nx.draw_networkx_edges(
+        G, edgelist=across_extra, ax=ax, edge_color="gray", pos=pos, alpha=0.2, width=1
+    )
+    # nx.draw_networkx_edge_labels(G, pos, label_pos=0.5, edge_labels=edge_labels, ax=ax)
     if colorbar:
         divider = make_axes_locatable(ax)
-        
+
         # cax = inset_axes(ax, loc='upper right', width="100%", height="100%",
         #                bbox_to_anchor=(0.75,0.85,.05,.05), bbox_transform=ax.transAxes) #
         # cax.set_xticks([-1,0,1])
         # cax.set_title("$\\Delta$ correlation", fontsize=24)
-        # #cax = divider.append_axes("right", size="1%", pad=0.05)    
+        # #cax = divider.append_axes("right", size="1%", pad=0.05)
         # cbar = plt.colorbar(m, cax= cax, orientation='horizontal')
-        # cbar.ax.tick_params(labelsize=24) 
+        # cbar.ax.tick_params(labelsize=24)
 
         cax2 = divider.append_axes("bottom", size="2%", pad=0.1)
-        cbar2= plt.colorbar(o, cax=cax2, orientation='horizontal')
-        cbar2.ax.tick_params(labelsize='xx-large') 
+        cbar2 = plt.colorbar(o, cax=cax2, orientation="horizontal")
+        cbar2.ax.tick_params(labelsize="xx-large")
 
     for types in boxes:
         for cat, pars in boxes[types].items():
             xy, width, height = pars[0], pars[1], pars[2]
-            rect = matplotlib.patches.Rectangle(xy,width,height, linewidth=1, edgecolor='gray', facecolor='none', alpha=0.75, linestyle='dashed')
-            if cat in ['linker to pharynx']:
+            rect = matplotlib.patches.Rectangle(
+                xy,
+                width,
+                height,
+                linewidth=1,
+                edgecolor="gray",
+                facecolor="none",
+                alpha=0.75,
+                linestyle="dashed",
+            )
+            if cat in ["linker to pharynx"]:
                 cat = "link. to phar."
-                cat = cat.replace(' ', '\n')
-            elif cat in ['sex-specific neuron']:
-                cat = 'sex-spec'
-                #cat = cat.replace(' ', '\n')]
+                cat = cat.replace(" ", "\n")
+            elif cat in ["sex-specific neuron"]:
+                cat = "sex-spec"
+                # cat = cat.replace(' ', '\n')]
             for suffix in ["interneuron", "motor neuron"]:
                 if suffix in cat:
-                    cat = cat.replace(suffix,'')
-            ax.text(xy[0], xy[1]-0.002, cat, #-height
-            horizontalalignment='left',
-            verticalalignment='top', fontsize=fontsize, color=classcolor)
+                    cat = cat.replace(suffix, "")
+            ax.text(
+                xy[0],
+                xy[1] - 0.002,
+                cat,  # -height
+                horizontalalignment="left",
+                verticalalignment="top",
+                fontsize=fontsize,
+                color=classcolor,
+            )
             # Add the patch to the Axes
             ax.add_patch(rect)
     simpleaxis(ax, every=True)
@@ -592,15 +827,29 @@ def plot_layered(interesting_conns, neunet, nodeColors=None, node_alpha=0.8, edg
     # plt.colorbar(m)
     plt.tight_layout()
     plt.subplots_adjust(top=2)
-    if not save==False:
+    if not save == False:
         plt.savefig(save, transparent=True)
     plt.show()
     plt.close()
-    
+
     return pos
 
 
-def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, title='', label='all', save=False, figsize=(20,3), limit=None, cmr_cmap='tropical', font_size=font_size_mid, piesize=0.3, draw_all=False):
+def plot_position(
+    nn,
+    axis="AP-DV",
+    highlight=None,
+    booleanDictionary=None,
+    title="",
+    label="all",
+    save=False,
+    figsize=(20, 3),
+    limit=None,
+    cmr_cmap="tropical",
+    font_size=font_size_mid,
+    piesize=0.3,
+    draw_all=False,
+):
     """
     A function to plot the positions of neurons based on their coordinates and attributes.
 
@@ -620,36 +869,46 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
         active_color, passive_color = "#CC5500", "grey"
         booleanDictionary = {True: active_color, False: passive_color}
 
-    coords = ['AP', 'DV', 'LR']
+    coords = ["AP", "DV", "LR"]
     nlabels = np.array([n for n in nn.neurons])
     pos = [[] for i in range(len(nlabels))]
     if highlight is None:
         highlight = []
-    
+
     if not isinstance(highlight, list):
         raise ValueError("Highlight must be a list of strings or a list of lists.")
-    is_str_list  = isinstance(highlight, list) and len(highlight)>0 and isinstance(highlight[0], str)
-    is_list_list = isinstance(highlight, list) and len(highlight)>0 and isinstance(highlight[0], list)
-    
+    is_str_list = (
+        isinstance(highlight, list)
+        and len(highlight) > 0
+        and isinstance(highlight[0], str)
+    )
+    is_list_list = (
+        isinstance(highlight, list)
+        and len(highlight) > 0
+        and isinstance(highlight[0], list)
+    )
+
     if is_str_list:
         if not all([n in nn.neurons for n in highlight]):
             raise ValueError("Neuron(s) not found in the network.")
     elif is_list_list:
-        if not all([n in nn.neurons for j in range(len(highlight)) for n in highlight[j]]):
+        if not all(
+            [n in nn.neurons for j in range(len(highlight)) for n in highlight[j]]
+        ):
             raise ValueError("Neuron(s) not found in the network.")
         # elif isinstance(highlight[0], list):
         #     assert all([n in nn.neurons for j in range(len(highlight)) for n in highlight[j]]), "Neuron(s) not found in the network."
         # else:
         #     raise ValueError("Highlight must be a list of strings or a list of lists.")
-            
-    for i,n in enumerate(nlabels):
-        if n in ['CANL']:
+
+    for i, n in enumerate(nlabels):
+        if n in ["CANL"]:
             pos[i] = [510, 20, -1]
-        elif n in ['CANR']:
+        elif n in ["CANR"]:
             pos[i] = [490, 20, 1]
         else:
             for x in coords:
-                if x in nn.neurons[n].position: 
+                if x in nn.neurons[n].position:
                     pos[i].append(nn.neurons[n].position[x])
                 else:
                     raise ValueError(f"Neuron {n} has no position in axis {x}.")
@@ -666,10 +925,10 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
         nlabels = nlabels[mask]
 
     posDict = dict(zip(coords, pos.T))
-    posDict['LR'] = -posDict['LR'] # flipping LR for plotting in the correct direction
-    posDict['DV'] = -posDict['DV'] # flipping DV for plotting in the correct direction
+    posDict["LR"] = -posDict["LR"]  # flipping LR for plotting in the correct direction
+    posDict["DV"] = -posDict["DV"]  # flipping DV for plotting in the correct direction
 
-    xax, yax = axis.split('-')
+    xax, yax = axis.split("-")
     if xax in coords:
         x = posDict[xax]
     elif xax[::-1] in coords:
@@ -683,14 +942,15 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
         y = -posDict[yax[::-1]]
     else:
         raise ValueError(f"Invalid axis: {yax}, use some combination of {coords}")
-    
+
     x = np.array(x)
     y = np.array(y)
 
-    f,ax = plt.subplots(figsize=figsize, dpi=600, layout='constrained')
-    plt.axis('off')
+    f, ax = plt.subplots(figsize=figsize, dpi=600, layout="constrained")
+    plt.axis("off")
     ## dummy scatter plot for text allocation
-    f.canvas.draw() 
+    f.canvas.draw()
+
     def data_dx_to_axes_frac(ax, dx):
         p0 = ax.transData.transform((0, 0))
         p1 = ax.transData.transform((dx, 0))
@@ -704,14 +964,15 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
         for xi, yi in zip(x[boolList], y[boolList]):
             # convert data radius -> points
             x0, y0 = ax.transData.transform((xi, yi))
-            x1, _  = ax.transData.transform((xi + piesize, yi))
-            r_pix  = abs(x1 - x0)
-            r_pt   = r_pix * 72.0 / ax.figure.dpi
-            s_area = np.pi * (r_pt ** 2)        # scatter size is area in pt^2
+            x1, _ = ax.transData.transform((xi + piesize, yi))
+            r_pix = abs(x1 - x0)
+            r_pt = r_pix * 72.0 / ax.figure.dpi
+            s_area = np.pi * (r_pt**2)  # scatter size is area in pt^2
             pts.append((xi, yi))
             sizes.append(s_area)
 
         return np.array(pts), np.array(sizes)
+
     # piesize is your pie radius in *data* units
     # min_dist = data_dx_to_axes_frac(ax, piesize*2.5)   # push label ~1.2× radius away
     # margin   = data_dx_to_axes_frac(ax, piesize*2.5)   # clearance to marker edge
@@ -720,12 +981,12 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
     # margin = max(0.015, min(0.03, data_dx_to_axes_frac(ax, piesize*1.2)))
     # min_dist = max(0.02,  min(0.05, data_dx_to_axes_frac(ax, piesize*1.6)))
     # max_dist = max(0.08,  min(0.15, data_dx_to_axes_frac(ax, piesize*6.0)))
-    
+
     # keep units consistent: data units everywhere
-    min_dist = piesize * 0.02      # label–label separation in DATA units
-    margin   = piesize * 0.03      # label–point clearance in DATA units
-    max_dist = piesize * 0.3      # cap to prevent long leader lines
-    print(min_dist, margin, max_dist)   # should be ~0.01–0.10, not 0.0
+    min_dist = piesize * 0.02  # label–label separation in DATA units
+    margin = piesize * 0.03  # label–point clearance in DATA units
+    max_dist = piesize * 0.3  # cap to prevent long leader lines
+    print(min_dist, margin, max_dist)  # should be ~0.01–0.10, not 0.0
     #
     if isinstance(highlight[0], str):
         facecolors = np.array([booleanDictionary[n in highlight] for n in nlabels])
@@ -734,66 +995,89 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
 
         pts, sizes = return_fake_scatter(ax, x, y, piesize, boolList)
         # invisible but geometry-aware collection
-        sc = ax.scatter(pts[:,0], pts[:,1], s=sizes, alpha=0.0, zorder=1) # Dummy scatter
-        #print([(n,facecolors[j]) for j,n in enumerate(nlabels) if n in highlight])
+        sc = ax.scatter(
+            pts[:, 0], pts[:, 1], s=sizes, alpha=0.0, zorder=1
+        )  # Dummy scatter
+        # print([(n,facecolors[j]) for j,n in enumerate(nlabels) if n in highlight])
         if label:
-            ta.allocate(ax,x[boolList], y[boolList],
-            nlabels[boolList],
-            # x_scatter=x[boolList], y_scatter=y[boolList],
-            scatter_plot=sc,
-            # direction='north',
-            margin=margin,
-            min_distance=min_dist,
-            max_distance=max_dist,
-            nbr_candidates=3000,
-            draw_all=draw_all,
-            plot_kwargs=dict(
-            zorder=60,
-            # weight='bold',
-            path_effects=[pe.withStroke(linewidth=2.0, foreground='white')]
-            # optional: bbox=dict(boxstyle='round,pad=0.2', fc='white', ec='none', alpha=0.8)
-            ),
-            zorder=60,
-            textsize=font_size, 
-            linecolor='gray',
-            avoid_label_lines_overlap=True,
-            clip_on=False)
+            ta.allocate(
+                ax,
+                x[boolList],
+                y[boolList],
+                nlabels[boolList],
+                # x_scatter=x[boolList], y_scatter=y[boolList],
+                scatter_plot=sc,
+                # direction='north',
+                margin=margin,
+                min_distance=min_dist,
+                max_distance=max_dist,
+                nbr_candidates=3000,
+                draw_all=draw_all,
+                plot_kwargs=dict(
+                    zorder=60,
+                    # weight='bold',
+                    path_effects=[pe.withStroke(linewidth=2.0, foreground="white")],
+                    # optional: bbox=dict(boxstyle='round,pad=0.2', fc='white', ec='none', alpha=0.8)
+                ),
+                zorder=60,
+                textsize=font_size,
+                linecolor="gray",
+                avoid_label_lines_overlap=True,
+                clip_on=False,
+            )
 
             # ta.allocate_text(f,ax,x[boolList], y[boolList],
             #             nlabels[boolList],
             #             x_scatter=x[boolList], y_scatter=y[boolList],
             #             textsize=font_size, linecolor='gray', avoid_label_lines_overlap=True)
-        
-        ax.scatter(x[~boolList], y[~boolList], s=200, facecolor=facecolors[~boolList], edgecolor=facecolors[~boolList], alpha=alphas[~boolList], zorder=1)
-        ax.scatter(x[boolList], y[boolList], s=200, facecolor=facecolors[boolList], edgecolor=facecolors[boolList], alpha=alphas[boolList], zorder=2)
+
+        ax.scatter(
+            x[~boolList],
+            y[~boolList],
+            s=200,
+            facecolor=facecolors[~boolList],
+            edgecolor=facecolors[~boolList],
+            alpha=alphas[~boolList],
+            zorder=1,
+        )
+        ax.scatter(
+            x[boolList],
+            y[boolList],
+            s=200,
+            facecolor=facecolors[boolList],
+            edgecolor=facecolors[boolList],
+            alpha=alphas[boolList],
+            zorder=2,
+        )
 
     elif is_list_list:
         buffer = 1.1
         # f,ax = plt.subplots( dpi=600, layout='constrained',figsize=figsize) #figsize=(2,0.3), dpi=300, layout='constrained'
         # plt.axis('off')
-        plt.xlim(min(x)*buffer,max(x)*buffer)
-        plt.ylim(min(y)*buffer,max(y)*buffer)
+        plt.xlim(min(x) * buffer, max(x) * buffer)
+        plt.ylim(min(y) * buffer, max(y) * buffer)
         # ax.set_aspect('equal')
-        trans=ax.transData.transform
-        trans2=f.transFigure.inverted().transform
+        trans = ax.transData.transform
+        trans2 = f.transFigure.inverted().transform
 
-        facecolors = cmr.take_cmap_colors('cmr.' + cmr_cmap, len(highlight), cmap_range=(0.15, 0.85), return_fmt='hex')
-        color_dict = {n:[] for n in nlabels}
-        alpha_dict = {n:0.25 for n in nlabels}
-        boolList = np.array([False]*len(nlabels))
-        group_idx  = {n: None for n in nlabels}
-        for i,n in enumerate(nlabels):
-            for j,hlc in enumerate(highlight):
+        facecolors = cmr.take_cmap_colors(
+            "cmr." + cmr_cmap, len(highlight), cmap_range=(0.15, 0.85), return_fmt="hex"
+        )
+        color_dict = {n: [] for n in nlabels}
+        alpha_dict = {n: 0.25 for n in nlabels}
+        boolList = np.array([False] * len(nlabels))
+        group_idx = {n: None for n in nlabels}
+        for i, n in enumerate(nlabels):
+            for j, hlc in enumerate(highlight):
                 if n in hlc:
                     color_dict[n].append(facecolors[j])
                     alpha_dict[n] = 1
-                    if label == 'all' or (label == 'left' and is_left_neuron(n)):
+                    if label == "all" or (label == "left" and is_left_neuron(n)):
                         boolList[i] = True
             if len(color_dict[n]) == 0:
                 color_dict[n].append("grey")
-        
-        if not label == 'none':
-            
+
+        if not label == "none":
             # if isinstance(label, int):
             #     randnum = np.random.default_rng()
             #     boolList = randnum.choice(boolList, size=label, replace=False)
@@ -801,47 +1085,54 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
             # pts, sizes = return_fake_scatter(ax, x, y, piesize, np.array([True]*len(nlabels)))
             pts, sizes = return_fake_scatter(ax, x, y, piesize, boolList)
             # invisible but geometry-aware collection
-            sc = ax.scatter(pts[:,0], pts[:,1], s=sizes, alpha=0.0, zorder=1) # Dummy scatter
-            ta.allocate(ax,x[boolList], y[boolList],
-                        nlabels[boolList],
-                        # x_scatter=x[boolList], y_scatter=y[boolList],
-                        scatter_plot=sc,
-                        # direction='north',
-                        margin=margin,
-                        min_distance=min_dist,
-                        max_distance=max_dist,
-                        nbr_candidates=3000,
-                        draw_all=draw_all,
-                        plot_kwargs=dict(
-                        zorder=60,
-                        # weight='bold',
-                        path_effects=[pe.withStroke(linewidth=2.0, foreground='white')]
-                        # optional: bbox=dict(boxstyle='round,pad=0.2', fc='white', ec='none', alpha=0.8)
-                        ),
-                        zorder=60,
-                        textsize=font_size, 
-                        linecolor='gray',
-                        avoid_label_lines_overlap=True,
-                        clip_on=False)
+            sc = ax.scatter(
+                pts[:, 0], pts[:, 1], s=sizes, alpha=0.0, zorder=1
+            )  # Dummy scatter
+            ta.allocate(
+                ax,
+                x[boolList],
+                y[boolList],
+                nlabels[boolList],
+                # x_scatter=x[boolList], y_scatter=y[boolList],
+                scatter_plot=sc,
+                # direction='north',
+                margin=margin,
+                min_distance=min_dist,
+                max_distance=max_dist,
+                nbr_candidates=3000,
+                draw_all=draw_all,
+                plot_kwargs=dict(
+                    zorder=60,
+                    # weight='bold',
+                    path_effects=[pe.withStroke(linewidth=2.0, foreground="white")],
+                    # optional: bbox=dict(boxstyle='round,pad=0.2', fc='white', ec='none', alpha=0.8)
+                ),
+                zorder=60,
+                textsize=font_size,
+                linecolor="gray",
+                avoid_label_lines_overlap=True,
+                clip_on=False,
+            )
         # print(boolList, ~boolList, x[boolList])
         # ax.scatter(x[~boolList], y[~boolList], s=200)
         # ax.scatter(x[boolList], y[boolList], s=200)
-        for i,n in enumerate(nlabels):
-            xx,yy=trans((x[i],y[i])) # figure coordinates
-            xa,ya=trans2((xx,yy)) # axes coordinates
+        for i, n in enumerate(nlabels):
+            xx, yy = trans((x[i], y[i]))  # figure coordinates
+            xa, ya = trans2((xx, yy))  # axes coordinates
             z = 1 if not boolList[i] else 2
-            #plot_pie(n, (x[i], y[i]), a, color_dict, alpha_dict, piesize)
-            a = plt.axes([xa-piesize/2,ya-piesize/2, piesize, piesize], zorder=z)
+            # plot_pie(n, (x[i], y[i]), a, color_dict, alpha_dict, piesize)
+            a = plt.axes(
+                [xa - piesize / 2, ya - piesize / 2, piesize, piesize], zorder=z
+            )
             a.set_facecolor("none")
-            a.set_aspect('equal')
-            pie = plot_pie(n, (0,0), a, color_dict, alpha_dict, piesize=piesize)
+            a.set_aspect("equal")
+            pie = plot_pie(n, (0, 0), a, color_dict, alpha_dict, piesize=piesize)
             ax.set_zorder(10)
             for txt in ax.texts:
                 txt.set_zorder(60)
         #     ax.pie([1/len(color_dict[n])]*len(color_dict[n]), center = (x[i], y[i]), colors=color_dict[n], radius = piesize, counterclock=False, wedgeprops={'alpha': alpha_dict[n], 'zorder': len(color_dict[n])})
 
-
-    #Add the legend to the plot
+    # Add the legend to the plot
     legend_ax = f.add_axes([0.95, 0.1, 0.1, 0.1])
     # legend_ax.set_xlim(0, 1)
     # legend_ax.set_ylim(0, 1)
@@ -849,23 +1140,34 @@ def plot_position(nn, axis='AP-DV', highlight=None, booleanDictionary=None, titl
     legend_ax.set_ylabel(yax, fontsize=font_size)
     legend_ax.set_xticks([])
     legend_ax.set_yticks([])
-    legend_ax.set_aspect('equal')
+    legend_ax.set_aspect("equal")
     simpleaxis(legend_ax)
     ax = f.gca()
     ax.set_title(title, fontsize=font_size)
     # f.draw_without_rendering()
-    #ax.set_xlim((-0.9,-0.))
-    
+    # ax.set_xlim((-0.9,-0.))
+
     for txt in ax.texts:
-        txt.set_weight('bold')
+        txt.set_weight("bold")
         txt.fontsize = font_size
-        txt.set_path_effects([pe.withStroke(linewidth=2, foreground='white')])
+        txt.set_path_effects([pe.withStroke(linewidth=2, foreground="white")])
         txt.set_zorder(1000)
     if save:
         plt.savefig(save, transparent=True)
     plt.show()
 
-def plot_position_oneside(nn, axis='AP-DV', highlight=None, booleanDictionary=None, title='', label='all', save=False, figsize=(20,3), limit=None):
+
+def plot_position_oneside(
+    nn,
+    axis="AP-DV",
+    highlight=None,
+    booleanDictionary=None,
+    title="",
+    label="all",
+    save=False,
+    figsize=(20, 3),
+    limit=None,
+):
     """
     # A function to plot the positions of neurons based on their coordinates and attributes.
 
@@ -879,7 +1181,7 @@ def plot_position_oneside(nn, axis='AP-DV', highlight=None, booleanDictionary=No
 
     # Returns:
     #     None
-    # """
+    #"""
     pass
     # if booleanDictionary is None:
     #     active_color, passive_color = "#CC5500", "lightgrey"
@@ -897,7 +1199,7 @@ def plot_position_oneside(nn, axis='AP-DV', highlight=None, booleanDictionary=No
     #         assert all([n in nn.neurons for j in range(len(highlight)) for n in highlight[j]]), "Neuron(s) not found in the network."
     #     else:
     #         raise ValueError("Highlight must be a list of strings or a list of lists.")
-            
+
     # for i,n in enumerate(nlabels):
     #     if n in ['CANL']:
     #         pos[i] = [510, 20, -1]
@@ -905,7 +1207,7 @@ def plot_position_oneside(nn, axis='AP-DV', highlight=None, booleanDictionary=No
     #         pos[i] = [490, 20, 1]
     #     else:
     #         for x in coords:
-    #             if x in nn.neurons[n].position: 
+    #             if x in nn.neurons[n].position:
     #                 pos[i].append(nn.neurons[n].position[x])
     #             else:
     #                 raise ValueError(f"Neuron {n} has no position in axis {x}.")
@@ -939,7 +1241,7 @@ def plot_position_oneside(nn, axis='AP-DV', highlight=None, booleanDictionary=No
     #     y = -posDict[yax[::-1]]
     # else:
     #     raise ValueError(f"Invalid axis: {yax}, use some combination of {coords}")
-    
+
     # x = np.array(x)
     # y = np.array(y)
 
@@ -969,7 +1271,7 @@ def plot_position_oneside(nn, axis='AP-DV', highlight=None, booleanDictionary=No
     # elif isinstance(highlight[0], list):
     #     buffer = 1.1
     #     f,ax = plt.subplots( dpi=300, layout='constrained',figsize=figsize) #figsize=(2,0.3), dpi=300, layout='constrained'
-    #     plt.axis('off') 
+    #     plt.axis('off')
     #     plt.xlim(min(x)*buffer,max(x)*buffer)
     #     plt.ylim(min(y)*buffer,max(y)*buffer)
     #     # ax.set_aspect('equal')
@@ -1012,7 +1314,6 @@ def plot_position_oneside(nn, axis='AP-DV', highlight=None, booleanDictionary=No
     #         plot_pie(n, (0,0), a, color_dict, alpha_dict, piesize=piesize)
     #     #     ax.pie([1/len(color_dict[n])]*len(color_dict[n]), center = (x[i], y[i]), colors=color_dict[n], radius = piesize, counterclock=False, wedgeprops={'alpha': alpha_dict[n], 'zorder': len(color_dict[n])})
 
-
     # #Add the legend to the plot
     # legend_ax = f.add_axes([0.95, 0.1, 0.1, 0.1])
     # # legend_ax.set_xlim(0, 1)
@@ -1030,16 +1331,34 @@ def plot_position_oneside(nn, axis='AP-DV', highlight=None, booleanDictionary=No
     #     plt.savefig(save)
     # plt.show()
 
-def plot_pie(n, center, ax, color_dict, alpha_dict, pie_division = None, piesize=1): 
+
+def plot_pie(n, center, ax, color_dict, alpha_dict, pie_division=None, piesize=1):
     # radius for pieplot size on a scatterplot
     if not pie_division:
-        pie_division = [1/len(color_dict[n])]*len(color_dict[n])
-    pie = ax.pie(pie_division, center = center, colors=color_dict[n], radius = piesize, counterclock=False, wedgeprops={'alpha': alpha_dict[n], 'zorder': len(color_dict[n])})
+        pie_division = [1 / len(color_dict[n])] * len(color_dict[n])
+    pie = ax.pie(
+        pie_division,
+        center=center,
+        colors=color_dict[n],
+        radius=piesize,
+        counterclock=False,
+        wedgeprops={"alpha": alpha_dict[n], "zorder": len(color_dict[n])},
+    )
     return pie
 
-def plot_pie_data(n, center, ax, color_dict, alpha_dict,
-                  pie_division=None, piesize=1.0,
-                  startangle=90.0, ccw=True, z=10):
+
+def plot_pie_data(
+    n,
+    center,
+    ax,
+    color_dict,
+    alpha_dict,
+    pie_division=None,
+    piesize=1.0,
+    startangle=90.0,
+    ccw=True,
+    z=10,
+):
     # fractions
     if pie_division is None or np.sum(pie_division) == 0:
         k = len(color_dict[n])
@@ -1060,35 +1379,47 @@ def plot_pie_data(n, center, ax, color_dict, alpha_dict,
 
     patches = []
     for ang1, ang2, col in zip(edges[:-1], edges[1:], colors):
-        w = Wedge(center, piesize, float(ang1), float(ang2),
-                  transform=ax.transData,
-                  facecolor=col, edgecolor='none',
-                  alpha=alpha_dict[n], zorder=z)
+        w = Wedge(
+            center,
+            piesize,
+            float(ang1),
+            float(ang2),
+            transform=ax.transData,
+            facecolor=col,
+            edgecolor="none",
+            alpha=alpha_dict[n],
+            zorder=z,
+        )
         ax.add_patch(w)
         patches.append(w)
     return patches
 
+
 class Annotation3D(Annotation):
-    '''Annotate the point xyz with text s'''
+    """Annotate the point xyz with text s"""
 
     def __init__(self, s, xyz, *args, **kwargs):
-        Annotation.__init__(self,s, xy=(0,0), *args, **kwargs)
+        Annotation.__init__(self, s, xy=(0, 0), *args, **kwargs)
         self._verts3d = xyz
 
     def draw(self, renderer):
         xs3d, ys3d, zs3d = self._verts3d
         xs, ys, zs = proj_transform(xs3d, ys3d, zs3d, self.axes.M)
-        self.xy=(xs,ys)
+        self.xy = (xs, ys)
         Annotation.draw(self, renderer)
 
+
 def annotate3D(ax, s, *args, **kwargs):
-    '''add anotation text s to to Axes3d ax'''
+    """add anotation text s to to Axes3d ax"""
 
     tag = Annotation3D(s, *args, **kwargs)
     ax.add_artist(tag)
     return tag
 
-def plot_position_3D(nn, highlight=None, booleanDictionary=None, title='', label=True, save=False):
+
+def plot_position_3D(
+    nn, highlight=None, booleanDictionary=None, title="", label=True, save=False
+):
     """
     A function to plot the positions of neurons based on their coordinates and attributes.
 
@@ -1103,7 +1434,7 @@ def plot_position_3D(nn, highlight=None, booleanDictionary=None, title='', label
     Returns:
         None
     """
-    coords = ['AP', 'DV', 'LR']
+    coords = ["AP", "DV", "LR"]
     if booleanDictionary is None:
         active_color, passive_color = "#CC5500", "lightgrey"
         booleanDictionary = {True: active_color, False: passive_color}
@@ -1112,23 +1443,25 @@ def plot_position_3D(nn, highlight=None, booleanDictionary=None, title='', label
     if highlight is None:
         highlight = []
     else:
-        assert all([n in nn.neurons for n in highlight]), "Neuron(s) not found in the network."
-            
-    for i,n in enumerate(nlabels):
-        if n in ['CANL']:
+        assert all(
+            [n in nn.neurons for n in highlight]
+        ), "Neuron(s) not found in the network."
+
+    for i, n in enumerate(nlabels):
+        if n in ["CANL"]:
             pos[i] = [510, 20, -1]
-        elif n in ['CANR']:
+        elif n in ["CANR"]:
             pos[i] = [490, 20, 1]
         else:
             for x in coords:
-                if x in nn.neurons[n].position: 
+                if x in nn.neurons[n].position:
                     pos[i].append(nn.neurons[n].position[x])
                 else:
                     raise ValueError(f"Neuron {n} has no position in axis {x}.")
     pos = np.array(pos)
     posDict = dict(zip(coords, pos.T))
-    posDict['LR'] = -posDict['LR'] # flipping LR for plotting in the correct direction
-    posDict['DV'] = -posDict['DV'] # flipping DV for plotting in the correct direction
+    posDict["LR"] = -posDict["LR"]  # flipping LR for plotting in the correct direction
+    posDict["DV"] = -posDict["DV"]  # flipping DV for plotting in the correct direction
     facecolors = np.array([booleanDictionary[n in highlight] for n in nlabels])
     alphas = np.array([1 if n in highlight else 0.25 for n in nlabels])
     boolList = np.array([n in highlight for n in nlabels])
@@ -1137,48 +1470,84 @@ def plot_position_3D(nn, highlight=None, booleanDictionary=None, title='', label
     x = np.array(posDict[xax])
     y = np.array(posDict[yax])
     z = np.array(posDict[zax])
-    
-    xscale =np.max(x)-np.min(x)
-    yscale =np.max(y)-np.min(y)
+
+    xscale = np.max(x) - np.min(x)
+    yscale = np.max(y) - np.min(y)
 
     # Create the figure and GridSpec
-    f = plt.figure(figsize=(xscale,yscale), layout='constrained')
+    f = plt.figure(figsize=(xscale, yscale), layout="constrained")
     gs = GridSpec(10, 10, figure=f)
 
     # Create the 3D subplots using GridSpec
-    ax = f.add_subplot(gs[:8,:], projection='3d')
-    ax.set_box_aspect(aspect = (10,2,1))
-    plt.axis('off') 
-    ax_leg = f.add_subplot(gs[8,8], projection='3d')
-    ax_leg.grid(visible=False, which='both', axis='both')
+    ax = f.add_subplot(gs[:8, :], projection="3d")
+    ax.set_box_aspect(aspect=(10, 2, 1))
+    plt.axis("off")
+    ax_leg = f.add_subplot(gs[8, 8], projection="3d")
+    ax_leg.grid(visible=False, which="both", axis="both")
     ax_leg.set_xticks([])
     ax_leg.set_yticks([])
     ax_leg.set_zticks([])
 
-    ax_leg.set_aspect('equal')
-    sc_bg = ax.scatter(x[~boolList], y[~boolList], z[~boolList], s=25, facecolor=facecolors[~boolList], edgecolor=facecolors[~boolList], alpha=alphas[~boolList], zorder=1)
-    sc_fg = ax.scatter(x[boolList], y[boolList], z[boolList], s=25, facecolor=facecolors[boolList], edgecolor=facecolors[boolList], alpha=alphas[boolList], zorder=2)
+    ax_leg.set_aspect("equal")
+    sc_bg = ax.scatter(
+        x[~boolList],
+        y[~boolList],
+        z[~boolList],
+        s=25,
+        facecolor=facecolors[~boolList],
+        edgecolor=facecolors[~boolList],
+        alpha=alphas[~boolList],
+        zorder=1,
+    )
+    sc_fg = ax.scatter(
+        x[boolList],
+        y[boolList],
+        z[boolList],
+        s=25,
+        facecolor=facecolors[boolList],
+        edgecolor=facecolors[boolList],
+        alpha=alphas[boolList],
+        zorder=2,
+    )
 
     arrowprops = dict(
-    arrowstyle="-",
-    #connectionstyle="angle,angleA=0,angleB=90,rad=10"
+        arrowstyle="-",
+        # connectionstyle="angle,angleA=0,angleB=90,rad=10"
     )
     annot_bg = {}
-    for i,n in enumerate(nlabels):
-        lr_sign = 1 if z[i]>0 else -1
+    for i, n in enumerate(nlabels):
+        lr_sign = 1 if z[i] > 0 else -1
         if n in highlight:
-            annotate3D(ax, s=n, xyz=(x[i], y[i], z[i]), fontsize=10, xytext=(np.random.uniform(-30,30),lr_sign*30),
-               textcoords='offset points', ha='right',va='bottom',arrowprops=arrowprops) 
+            annotate3D(
+                ax,
+                s=n,
+                xyz=(x[i], y[i], z[i]),
+                fontsize=10,
+                xytext=(np.random.uniform(-30, 30), lr_sign * 30),
+                textcoords="offset points",
+                ha="right",
+                va="bottom",
+                arrowprops=arrowprops,
+            )
         else:
-            annot_bg[i] = annotate3D(ax, s=n, xyz=(x[i], y[i], z[i]), fontsize=10, xytext=(np.random.uniform(-30,30),lr_sign*30),
-               textcoords='offset points', ha='right',va='bottom',arrowprops=arrowprops)
+            annot_bg[i] = annotate3D(
+                ax,
+                s=n,
+                xyz=(x[i], y[i], z[i]),
+                fontsize=10,
+                xytext=(np.random.uniform(-30, 30), lr_sign * 30),
+                textcoords="offset points",
+                ha="right",
+                va="bottom",
+                arrowprops=arrowprops,
+            )
             annot_bg[i].set_visible(False)
 
     ax_leg.set_xlabel(coords[0])
     ax_leg.set_ylabel(coords[1])
     ax_leg.set_zlabel(coords[2])
 
-    ax.set_xlim3d(np.min(x),np.max(x))
+    ax.set_xlim3d(np.min(x), np.max(x))
     ax.set_ylim3d(np.min(y), np.max(y))
     ax.set_zlim3d(np.min(z), np.max(z))
     ax.set_title(title, fontsize="xx-large")
@@ -1197,14 +1566,13 @@ def plot_position_3D(nn, highlight=None, booleanDictionary=None, title='', label
 
     #     #annot_bg.xy = pos_xy
     #     #print(ind["ind"])
-    #     #text = "{}, {}".format(" ".join(list(map(str,ind["ind"]))), 
+    #     #text = "{}, {}".format(" ".join(list(map(str,ind["ind"]))),
     #                         #" ".join([nlabels[n] for n in ind["ind"]]))
     #     #text = ", ".join([nlabels[n] for n in ind["ind"]]) #nlabels[n]
 
     #     #annot_bg.set_text(text)
     #     #annot_bg.get_bbox_patch().set_facecolor('lightgrey')
     #     #annot_bg.get_bbox_patch().set_alpha(0.4)
-    
 
     # def hover(event):
     #     #vis = annot_bg.get_visible()
@@ -1225,10 +1593,16 @@ def plot_position_3D(nn, highlight=None, booleanDictionary=None, title='', label
         plt.savefig(save)
     plt.show()
 
+
 ## For simulation module
-def plot_simulation_results(results, twinx=True, figsize=mm_to_inches((single_column/4, single_column/4)), xticks=None):
+def plot_simulation_results(
+    results,
+    twinx=True,
+    figsize=mm_to_inches((single_column / 4, single_column / 4)),
+    xticks=None,
+):
     rate_model, inputs, rates = results
-    f, ax = plt.subplots(figsize=figsize, layout='constrained')
+    f, ax = plt.subplots(figsize=figsize, layout="constrained")
     for node in rates:
         ax.plot(rate_model.time_points, rates[node], label=node.name, lw=2)
     # ax.set_ylim((-15,15))
@@ -1236,23 +1610,28 @@ def plot_simulation_results(results, twinx=True, figsize=mm_to_inches((single_co
     if twinx:
         ax2 = ax.twinx()
     else:
-        ax2=ax
+        ax2 = ax
     for inp in inputs:
-        ax2.plot(rate_model.time_points, [inp.process_input(t) for t in rate_model.time_points], ls='--', color='k')
-    ax2.axhline(y=0, ls='--', alpha=0.25, color='gray')
+        ax2.plot(
+            rate_model.time_points,
+            [inp.process_input(t) for t in rate_model.time_points],
+            ls="--",
+            color="k",
+        )
+    ax2.axhline(y=0, ls="--", alpha=0.25, color="gray")
     # ax2.set_ylim((-4,4))
     for inp in inputs:
         if isinstance(inp, simulator.StepInput):
-            ax2.axvline(x=inp.tstart, ls='--', color='gray', alpha=0.25)
-            ax2.axvline(x=inp.tend, ls='--', color='gray', alpha=0.25)
+            ax2.axvline(x=inp.tstart, ls="--", color="gray", alpha=0.25)
+            ax2.axvline(x=inp.tend, ls="--", color="gray", alpha=0.25)
     # ax.set_ylim((-1,1))
-    ax.set_xlabel('Time (s)', fontsize=font_size_mid)
-    ax.set_ylabel('Rate', fontsize=font_size_mid)
-    ax2.set_ylabel('Input', fontsize=font_size_mid)
+    ax.set_xlabel("Time (s)", fontsize=font_size_mid)
+    ax.set_ylabel("Rate", fontsize=font_size_mid)
+    ax2.set_ylabel("Input", fontsize=font_size_mid)
 
-    ax.tick_params(axis='both', which='major', labelsize=font_size_mid)
-    ax2.tick_params(axis='both', which='major', labelsize=font_size_mid)
-    if not xticks is None:
+    ax.tick_params(axis="both", which="major", labelsize=font_size_mid)
+    ax2.tick_params(axis="both", which="major", labelsize=font_size_mid)
+    if xticks is not None:
         ax.set_xticks(xticks[0], xticks[1])
     # ax.set_xticks([0,30,60,90])
     simpleaxis(ax)
@@ -1260,38 +1639,67 @@ def plot_simulation_results(results, twinx=True, figsize=mm_to_inches((single_co
     # f.legend(loc='outside upper center', ncol=1, frameon=False, fontsize=font_size_mid)
     return f
 
+
 def compare_simulation_results(results1, results2, twinx=True):
     rate_model, inputs, rates1 = results1
     _, _, rates2 = results2
-    f, ax = plt.subplots(figsize=(2.5, 2.5), layout='constrained')
-    colors = {node: plt.cm.viridis(i/len(rates1)) for i, node in enumerate(rates1)}
+    f, ax = plt.subplots(figsize=(2.5, 2.5), layout="constrained")
+    colors = {node: plt.cm.viridis(i / len(rates1)) for i, node in enumerate(rates1)}
     for node in rates1:
-        ax.plot(rate_model.time_points, rates1[node], label=node.label or node, lw=2, color=colors[node])
-        ax.plot(rate_model.time_points, rates2[node], label=node.label or node, lw=2, color=colors[node], ls='--')
+        ax.plot(
+            rate_model.time_points,
+            rates1[node],
+            label=node.label or node,
+            lw=2,
+            color=colors[node],
+        )
+        ax.plot(
+            rate_model.time_points,
+            rates2[node],
+            label=node.label or node,
+            lw=2,
+            color=colors[node],
+            ls="--",
+        )
     if twinx:
         ax2 = ax.twinx()
     else:
-        ax2=ax
+        ax2 = ax
     for inp in inputs:
-        ax2.plot(rate_model.time_points, [inp.process_input(t) for t in rate_model.time_points], ls='--', color='k')
-    ax2.axhline(y=0, ls='--', alpha=0.25, color='gray')
+        ax2.plot(
+            rate_model.time_points,
+            [inp.process_input(t) for t in rate_model.time_points],
+            ls="--",
+            color="k",
+        )
+    ax2.axhline(y=0, ls="--", alpha=0.25, color="gray")
     # ax2.set_ylim((-4,4))
     for inp in inputs:
         if isinstance(inp, simulator.StepInput):
-            ax2.axvline(x=inp.tstart, ls='--', color='gray', alpha=0.25)
-            ax2.axvline(x=inp.tend, ls='--', color='gray', alpha=0.25)
+            ax2.axvline(x=inp.tstart, ls="--", color="gray", alpha=0.25)
+            ax2.axvline(x=inp.tend, ls="--", color="gray", alpha=0.25)
     # ax.set_ylim((-1,1))
-    ax.set_xlabel('Time (s)')
-    ax.set_ylabel('Rate')
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Rate")
     # ax.set_xticks([0,30,60,90])
     simpleaxis(ax)
-    f.legend(loc='outside upper center', ncol=len(rates1), frameon=False)
+    f.legend(loc="outside upper center", ncol=len(rates1), frameon=False)
     return f
 
-def plot_ciona_anatomical(nn, view='2d', save=False, figsize=(8, 12), title='Ciona Anatomical View', font_size=8, alpha_conn=0.1):
+
+def plot_ciona_anatomical(
+    nn,
+    view="2d",
+    save=False,
+    figsize=(8, 12),
+    title="Ciona Anatomical View",
+    font_size=8,
+    alpha_conn=0.1,
+):
     """
     Generates an anatomical plot for the Ciona nervous system (2D or 3D).
     """
+
     def _normalize_position(position):
         if position is None:
             return None
@@ -1308,23 +1716,23 @@ def plot_ciona_anatomical(nn, view='2d', save=False, figsize=(8, 12), title='Cio
         return coords[:3]
 
     nlabels = list(nn.neurons.keys())
-    
+
     # Define colors based on annotation
     annot_colors = {
-        'Sensory': '#3498db',      # Blue
-        'Interneuron': '#e67e22',  # Orange
-        'Motor neuron': '#e74c3c', # Red
-        'Accessory': '#2ecc71',    # Green
-        'Unknown': '#95a5a6'       # Gray
+        "Sensory": "#3498db",  # Blue
+        "Interneuron": "#e67e22",  # Orange
+        "Motor neuron": "#e74c3c",  # Red
+        "Accessory": "#2ecc71",  # Green
+        "Unknown": "#95a5a6",  # Gray
     }
-    
+
     plotted_neurons = []
     for n in nlabels:
-        position = _normalize_position(getattr(nn.neurons[n], 'position', None))
+        position = _normalize_position(getattr(nn.neurons[n], "position", None))
         if position is None:
             continue
-        annot = getattr(nn.neurons[n], 'annotation', 'Unknown')
-        plotted_neurons.append((n, position, annot_colors.get(annot, '#95a5a6')))
+        annot = getattr(nn.neurons[n], "annotation", "Unknown")
+        plotted_neurons.append((n, position, annot_colors.get(annot, "#95a5a6")))
 
     if not plotted_neurons:
         raise ValueError("No neurons have anatomical coordinates to plot.")
@@ -1342,33 +1750,62 @@ def plot_ciona_anatomical(nn, view='2d', save=False, figsize=(8, 12), title='Cio
     colors = [color for _, _, color in plotted_neurons]
 
     fig = plt.figure(figsize=figsize)
-    if view == '3d':
-        ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(pos[:, 0], pos[:, 1], pos[:, 2], c=colors, s=50, edgecolors='k', alpha=0.8, zorder=2)
-        
+    if view == "3d":
+        ax = fig.add_subplot(111, projection="3d")
+        ax.scatter(
+            pos[:, 0],
+            pos[:, 1],
+            pos[:, 2],
+            c=colors,
+            s=50,
+            edgecolors="k",
+            alpha=0.8,
+            zorder=2,
+        )
+
         for (u, v, k), connection in nn.connections.items():
-            p1 = _normalize_position(getattr(u, 'position', None))
-            p2 = _normalize_position(getattr(v, 'position', None))
+            p1 = _normalize_position(getattr(u, "position", None))
+            p2 = _normalize_position(getattr(v, "position", None))
             if p1 is not None and p2 is not None:
-                ax.plot([p1[0], p2[0]], [p1[1], p2[1]], [p1[2], p2[2]], 
-                        color='gray', alpha=alpha_conn, lw=0.5, zorder=1)
-        
-        ax.set_zlabel('Z')
+                ax.plot(
+                    [p1[0], p2[0]],
+                    [p1[1], p2[1]],
+                    [p1[2], p2[2]],
+                    color="gray",
+                    alpha=alpha_conn,
+                    lw=0.5,
+                    zorder=1,
+                )
+
+        ax.set_zlabel("Z")
     else:
         ax = fig.add_subplot(111)
-        ax.scatter(pos[:, 0], pos[:, 1], c=colors, s=100, edgecolors='k', alpha=0.8, zorder=2)
-        
+        ax.scatter(
+            pos[:, 0], pos[:, 1], c=colors, s=100, edgecolors="k", alpha=0.8, zorder=2
+        )
+
         # Draw connections with arrows for 2D
         for (u, v, k), connection in nn.connections.items():
-            p1 = _normalize_position(getattr(u, 'position', None))
-            p2 = _normalize_position(getattr(v, 'position', None))
+            p1 = _normalize_position(getattr(u, "position", None))
+            p2 = _normalize_position(getattr(v, "position", None))
             if p1 is not None and p2 is not None:
                 # Use annotate for arrows
-                ax.annotate("", xy=(p2[0], p2[1]), xytext=(p1[0], p1[1]),
-                            arrowprops=dict(arrowstyle="->", color='gray', alpha=alpha_conn, lw=0.5, shrinkA=5, shrinkB=5),
-                            zorder=1)
+                ax.annotate(
+                    "",
+                    xy=(p2[0], p2[1]),
+                    xytext=(p1[0], p1[1]),
+                    arrowprops=dict(
+                        arrowstyle="->",
+                        color="gray",
+                        alpha=alpha_conn,
+                        lw=0.5,
+                        shrinkA=5,
+                        shrinkB=5,
+                    ),
+                    zorder=1,
+                )
 
-        ax.set_aspect('equal')
+        ax.set_aspect("equal")
         simpleaxis(ax)
 
     # Add labels (optional, can be cluttered)
@@ -1376,19 +1813,26 @@ def plot_ciona_anatomical(nn, view='2d', save=False, figsize=(8, 12), title='Cio
     #     if view == '3d':
     #         ax.text(pos[i, 0], pos[i, 1], pos[i, 2], label, fontsize=font_size-2, alpha=0.5)
     #     else:
-            # ax.annotate(label, (pos[i, 0], pos[i, 1]), fontsize=font_size, alpha=0.5)
-    
+    # ax.annotate(label, (pos[i, 0], pos[i, 1]), fontsize=font_size, alpha=0.5)
+
     ax.set_title(title)
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+
     # Add legend
     from matplotlib.lines import Line2D
-    legend_elements = [Line2D([0], [0], marker='o', color='w', label=k,
-                              markerfacecolor=v, markersize=10) for k, v in annot_colors.items()]
-    ax.legend(handles=legend_elements, loc='upper right', frameon=False, fontsize=font_size)
+
+    legend_elements = [
+        Line2D(
+            [0], [0], marker="o", color="w", label=k, markerfacecolor=v, markersize=10
+        )
+        for k, v in annot_colors.items()
+    ]
+    ax.legend(
+        handles=legend_elements, loc="upper right", frameon=False, fontsize=font_size
+    )
 
     if save:
-        plt.savefig(save, bbox_inches='tight', transparent=True)
-    
+        plt.savefig(save, bbox_inches="tight", transparent=True)
+
     return fig

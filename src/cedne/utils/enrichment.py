@@ -122,7 +122,9 @@ def group_attribute_enrichment(
         value,
         missing_policy,
     )
-    _validate_resolved_policy(resolved_mode, missing_policy, observed_values + reference_values)
+    _validate_resolved_policy(
+        resolved_mode, missing_policy, observed_values + reference_values
+    )
     missingness = _missingness_result(
         len(observed_members),
         observed_missing,
@@ -134,7 +136,9 @@ def group_attribute_enrichment(
         "element": "node" if isinstance(group, NeuronGroup) else "edge",
         "attribute": attribute,
         "mode": resolved_mode,
-        "attribute_type": resolved_mode if resolved_mode in {"numeric", "categorical"} else attribute_type,
+        "attribute_type": resolved_mode
+        if resolved_mode in {"numeric", "categorical"}
+        else attribute_type,
         "value": value,
         "missing_policy": missing_policy,
         "eligible_filter": eligible_filter or {},
@@ -183,7 +187,9 @@ def group_attribute_enrichment(
                 observed_values,
                 reference_values,
                 tested_value,
-                use_hypergeom=(reference_name == "network" and not direct_group_comparison),
+                use_hypergeom=(
+                    reference_name == "network" and not direct_group_comparison
+                ),
                 alternative=alternative,
             )
         ]
@@ -226,7 +232,9 @@ def _validate_options(
     if attribute_type not in {"auto", "categorical", "numeric"}:
         raise ValueError("attribute_type must be 'auto', 'categorical', or 'numeric'")
     if mode not in MODES:
-        raise ValueError("mode must be 'auto', 'numeric', 'categorical', 'set_membership', or 'binary'")
+        raise ValueError(
+            "mode must be 'auto', 'numeric', 'categorical', 'set_membership', or 'binary'"
+        )
     if mode == "set_membership" and value is None:
         raise ValueError("value is required when mode='set_membership'")
     if missing_policy not in MISSING_POLICIES:
@@ -234,7 +242,9 @@ def _validate_options(
             "missing_policy must be 'exclude_and_report', 'empty_is_absent', "
             "'missing_is_absent', or 'missing_is_unknown'"
         )
-    if null_model.lower() not in NETWORK_NULLS | COMPLEMENT_NULLS | EMPIRICAL_NULLS | {"group"}:
+    if null_model.lower() not in NETWORK_NULLS | COMPLEMENT_NULLS | EMPIRICAL_NULLS | {
+        "group"
+    }:
         raise ValueError(
             "null_model must be 'network', 'complement', 'size_matched', "
             "'shuffled', 'permutation', 'sample', or 'group'"
@@ -251,7 +261,11 @@ def _validate_resolved_policy(
     values: list[Any],
 ) -> None:
     if mode == "numeric":
-        if missing_policy in {"empty_is_absent", "missing_is_absent", "missing_is_unknown"}:
+        if missing_policy in {
+            "empty_is_absent",
+            "missing_is_absent",
+            "missing_is_unknown",
+        }:
             raise ValueError(
                 "Numeric enrichment requires missing_policy='exclude_and_report'"
             )
@@ -304,10 +318,15 @@ def _resolve_reference(
     universe = _network_members(group)
     if null_key in COMPLEMENT_NULLS:
         group_ids = {_member_identity(member) for member in _members(group)}
-        return [
-            member for member in universe
-            if _member_identity(member) not in group_ids
-        ], "complement", True
+        return (
+            [
+                member
+                for member in universe
+                if _member_identity(member) not in group_ids
+            ],
+            "complement",
+            True,
+        )
     return universe, "network", direct_group_comparison
 
 
@@ -317,7 +336,9 @@ def _member_identity(member: Neuron | Connection) -> str | tuple[str, str, Any]:
     return (member.pre.name, member.post.name, member.uid)
 
 
-def _records_with_attribute(members: Iterable[Neuron | Connection], attribute: str) -> list[Any]:
+def _records_with_attribute(
+    members: Iterable[Neuron | Connection], attribute: str
+) -> list[Any]:
     values = []
     for member in members:
         value = _get_attribute(member, attribute)
@@ -362,9 +383,12 @@ def _eligible_members(
     if not eligible_filter:
         return list(members)
     return [
-        member for member in members
-        if all(_matches_filter(_get_attribute(member, attr), expected)
-               for attr, expected in eligible_filter.items())
+        member
+        for member in members
+        if all(
+            _matches_filter(_get_attribute(member, attr), expected)
+            for attr, expected in eligible_filter.items()
+        )
     ]
 
 
@@ -496,7 +520,11 @@ def _missingness_result(
     observed_valid = observed_n - observed_missing
     reference_valid = reference_n - reference_missing
     table = [[observed_missing, observed_valid], [reference_missing, reference_valid]]
-    fisher = stats.fisher_exact(table, alternative="two-sided") if observed_n and reference_n else None
+    fisher = (
+        stats.fisher_exact(table, alternative="two-sided")
+        if observed_n and reference_n
+        else None
+    )
     observed_fraction = observed_missing / observed_n if observed_n else 0.0
     reference_fraction = reference_missing / reference_n if reference_n else 0.0
     return {
@@ -546,7 +574,9 @@ def _numeric_result(
         "statistic": "mean",
         "observed": observed_mean,
         "reference_mean": reference_mean,
-        "reference_std": float(np.std(reference, ddof=1)) if len(reference) > 1 else 0.0,
+        "reference_std": float(np.std(reference, ddof=1))
+        if len(reference) > 1
+        else 0.0,
         "delta": observed_mean - reference_mean,
         "fold_change": _safe_ratio(observed_mean, reference_mean),
         "observed_n": int(len(observed)),
@@ -569,16 +599,18 @@ def _numeric_result(
     p_greater = (np.count_nonzero(null_means >= observed_mean) + 1) / (n_resamples + 1)
     p_less = (np.count_nonzero(null_means <= observed_mean) + 1) / (n_resamples + 1)
     p_two = min(1.0, 2.0 * min(p_greater, p_less))
-    out.update({
-        "p_value": _select_p_value(p_two, p_greater, p_less, alternative),
-        "p_enrichment": float(p_greater),
-        "p_depletion": float(p_less),
-        "null_mean": float(np.mean(null_means)),
-        "null_ci95": [
-            float(np.percentile(null_means, 2.5)),
-            float(np.percentile(null_means, 97.5)),
-        ],
-    })
+    out.update(
+        {
+            "p_value": _select_p_value(p_two, p_greater, p_less, alternative),
+            "p_enrichment": float(p_greater),
+            "p_depletion": float(p_less),
+            "null_mean": float(np.mean(null_means)),
+            "null_ci95": [
+                float(np.percentile(null_means, 2.5)),
+                float(np.percentile(null_means, 97.5)),
+            ],
+        }
+    )
     return out
 
 
@@ -690,20 +722,24 @@ def _categorical_results(
 
         p_value = _select_p_value(p_two, p_enrichment, p_depletion, alternative)
         p_values.append(p_value)
-        rows.append({
-            "value": value,
-            "observed_count": int(k),
-            "observed_fraction": float(observed_fraction),
-            "reference_count": int(ref_k),
-            "reference_fraction": float(reference_fraction),
-            "fold_enrichment": _safe_ratio(observed_fraction, reference_fraction),
-            "log2_fold_enrichment": _safe_log2_ratio(observed_fraction, reference_fraction),
-            "odds_ratio": _finite_or_none(odds_ratio),
-            "p_value": float(p_value),
-            "p_enrichment": float(p_enrichment),
-            "p_depletion": float(p_depletion),
-            "direction": _direction(observed_fraction, reference_fraction),
-        })
+        rows.append(
+            {
+                "value": value,
+                "observed_count": int(k),
+                "observed_fraction": float(observed_fraction),
+                "reference_count": int(ref_k),
+                "reference_fraction": float(reference_fraction),
+                "fold_enrichment": _safe_ratio(observed_fraction, reference_fraction),
+                "log2_fold_enrichment": _safe_log2_ratio(
+                    observed_fraction, reference_fraction
+                ),
+                "odds_ratio": _finite_or_none(odds_ratio),
+                "p_value": float(p_value),
+                "p_enrichment": float(p_enrichment),
+                "p_depletion": float(p_depletion),
+                "direction": _direction(observed_fraction, reference_fraction),
+            }
+        )
 
     for row, q_value in zip(rows, _benjamini_hochberg(p_values)):
         row["q_value"] = q_value
@@ -716,7 +752,9 @@ def _categorical_values(value: Any) -> set[Any]:
     return {value}
 
 
-def _select_p_value(p_two: float, p_greater: float, p_less: float, alternative: str) -> float:
+def _select_p_value(
+    p_two: float, p_greater: float, p_less: float, alternative: str
+) -> float:
     if alternative == "greater":
         return float(p_greater)
     if alternative == "less":

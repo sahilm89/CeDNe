@@ -13,10 +13,12 @@ from .source import (
     Citable,
 )
 
+
 class Animal(Citable):
-    ''' This is a full animal class'''
-    def __init__(self, species = '', name='', stage='', sex='', genotype='', **kwargs):
-        ''' Initializes an Organism class'''
+    """This is a full animal class"""
+
+    def __init__(self, species="", name="", stage="", sex="", genotype="", **kwargs):
+        """Initializes an Organism class"""
         Citable.__init__(self)  # provides self.citations = {}
         # Every CeDNe Animal carries a self-citation for the CeDNe software so
         # that downstream consumers (notebooks, web UI references panel,
@@ -38,25 +40,24 @@ class Animal(Citable):
         for key, value in kwargs.items():
             self.set_property(key, value)
 
-
-    def save(self, file_path, file_format='cedne'):
+    def save(self, file_path, file_format="cedne"):
         """
         Saves the Organism object to a pickle file at the specified file path.
 
         Args:
             file_path (str): The path to the pickle file.
         """
-        if file_format == 'cedne':
+        if file_format == "cedne":
             output_path = Path(file_path)
             if not output_path.suffix:
-                output_path = output_path.with_suffix('.cedne')
-            with open(output_path, 'wb') as pickle_file:
+                output_path = output_path.with_suffix(".cedne")
+            with open(output_path, "wb") as pickle_file:
                 pickle.dump(self, pickle_file, protocol=pickle.HIGHEST_PROTOCOL)
-        elif file_format == 'full':
+        elif file_format == "full":
             pass
         else:
             raise NotImplementedError("Only pickle format is supported.")
-    
+
     def set_property(self, key, value):
         """
         Set a property of the organism.
@@ -66,7 +67,7 @@ class Animal(Citable):
             value: The value of the property.
         """
         setattr(self, key, value)
-    
+
     def add_context(self, name, data=None):
         """
         Adds a context to the organism.
@@ -86,11 +87,11 @@ class Animal(Citable):
         """
         if name not in self.contexts:
             raise ValueError(f"Context '{name}' not found.")
-        
+
         # Clear active_context if it's the one being removed
         if self.active_context == name:
             self.active_context = None
-            
+
         del self.contexts[name]
 
     def get_context(self, name):
@@ -108,7 +109,7 @@ class Animal(Citable):
     def set_active_context(self, name):
         """
         Set the active context by name.
-        
+
         Args:
             name (str): The name of the context to set as active.
         """
@@ -120,9 +121,13 @@ class Animal(Citable):
         """Clear the active context."""
         self.active_context = None
 
+
 class Worm(Animal):
-    ''' This is an explicit Worm class, a container for network(s).'''
-    def __init__(self, name='', stage='Day-1 Adult', sex='Hermaphrodite', genotype='N2', **kwargs) -> None:
+    """This is an explicit Worm class, a container for network(s)."""
+
+    def __init__(
+        self, name="", stage="Day-1 Adult", sex="Hermaphrodite", genotype="N2", **kwargs
+    ) -> None:
         """
         Initializes a Worm object.
 
@@ -140,12 +145,28 @@ class Worm(Animal):
             None
         """
         if not name:
-            name = 'Worm-' + generate_random_string()
-        super().__init__(species='Caenorhabditis elegans', name=name, stage=stage, sex=sex, genotype=genotype, **kwargs)
+            name = "Worm-" + generate_random_string()
+        super().__init__(
+            species="Caenorhabditis elegans",
+            name=name,
+            stage=stage,
+            sex=sex,
+            genotype=genotype,
+            **kwargs,
+        )
+
 
 class Fly(Animal):
-    ''' This is an explicit Fly class, a container for network(s).'''
-    def __init__(self, name='', stage='Day-7 Adult', sex='Female', genotype='w1118 x Canton-S G1', **kwargs) -> None:
+    """This is an explicit Fly class, a container for network(s)."""
+
+    def __init__(
+        self,
+        name="",
+        stage="Day-7 Adult",
+        sex="Female",
+        genotype="w1118 x Canton-S G1",
+        **kwargs,
+    ) -> None:
         """
         Initializes a Fly object.
 
@@ -163,8 +184,14 @@ class Fly(Animal):
             None
         """
         if not name:
-            name = 'Fly-' + generate_random_string()
-        super().__init__(species='Drosophila melanogaster', name=name, stage=stage, sex=sex, genotype=genotype)
+            name = "Fly-" + generate_random_string()
+        super().__init__(
+            species="Drosophila melanogaster",
+            name=name,
+            stage=stage,
+            sex=sex,
+            genotype=genotype,
+        )
 
 
 def load_worm(file_path):
@@ -178,7 +205,7 @@ def load_worm(file_path):
         Worm: The loaded Worm object.
     """
     try:
-        with open(file_path, 'rb') as pickle_file:
+        with open(file_path, "rb") as pickle_file:
             # return pickle.load(pickle_file)
             return load_pickle(pickle_file)
     except Exception as exc:

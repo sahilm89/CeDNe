@@ -10,7 +10,7 @@ It includes:
 - `NeuronGroup`: A container for managing sets of neurons with shared structure,
   metadata, or functional properties.
 
-Neurons are stored within a `NervousSystem` graph, and may maintain their own 
+Neurons are stored within a `NervousSystem` graph, and may maintain their own
 set of incoming and outgoing `Connection` objects. Each neuron can host multiple
 `Trial` objects, representing experimental recordings under different conditions.
 """
@@ -21,12 +21,9 @@ __license__ = "MIT"
 
 import math
 import networkx as nx
-import copy
 from .io import generate_random_string
-from typing import Optional, List, Dict, Any, Union, TYPE_CHECKING
-from dataclasses import dataclass, field
+from typing import List, Dict, Any, TYPE_CHECKING
 import numpy as np
-from .config import F_SAMPLE
 from .recordings import Trial
 from .connection import Path
 from .source import Citable, serialize_citations
@@ -42,7 +39,7 @@ merged neuron disagree on that attribute. Analyses that switch on those
 attributes should branch on this value explicitly rather than silently
 treating a merged neuron as its first constituent's value.
 """
-MERGED_TYPE = 'merged'
+MERGED_TYPE = "merged"
 
 # Enum-like attributes whose merge follows the "all-same → keep / mixed
 # → 'merged'" policy in ``NervousSystem.contract_neurons``. Adding an
@@ -57,33 +54,34 @@ MERGED_TYPE = 'merged'
 # bounded categorical labels. Numeric properties (degree, length,
 # transcript counts) need their own aggregation policy and are not
 # covered here.
-MERGE_TRACK_ATTRS = ('type', 'category', 'modality')
+MERGE_TRACK_ATTRS = ("type", "category", "modality")
 
 
 class Cell:
-    '''
+    """
     Models a biological cell.
-    '''
+    """
+
     def __init__(self, name, network, **kwargs):
         """
         Initializes a new instance of the Cell class.
 
         Args:
-            name (str): 
+            name (str):
                 The name of the neuron.
-            network (NeuronalNetwork): 
+            network (NeuronalNetwork):
                 The neuronal network to which the neuron belongs.
-            type (str, optional): 
+            type (str, optional):
                 The type of the neuron. Defaults to ''.
-            category (str, optional): 
+            category (str, optional):
                 The category of the neuron. Defaults to ''.
-            modality (str, optional): 
+            modality (str, optional):
                 The modality of the neuron. Defaults to ''.
-            position (dict, optional): 
+            position (dict, optional):
                 The position of the neuron. Defaults to None.
-            presynapses (list, optional): 
+            presynapses (list, optional):
                 The list of presynaptic components. Defaults to None.
-            postsynapses (dict, optional): 
+            postsynapses (dict, optional):
                 The dictionary of postsynaptic components. Defaults to None.
         """
         if not isinstance(name, str):
@@ -103,25 +101,41 @@ class Cell:
 
         for key, value in kwargs.items():
             setattr(self, key, value)
-        
+
         self.in_connections = {}
         self.out_connections = {}
-        
-        self.network.add_node(self, **kwargs)#type=self.type, category=self.category, modality=self.modality)
-    
+
+        self.network.add_node(
+            self, **kwargs
+        )  # type=self.type, category=self.category, modality=self.modality)
+
+
 class Neuron(Cell, Citable):
-    ''' Models a biological neuron'''
+    """Models a biological neuron"""
 
     # Attributes excluded from automatic scalar introspection in to_dict()
-    _SERIALIZE_SKIP = frozenset({
-        'name', 'network', 'in_connections', 'out_connections',
-        'trial', 'features', 'spatial_mask', '_data', 'loadings',
-        'position', 'transcript', 'group_id', 'citations',
-        # `constituents` is a dict (not a numeric scalar) — handled
-        # explicitly in to_dict() via the merged-neuron block.
-        'constituents',
-    })
-    def __init__(self, name: str, network: 'NervousSystem', **kwargs):
+    _SERIALIZE_SKIP = frozenset(
+        {
+            "name",
+            "network",
+            "in_connections",
+            "out_connections",
+            "trial",
+            "features",
+            "spatial_mask",
+            "_data",
+            "loadings",
+            "position",
+            "transcript",
+            "group_id",
+            "citations",
+            # `constituents` is a dict (not a numeric scalar) — handled
+            # explicitly in to_dict() via the merged-neuron block.
+            "constituents",
+        }
+    )
+
+    def __init__(self, name: str, network: "NervousSystem", **kwargs):
         """
         Initializes a new instance of the Neuron class.
 
@@ -163,21 +177,32 @@ class Neuron(Cell, Citable):
 
         # self.in_connections = {}
         # self.out_connections = {}
-        
+
         # self.network.add_node(self, type=self.type, category=self.category, modality=self.modality)
-        self.trial = kwargs.pop('trial', {})
-        self.features = kwargs.pop('features', {0: 'Ca_max', 1: 'Ca_area', 2: 'Ca_avg',
-                         3: 'Ca_time_to_peak', 4: 'Ca_area_to_peak',
-                         5: 'Ca_min', 6: 'Ca_onset', 7: 'positive_area', 8: 'positive_time'})
-        
+        self.trial = kwargs.pop("trial", {})
+        self.features = kwargs.pop(
+            "features",
+            {
+                0: "Ca_max",
+                1: "Ca_area",
+                2: "Ca_avg",
+                3: "Ca_time_to_peak",
+                4: "Ca_area_to_peak",
+                5: "Ca_min",
+                6: "Ca_onset",
+                7: "positive_area",
+                8: "positive_time",
+            },
+        )
+
         # Loadings from dimensionality reduction (SVD/PCA/NMF)
         # e.g. {"SVD_PC1": 0.45, "SVD_PC2": -0.12, "SVD_PC3": 0.03}
-        self.loadings = kwargs.pop('loadings', {})
-        
+        self.loadings = kwargs.pop("loadings", {})
+
         # self.presynapse = presynapse or []
         # self.postsynapse = postsynapse or {}
-        self.spatial_mask = kwargs.pop('spatial_mask', None)
-        #self.cable_length = kwargs.pop('cable_length', 1)
+        self.spatial_mask = kwargs.pop("spatial_mask", None)
+        # self.cable_length = kwargs.pop('cable_length', 1)
 
     @property
     def is_merged(self) -> bool:
@@ -187,7 +212,7 @@ class Neuron(Cell, Citable):
         Set by ``NervousSystem.contract_neurons``; round-trips through
         graph cloning via the networkx node attribute mirror.
         """
-        return bool(getattr(self, 'constituents', None))
+        return bool(getattr(self, "constituents", None))
 
     def _constituent_values(self, attr):
         """Sorted list of distinct, non-empty string values of `attr`
@@ -200,7 +225,7 @@ class Neuron(Cell, Citable):
         only carry meaningful information when they're string labels,
         and mixed-type sets break ``sorted`` on Python 3 anyway.
         """
-        if not getattr(self, 'constituents', None):
+        if not getattr(self, "constituents", None):
             return []
         values = set()
         for meta in self.constituents.values():
@@ -218,7 +243,7 @@ class Neuron(Cell, Citable):
         updates this list — no parallel field to keep in sync.
         Returns ``[]`` for un-merged neurons.
         """
-        return self._constituent_values('type')
+        return self._constituent_values("type")
 
     @property
     def constituent_categories(self):
@@ -226,7 +251,7 @@ class Neuron(Cell, Citable):
         neuron's constituents. ``[]`` for un-merged neurons or for
         merged neurons whose constituents had no category set.
         """
-        return self._constituent_values('category')
+        return self._constituent_values("category")
 
     @property
     def constituent_modalities(self):
@@ -234,7 +259,7 @@ class Neuron(Cell, Citable):
         neuron's constituents. ``[]`` for un-merged neurons or for
         merged neurons whose constituents had no modality set.
         """
-        return self._constituent_values('modality')
+        return self._constituent_values("modality")
 
     def _parent_citables(self):
         """Walk citations up through containing NeuronGroups and the NervousSystem."""
@@ -242,7 +267,10 @@ class Neuron(Cell, Citable):
         if self.network is not None:
             for group in self.network.groups.values():
                 # O(1) membership via the name->Neuron dict each NeuronGroup maintains
-                if isinstance(group, NeuronGroup) and group.neurons.get(self.name) is self:
+                if (
+                    isinstance(group, NeuronGroup)
+                    and group.neurons.get(self.name) is self
+                ):
                     parents.append(group)
             parents.append(self.network)
         return parents
@@ -260,36 +288,39 @@ class Neuron(Cell, Citable):
         """
         d: Dict[str, Any] = {
             "id": self.name,
-            "type": getattr(self, 'type', 'Unknown'),
-            "group_id": getattr(self, 'group_id', 0),
+            "type": getattr(self, "type", "Unknown"),
+            "group_id": getattr(self, "group_id", 0),
             "degree": len(self.in_connections) + len(self.out_connections),
             "has_recordings": bool(self.trial),
         }
 
         # Position — serialize as-is (no LR string normalization)
-        if hasattr(self, 'position') and self.position:
+        if hasattr(self, "position") and self.position:
             if isinstance(self.position, dict):
-                d['position'] = dict(self.position)
+                d["position"] = dict(self.position)
 
         # Numeric scalar attributes (dynamic introspection)
         scalars: Dict[str, Any] = {}
         for attr in vars(self):
-            if attr.startswith('_') or attr in self._SERIALIZE_SKIP:
+            if attr.startswith("_") or attr in self._SERIALIZE_SKIP:
                 continue
             try:
                 val = getattr(self, attr)
                 if isinstance(val, (int, float)) and math.isfinite(val):
                     scalars[attr] = val
-                elif (isinstance(val, (list, tuple)) and val
-                      and all(isinstance(v, (int, float)) for v in val)):
+                elif (
+                    isinstance(val, (list, tuple))
+                    and val
+                    and all(isinstance(v, (int, float)) for v in val)
+                ):
                     scalars[attr] = list(val)
             except Exception:
                 pass
         if scalars:
-            d['scalars'] = scalars
+            d["scalars"] = scalars
 
         # Loadings from dimensionality reduction
-        if hasattr(self, 'loadings') and self.loadings:
+        if hasattr(self, "loadings") and self.loadings:
             clean_loadings: Dict[str, float] = {}
             for k, v in self.loadings.items():
                 try:
@@ -299,32 +330,32 @@ class Neuron(Cell, Citable):
                 except (ValueError, TypeError):
                     pass
             if clean_loadings:
-                d['loadings'] = clean_loadings
+                d["loadings"] = clean_loadings
 
         # Citations attached directly to this neuron (not the inherited chain)
-        if hasattr(self, 'citations') and self.citations:
-            d['citations'] = serialize_citations(self.citations)
+        if hasattr(self, "citations") and self.citations:
+            d["citations"] = serialize_citations(self.citations)
 
         # Merge provenance — `is_merged` is only emitted when actually
         # merged so un-merged neurons stay payload-slim. Each
         # constituent snapshot includes every MERGE_TRACK_ATTRS value
         # captured at merge time.
         if self.is_merged:
-            d['is_merged'] = True
-            d['constituents'] = [
+            d["is_merged"] = True
+            d["constituents"] = [
                 {
-                    'name': meta.get('name', name),
-                    **{a: meta.get(a, '') for a in MERGE_TRACK_ATTRS},
+                    "name": meta.get("name", name),
+                    **{a: meta.get(a, "") for a in MERGE_TRACK_ATTRS},
                 }
                 for name, meta in self.constituents.items()
             ]
-            d['constituent_types'] = self.constituent_types
+            d["constituent_types"] = self.constituent_types
             cats = self.constituent_categories
             if cats:
-                d['constituent_categories'] = cats
+                d["constituent_categories"] = cats
             mods = self.constituent_modalities
             if mods:
-                d['constituent_modalities'] = mods
+                d["constituent_modalities"] = mods
 
         return d
 
@@ -370,7 +401,7 @@ class Neuron(Cell, Citable):
 
         self.trial[trial_num] = Trial(self, trial_num)
         # B4: Sync to node attributes so **data works in subnetwork/copy
-        nx.set_node_attributes(self.network, {self: {'trial': self.trial}})
+        nx.set_node_attributes(self.network, {self: {"trial": self.trial}})
         return self.trial[trial_num]
 
     def load_recording(self, data, trial_num=0, sampling_rate=None, metadata=None):
@@ -394,7 +425,7 @@ class Neuron(Cell, Citable):
         trial = self.add_trial(trial_num)
         trial.recording = np.asarray(data)
         if sampling_rate is not None:
-            trial.metadata['sampling_rate'] = float(sampling_rate)
+            trial.metadata["sampling_rate"] = float(sampling_rate)
         if metadata:
             trial.metadata.update(metadata)
         return trial
@@ -405,85 +436,123 @@ class Neuron(Cell, Citable):
         """
         del self.trial[trial_num]
 
-    def get_connections(self, paired_neuron=None, direction='both', connection_type='all'):
+    def get_connections(
+        self, paired_neuron=None, direction="both", connection_type="all"
+    ):
         """
         Returns all connections that the neuron is involved in.
 
         :return: A list of connections where the neuron is present.
         :rtype: list
         """
-        if connection_type == 'all':
+        if connection_type == "all":
             if paired_neuron is None:
-                if direction == 'both':
+                if direction == "both":
                     return self.in_connections | self.out_connections
-                    #return [edge for edge in self.network.edges if self in edge]
-                if direction == 'in':
+                    # return [edge for edge in self.network.edges if self in edge]
+                if direction == "in":
                     return self.in_connections
-                if direction == 'out':
+                if direction == "out":
                     return self.out_connections
                 raise ValueError('Direction must be either "both", "in", or "out"')
 
             if paired_neuron is not None:
-                if direction == 'both':
+                if direction == "both":
                     return self.outgoing(paired_neuron) | self.incoming(paired_neuron)
-                if direction == 'in':
+                if direction == "in":
                     return self.incoming(paired_neuron)
-                if direction == 'out':
+                if direction == "out":
                     return self.outgoing(paired_neuron)
                 raise ValueError('Direction must be either "both", "in", or "out"')
         else:
             if paired_neuron is None:
-                if direction == 'both':
-                    return {key:value for key, value in self.in_connections.items() if value.connection_type == connection_type} | {key:value for key, value in self.out_connections.items() if value.connection_type == connection_type}
-                    #return [edge for edge in self.network.edges if self in edge]
-                if direction == 'in':
-                    return {key:value for key, value in self.in_connections.items() if value.connection_type == connection_type}
-                if direction == 'out':
-                    return {key:value for key, value in self.out_connections.items() if value.connection_type == connection_type}
+                if direction == "both":
+                    return {
+                        key: value
+                        for key, value in self.in_connections.items()
+                        if value.connection_type == connection_type
+                    } | {
+                        key: value
+                        for key, value in self.out_connections.items()
+                        if value.connection_type == connection_type
+                    }
+                    # return [edge for edge in self.network.edges if self in edge]
+                if direction == "in":
+                    return {
+                        key: value
+                        for key, value in self.in_connections.items()
+                        if value.connection_type == connection_type
+                    }
+                if direction == "out":
+                    return {
+                        key: value
+                        for key, value in self.out_connections.items()
+                        if value.connection_type == connection_type
+                    }
                 raise ValueError('Direction must be either "both", "in", or "out"')
 
             if paired_neuron is not None:
-                if direction == 'both':
-                    return {key:value for key, value in self.outgoing(paired_neuron) if value.connection_type == connection_type} | {key:value for key, value in self.incoming(paired_neuron) if value.connection_type == connection_type}
-                if direction == 'in':
-                    return {key:value for key, value in self.incoming(paired_neuron) if value.connection_type == connection_type}
-                if direction == 'out':
-                    return {key:value for key, value in self.outgoing(paired_neuron) if value.connection_type == connection_type}
+                if direction == "both":
+                    return {
+                        key: value
+                        for key, value in self.outgoing(paired_neuron)
+                        if value.connection_type == connection_type
+                    } | {
+                        key: value
+                        for key, value in self.incoming(paired_neuron)
+                        if value.connection_type == connection_type
+                    }
+                if direction == "in":
+                    return {
+                        key: value
+                        for key, value in self.incoming(paired_neuron)
+                        if value.connection_type == connection_type
+                    }
+                if direction == "out":
+                    return {
+                        key: value
+                        for key, value in self.outgoing(paired_neuron)
+                        if value.connection_type == connection_type
+                    }
                 raise ValueError('Direction must be either "both", "in", or "out"')
 
-
-    def get_connected_neurons(self, direction='both', weight_filter = 1, connection_type='all'):
-        """ Returns all connected neurons for this neuron. """
-        if connection_type == 'all':
-            if direction == 'both':
+    def get_connected_neurons(
+        self, direction="both", weight_filter=1, connection_type="all"
+    ):
+        """Returns all connected neurons for this neuron."""
+        if connection_type == "all":
+            if direction == "both":
                 conns = self.in_connections | self.out_connections
-            elif direction == 'in':
+            elif direction == "in":
                 conns = self.in_connections
-            elif direction == 'out':
-                conns =  self.out_connections
+            elif direction == "out":
+                conns = self.out_connections
             else:
                 raise ValueError('Direction must be either "both", "in", or "out"')
             all_conns = []
             for c, conn in conns.items():
-                if conn.weight>weight_filter:
-                    all_conns+= [c[0]]
-                    all_conns+= [c[1]]
+                if conn.weight > weight_filter:
+                    all_conns += [c[0]]
+                    all_conns += [c[1]]
             all_conns = set(all_conns)
             return all_conns
         else:
-            if direction == 'both':
+            if direction == "both":
                 conns = self.in_connections | self.out_connections
-            elif direction == 'in':
+            elif direction == "in":
                 conns = self.in_connections
-            elif direction == 'out':
-                conns =  self.out_connections
+            elif direction == "out":
+                conns = self.out_connections
             else:
                 raise ValueError('Direction must be either "both", "in", or "out"')
             all_conns = []
             for c, conn in conns.items():
-                if conn.weight>weight_filter and conn.connection_type == connection_type:
-                    all_conns+= [c[0]]
-                    all_conns+= [c[1]]
+                if (
+                    conn.weight > weight_filter
+                    and conn.connection_type == connection_type
+                ):
+                    all_conns += [c[0]]
+                    all_conns += [c[1]]
             all_conns = set(all_conns)
             return all_conns
 
@@ -491,8 +560,14 @@ class Neuron(Cell, Citable):
         """
         Updates the `in_connections` and `out_connections` dictionaries of the current object.
         """
-        self.in_connections = {_id: self.network.connections[_id] for _id in self.network.in_edges(self, keys=True)}
-        self.out_connections = {_id: self.network.connections[_id] for _id in self.network.out_edges(self, keys=True)}
+        self.in_connections = {
+            _id: self.network.connections[_id]
+            for _id in self.network.in_edges(self, keys=True)
+        }
+        self.out_connections = {
+            _id: self.network.connections[_id]
+            for _id in self.network.out_edges(self, keys=True)
+        }
 
     def outgoing(self, paired_neuron=None):
         """
@@ -504,8 +579,12 @@ class Neuron(Cell, Citable):
         if paired_neuron is None:
             return self.out_connections
         if isinstance(paired_neuron, Neuron):
-            return {edge:conn for edge,conn in self.out_connections.items() if edge[0] == self and edge[1] == paired_neuron}
-        raise TypeError('paired_neuron must be a Neuron object')
+            return {
+                edge: conn
+                for edge, conn in self.out_connections.items()
+                if edge[0] == self and edge[1] == paired_neuron
+            }
+        raise TypeError("paired_neuron must be a Neuron object")
 
     def incoming(self, paired_neuron=None):
         """
@@ -514,8 +593,12 @@ class Neuron(Cell, Citable):
         if paired_neuron is None:
             return self.in_connections
         if isinstance(paired_neuron, Neuron):
-            return {edge:conn for edge,conn in self.in_connections.items() if edge[1] == self and edge[0] == paired_neuron}
-        raise TypeError('paired_neuron must be a Neuron object')
+            return {
+                edge: conn
+                for edge, conn in self.in_connections.items()
+                if edge[1] == self and edge[0] == paired_neuron
+            }
+        raise TypeError("paired_neuron must be a Neuron object")
 
     def set_property(self, property_name, property_value):
         """
@@ -529,11 +612,11 @@ class Neuron(Cell, Citable):
         nx.set_node_attributes(self.network, {self: {property_name: property_value}})
 
     def get_property(self, key):
-        ''' Gets an attribute for the class'''
+        """Gets an attribute for the class"""
         return getattr(self, key)
 
     def connects_to(self, other):
-        ''' Checks if this neuron connects to another neuron '''
+        """Checks if this neuron connects to another neuron"""
         for o in self.out_connections:
             if o[1] == other:
                 return True
@@ -543,36 +626,113 @@ class Neuron(Cell, Citable):
         return False
 
     def paths_to(self, target, path_length=1):
-        ''' 
+        """
         Returns all paths as a list of connections from this neuron to the target neuron
-        '''
-        path_list = [self.network.groups[group] for group in self.network.groups if group.startswith(f'Path_{self.name}_{target.name}_length_{path_length}')]
+        """
+        path_list = [
+            self.network.groups[group]
+            for group in self.network.groups
+            if group.startswith(f"Path_{self.name}_{target.name}_length_{path_length}")
+        ]
         paths = nx.all_simple_edge_paths(self.network, self, target, cutoff=path_length)
-        connection_paths = [[self.network.connections[edge] for edge in path] for path in paths]
+        connection_paths = [
+            [self.network.connections[edge] for edge in path] for path in paths
+        ]
         if len(path_list) == len(connection_paths):
             return path_list
         else:
-            return [Path(self.network, path, f'Path_{self.name}_{target.name}_length_{path_length}_{j}') for j,path in enumerate(connection_paths)] 
-    
-    def all_paths(self, path_length=1, direction='both'):
-        '''
+            return [
+                Path(
+                    self.network,
+                    path,
+                    f"Path_{self.name}_{target.name}_length_{path_length}_{j}",
+                )
+                for j, path in enumerate(connection_paths)
+            ]
+
+    def all_paths(self, path_length=1, direction="both"):
+        """
         Returns all paths as a list of connections from this neuron to all other neurons in the network
-        '''
-        if direction == 'out':
-            out_paths = [nx.all_simple_edge_paths(self.network, self, self.network.neurons[n], cutoff=path_length) for n in self.network.neurons]
-            connection_paths = [[[self.network.connections[edge] for edge in path] for path in paths] for paths in out_paths]
-            return [Path(self.network, path, f'Path_{self.name}_out_length_{path_length}_{j}_{k}')  for k, paths in enumerate(connection_paths) for j,path in enumerate(paths)]
-        elif direction == 'in':
-            in_paths = [nx.all_simple_edge_paths(self.network, self.network.neurons[n], self, cutoff=path_length) for n in self.network.neurons]
-            connection_paths = [[[self.network.connections[edge] for edge in path] for path in paths] for paths in in_paths]
-            return [Path(self.network, path, f'Path_{self.name}_in_length_{path_length}_{j}_{k}') for k, paths in enumerate(connection_paths) for j,path in enumerate(paths)]
-        elif direction=='both':
-            in_paths = [nx.all_simple_edge_paths(self.network, self.network.neurons[n], self, cutoff=path_length) for n in self.network.neurons]
-            out_paths = [nx.all_simple_edge_paths(self.network, self, self.network.neurons[n], cutoff=path_length) for n in self.network.neurons]
-            connection_paths_out = [[[self.network.connections[edge] for edge in path] for path in paths] for paths in out_paths] 
-            connection_paths_in = [[[self.network.connections[edge] for edge in path] for path in paths] for paths in in_paths]
-            return [Path(self.network, path, f'Path_{self.name}_out_length_{path_length}_{j}_{k}')  for k, paths in enumerate(connection_paths_out) for j,path in enumerate(paths)] + [Path(self.network, path, f'Path_{self.name}_in_length_{path_length}_{j}_{k}') for k, paths in enumerate(connection_paths_in) for j,path in enumerate(paths)]
-    
+        """
+        if direction == "out":
+            out_paths = [
+                nx.all_simple_edge_paths(
+                    self.network, self, self.network.neurons[n], cutoff=path_length
+                )
+                for n in self.network.neurons
+            ]
+            connection_paths = [
+                [[self.network.connections[edge] for edge in path] for path in paths]
+                for paths in out_paths
+            ]
+            return [
+                Path(
+                    self.network,
+                    path,
+                    f"Path_{self.name}_out_length_{path_length}_{j}_{k}",
+                )
+                for k, paths in enumerate(connection_paths)
+                for j, path in enumerate(paths)
+            ]
+        elif direction == "in":
+            in_paths = [
+                nx.all_simple_edge_paths(
+                    self.network, self.network.neurons[n], self, cutoff=path_length
+                )
+                for n in self.network.neurons
+            ]
+            connection_paths = [
+                [[self.network.connections[edge] for edge in path] for path in paths]
+                for paths in in_paths
+            ]
+            return [
+                Path(
+                    self.network,
+                    path,
+                    f"Path_{self.name}_in_length_{path_length}_{j}_{k}",
+                )
+                for k, paths in enumerate(connection_paths)
+                for j, path in enumerate(paths)
+            ]
+        elif direction == "both":
+            in_paths = [
+                nx.all_simple_edge_paths(
+                    self.network, self.network.neurons[n], self, cutoff=path_length
+                )
+                for n in self.network.neurons
+            ]
+            out_paths = [
+                nx.all_simple_edge_paths(
+                    self.network, self, self.network.neurons[n], cutoff=path_length
+                )
+                for n in self.network.neurons
+            ]
+            connection_paths_out = [
+                [[self.network.connections[edge] for edge in path] for path in paths]
+                for paths in out_paths
+            ]
+            connection_paths_in = [
+                [[self.network.connections[edge] for edge in path] for path in paths]
+                for paths in in_paths
+            ]
+            return [
+                Path(
+                    self.network,
+                    path,
+                    f"Path_{self.name}_out_length_{path_length}_{j}_{k}",
+                )
+                for k, paths in enumerate(connection_paths_out)
+                for j, path in enumerate(paths)
+            ] + [
+                Path(
+                    self.network,
+                    path,
+                    f"Path_{self.name}_in_length_{path_length}_{j}_{k}",
+                )
+                for k, paths in enumerate(connection_paths_in)
+                for j, path in enumerate(paths)
+            ]
+
     def __str__(self):
         ## For use in debugging and testing
         return self.name
@@ -583,7 +743,8 @@ class Neuron(Cell, Citable):
 
 
 class NeuronGroup(Citable):
-    ''' This contains a group of neurons in the network'''
+    """This contains a group of neurons in the network"""
+
     def __init__(self, network, members=None, group_name=None) -> None:
         """
         Initializes a new instance of the NeuronGroup class.
@@ -603,7 +764,7 @@ class NeuronGroup(Citable):
         """
         Citable.__init__(self)  # provides self.citations = {}
         if group_name is None:
-            self.group_name = 'Group-'+ generate_random_string(8)
+            self.group_name = "Group-" + generate_random_string(8)
         else:
             self.group_name = group_name
 
@@ -628,7 +789,9 @@ class NeuronGroup(Citable):
         self.members = members
         self.neurons = {m.name: m for m in members}
         self.network = network
-        assert self.group_name not in self.network.groups, f"Group name {self.group_name}\
+        assert (
+            self.group_name not in self.network.groups
+        ), f"Group name {self.group_name}\
             already exists in the network"
         self.network.groups.update({self.group_name: self})
 
@@ -648,11 +811,13 @@ class NeuronGroup(Citable):
         """
         for key, value in self.neurons.items():
             yield key, value
+
     def keys(self):
         """
         Returns an iterator over the members of the group.
         """
         return list(self.neurons.keys())
+
     def values(self):
         """
         Returns an iterator over the members of the group.
@@ -695,8 +860,9 @@ class NeuronGroup(Citable):
         """
         Updates the list of members in the group.
         """
-        assert all([isinstance(neuron, Neuron) for nname,neuron in member_dict.items()]),\
-          "Neuron group members must be of type Neuron"
+        assert all(
+            [isinstance(neuron, Neuron) for nname, neuron in member_dict.items()]
+        ), "Neuron group members must be of type Neuron"
         self.neurons.update(member_dict)
         self.members = list(self.neurons.values())
 
@@ -725,42 +891,42 @@ class NeuronGroup(Citable):
         """
         return [neuron.get_connections() for neuron in self.members]
 
-    def add_neuron(self, neuron: 'Neuron') -> None:
+    def add_neuron(self, neuron: "Neuron") -> None:
         """Add a neuron to the group.
-        
+
         Args:
             neuron: Neuron to add.
         """
         if neuron not in self.neurons:
             self.neurons[neuron.name] = neuron
 
-    def remove_neuron(self, neuron: 'Neuron') -> None:
+    def remove_neuron(self, neuron: "Neuron") -> None:
         """Remove a neuron from the group.
-        
+
         Args:
             neuron: Neuron to remove.
         """
         if neuron in self.neurons:
             self.neurons.pop(neuron.name)
 
-    def get_neurons_by_type(self, type: str) -> List['Neuron']:
+    def get_neurons_by_type(self, type: str) -> List["Neuron"]:
         """Get all neurons of a specific type.
-        
+
         Args:
             type: Neuron type to filter by.
-            
+
         Returns:
             List of neurons of the specified type.
         """
         return [n for n in self.neurons.values() if n.type == type]
 
-    def get_neurons_by_property(self, key: str, value: Any) -> List['Neuron']:
+    def get_neurons_by_property(self, key: str, value: Any) -> List["Neuron"]:
         """Get neurons with a specific property value.
-        
+
         Args:
             key: Property name.
             value: Property value to match.
-            
+
         Returns:
             List of neurons with matching property value.
         """
@@ -768,7 +934,7 @@ class NeuronGroup(Citable):
 
     # ---- Set operations ----
 
-    def union(self, other: 'NeuronGroup', group_name: str = None) -> 'NeuronGroup':
+    def union(self, other: "NeuronGroup", group_name: str = None) -> "NeuronGroup":
         """Return a new NeuronGroup containing neurons from both groups.
 
         Args:
@@ -779,12 +945,16 @@ class NeuronGroup(Citable):
             A new NeuronGroup with the combined members.
         """
         assert isinstance(other, NeuronGroup), "Operand must be a NeuronGroup"
-        assert self.network is other.network, "Both groups must belong to the same network"
+        assert (
+            self.network is other.network
+        ), "Both groups must belong to the same network"
         merged = {**self.neurons, **other.neurons}
         name = group_name or f"{self.group_name}_union_{other.group_name}"
         return NeuronGroup(self.network, members=list(merged.values()), group_name=name)
 
-    def intersection(self, other: 'NeuronGroup', group_name: str = None) -> 'NeuronGroup':
+    def intersection(
+        self, other: "NeuronGroup", group_name: str = None
+    ) -> "NeuronGroup":
         """Return a new NeuronGroup containing only neurons present in both groups.
 
         Args:
@@ -795,13 +965,15 @@ class NeuronGroup(Citable):
             A new NeuronGroup with the shared members.
         """
         assert isinstance(other, NeuronGroup), "Operand must be a NeuronGroup"
-        assert self.network is other.network, "Both groups must belong to the same network"
+        assert (
+            self.network is other.network
+        ), "Both groups must belong to the same network"
         common_keys = set(self.neurons.keys()) & set(other.neurons.keys())
         members = [self.neurons[k] for k in common_keys]
         name = group_name or f"{self.group_name}_intersect_{other.group_name}"
         return NeuronGroup(self.network, members=members, group_name=name)
 
-    def difference(self, other: 'NeuronGroup', group_name: str = None) -> 'NeuronGroup':
+    def difference(self, other: "NeuronGroup", group_name: str = None) -> "NeuronGroup":
         """Return a new NeuronGroup containing neurons in self but not in other.
 
         Args:
@@ -812,20 +984,22 @@ class NeuronGroup(Citable):
             A new NeuronGroup with the difference members.
         """
         assert isinstance(other, NeuronGroup), "Operand must be a NeuronGroup"
-        assert self.network is other.network, "Both groups must belong to the same network"
+        assert (
+            self.network is other.network
+        ), "Both groups must belong to the same network"
         diff_keys = set(self.neurons.keys()) - set(other.neurons.keys())
         members = [self.neurons[k] for k in diff_keys]
         name = group_name or f"{self.group_name}_diff_{other.group_name}"
         return NeuronGroup(self.network, members=members, group_name=name)
 
-    def __or__(self, other: 'NeuronGroup') -> 'NeuronGroup':
+    def __or__(self, other: "NeuronGroup") -> "NeuronGroup":
         """Operator ``|`` — union."""
         return self.union(other)
 
-    def __and__(self, other: 'NeuronGroup') -> 'NeuronGroup':
+    def __and__(self, other: "NeuronGroup") -> "NeuronGroup":
         """Operator ``&`` — intersection."""
         return self.intersection(other)
 
-    def __sub__(self, other: 'NeuronGroup') -> 'NeuronGroup':
+    def __sub__(self, other: "NeuronGroup") -> "NeuronGroup":
         """Operator ``-`` — difference."""
         return self.difference(other)

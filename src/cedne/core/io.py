@@ -65,12 +65,13 @@ ALLOWED_MODULE_PREFIXES = [
 # could trigger arbitrary code execution if reached via a crafted pickle.
 DENIED_MODULE_PREFIXES = (
     "pandas.core.computation",  # pandas.eval lives here; whole subsystem evaluates expressions
-    "pandas.io.pickle",         # to_pickle/read_pickle helpers — refuse chaining via unpickle
+    "pandas.io.pickle",  # to_pickle/read_pickle helpers — refuse chaining via unpickle
 )
 DENIED_QUALIFIED_NAMES = {
-    ("pandas", "eval"),     # top-level re-export of pandas.core.computation.eval.eval
-    ("pandas", "query"),    # similar expression-evaluation entry point
+    ("pandas", "eval"),  # top-level re-export of pandas.core.computation.eval.eval
+    ("pandas", "query"),  # similar expression-evaluation entry point
 }
+
 
 class RestrictedUnpickler(pickle.Unpickler):
     def find_class(self, module, name):
@@ -79,7 +80,10 @@ class RestrictedUnpickler(pickle.Unpickler):
             raise pickle.UnpicklingError(
                 f"global '{module}.{name}' is denied (expression-evaluation gadget)"
             )
-        if any(module == prefix or module.startswith(prefix + ".") for prefix in DENIED_MODULE_PREFIXES):
+        if any(
+            module == prefix or module.startswith(prefix + ".")
+            for prefix in DENIED_MODULE_PREFIXES
+        ):
             raise pickle.UnpicklingError(
                 f"global '{module}.{name}' is denied (module under {DENIED_MODULE_PREFIXES})"
             )
@@ -89,12 +93,16 @@ class RestrictedUnpickler(pickle.Unpickler):
             return getattr(__import__(module, fromlist=[name]), name)
 
         # Allow all classes from whitelisted module prefixes (like cedne.*)
-        if any(module == prefix or module.startswith(prefix + ".") for prefix in ALLOWED_MODULE_PREFIXES):
+        if any(
+            module == prefix or module.startswith(prefix + ".")
+            for prefix in ALLOWED_MODULE_PREFIXES
+        ):
             return getattr(__import__(module, fromlist=[name]), name)
 
         # Otherwise, reject
         raise pickle.UnpicklingError(f"global '{module}.{name}' is forbidden")
-    
+
+
 # class RestrictedUnpickler(pickle.Unpickler):
 #     """
 #     A custom unpickler that restricts the loading of certain modules and classes.
@@ -113,9 +121,11 @@ class RestrictedUnpickler(pickle.Unpickler):
 #             return getattr(__import__(module, fromlist=[name]), name)
 #         raise pickle.UnpicklingError(f"global '{module}.{name}' is forbidden")
 
+
 def load_pickle(file):
-    ''' Loading restricted pickles.'''
+    """Loading restricted pickles."""
     return RestrictedUnpickler(file).load()
+
 
 def load_worm(file_path):
     """
@@ -129,9 +139,10 @@ def load_worm(file_path):
     """
     try:
         from .animal import Worm
-        with open(file_path, 'rb') as pickle_file:
+
+        with open(file_path, "rb") as pickle_file:
             # return pickle.load(pickle_file)
-            w= load_pickle(pickle_file)
+            w = load_pickle(pickle_file)
             if not isinstance(w, Worm):
                 raise TypeError(f"Expected Worm object, got {type(w)}")
             return w
@@ -139,7 +150,8 @@ def load_worm(file_path):
         raise FileNotFoundError(f"File {file_path} not found.") from exc
     except pickle.UnpicklingError as exc:
         raise pickle.UnpicklingError(f"Failed to unpickle {file_path}.") from exc
-    
+
+
 def generate_random_string(length: int = 8) -> str:
     """
     Generates a random string of given length.
@@ -151,10 +163,12 @@ def generate_random_string(length: int = 8) -> str:
         str: A random string of the specified length.
     """
     characters = string.ascii_letters + string.digits
-    return ''.join(random.choice(characters) for _ in range(length))
+    return "".join(random.choice(characters) for _ in range(length))
+
 
 class NetworkWriter:
-    ''' Writes the network for saving.'''
+    """Writes the network for saving."""
+
     def __init__(self):
         """
         Initializes the NetworkWriter object.
@@ -165,11 +179,11 @@ class NetworkWriter:
         OUTPUT_JSON = "generated_metadata.json"
         # Connect to Neo4j database
         # graph_db = py2neo.Graph(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
-    
+
     def write(self, w):
         json_data = self.generate_json(w)
-        output_filename = 'model/' + w.name + '.json'
-        with open(output_filename, "w", encoding='utf-8') as f:
+        output_filename = "model/" + w.name + ".json"
+        with open(output_filename, "w", encoding="utf-8") as f:
             json.dump(json_data, f, indent=4)
 
     def generate_json(self, w):
@@ -186,13 +200,13 @@ class NetworkWriter:
         """
         json_data = {
             "model_name": w.name,
-            "version": getattr(w, 'version', None),
-            "created_by": getattr(w, 'author', None),
+            "version": getattr(w, "version", None),
+            "created_by": getattr(w, "author", None),
             "networks": {},
         }
 
         for net_name, network in w.networks.items():
-            if hasattr(network, 'to_dict'):
+            if hasattr(network, "to_dict"):
                 json_data["networks"][net_name] = network.to_dict()
 
         return json_data

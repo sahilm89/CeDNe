@@ -3,7 +3,14 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from cedne.simulator import StepInput, RateModel, LDSModel, CTRNNModel, DKBModel, CalciumObservation
+from cedne.simulator import (
+    StepInput,
+    RateModel,
+    LDSModel,
+    CTRNNModel,
+    DKBModel,
+    CalciumObservation,
+)
 
 
 class SimpleNode:
@@ -54,7 +61,17 @@ def graph_with_static():
     return g, a, b, s
 
 
-def _build_model(model_kind, graph, a, b, *, static_neurons=None, time_points=None, inputs=None, input_neurons=None):
+def _build_model(
+    model_kind,
+    graph,
+    a,
+    b,
+    *,
+    static_neurons=None,
+    time_points=None,
+    inputs=None,
+    input_neurons=None,
+):
     if input_neurons is None:
         input_neurons = [a]
     if model_kind == "rate":
@@ -342,7 +359,9 @@ def test_dkb_higher_damping_reduces_peak_displacement(small_graph):
     low_states = low_damping.simulate()
     high_states = high_damping.simulate()
 
-    assert np.max(low_states[low_damping.neurons[b]]) > np.max(high_states[high_damping.neurons[b]])
+    assert np.max(low_states[low_damping.neurons[b]]) > np.max(
+        high_states[high_damping.neurons[b]]
+    )
 
 
 def test_dkb_higher_stiffness_returns_to_target_faster(small_graph):
@@ -364,7 +383,9 @@ def test_dkb_higher_stiffness_returns_to_target_faster(small_graph):
     soft_states = soft.simulate(initial_states=np.array([1.0, 0.0], dtype=np.float32))
     stiff_states = stiff.simulate(initial_states=np.array([1.0, 0.0], dtype=np.float32))
 
-    assert abs(stiff_states[stiff.neurons[a]][20]) < abs(soft_states[soft.neurons[a]][20])
+    assert abs(stiff_states[stiff.neurons[a]][20]) < abs(
+        soft_states[soft.neurons[a]][20]
+    )
 
 
 def test_calcium_observation_zero_activity_stays_flat():
@@ -461,10 +482,14 @@ def test_rate_and_ctrnn_share_parameter_update_contract(small_graph):
     rate_model.set_neuron_parameters(
         {"gain": {rate_model.neurons[b]: 2.5}, "time_constant": {}, "baseline": {}}
     )
-    rate_model.set_edge_parameters({"weight": {(rate_model.neurons[a], rate_model.neurons[b], 0): 1.7}})
+    rate_model.set_edge_parameters(
+        {"weight": {(rate_model.neurons[a], rate_model.neurons[b], 0): 1.7}}
+    )
 
     assert rate_model.neurons[b].gain == pytest.approx(2.5)
-    assert rate_model.edges[(rate_model.neurons[a], rate_model.neurons[b], 0)]["weight"] == pytest.approx(1.7)
+    assert rate_model.edges[(rate_model.neurons[a], rate_model.neurons[b], 0)][
+        "weight"
+    ] == pytest.approx(1.7)
 
     ctrnn_model = _build_model("ctrnn", g, a, b, time_points=time_points)
     ctrnn_model.set_neuron_parameters(
@@ -475,11 +500,15 @@ def test_rate_and_ctrnn_share_parameter_update_contract(small_graph):
             "activation": {},
         }
     )
-    ctrnn_model.set_edge_parameters({"weight": {(ctrnn_model.neurons[a], ctrnn_model.neurons[b], 0): 1.4}})
+    ctrnn_model.set_edge_parameters(
+        {"weight": {(ctrnn_model.neurons[a], ctrnn_model.neurons[b], 0): 1.4}}
+    )
 
     assert ctrnn_model.neurons[b].gain == pytest.approx(1.8)
     assert ctrnn_model.neurons[b].time_constant == pytest.approx(0.3)
-    assert ctrnn_model.edges[(ctrnn_model.neurons[a], ctrnn_model.neurons[b], 0)]["weight"] == pytest.approx(1.4)
+    assert ctrnn_model.edges[(ctrnn_model.neurons[a], ctrnn_model.neurons[b], 0)][
+        "weight"
+    ] == pytest.approx(1.4)
 
 
 def test_lds_parameter_update_contract_supports_sparse_updates(small_graph):
@@ -493,11 +522,15 @@ def test_lds_parameter_update_contract_supports_sparse_updates(small_graph):
             "baseline": {model.neurons[b]: 0.5},
         }
     )
-    model.set_edge_parameters({"weight": {(model.neurons[a], model.neurons[b], 0): 1.8}})
+    model.set_edge_parameters(
+        {"weight": {(model.neurons[a], model.neurons[b], 0): 1.8}}
+    )
 
     assert model.neurons[a].input_weight == pytest.approx(1.6)
     assert model.neurons[b].baseline == pytest.approx(0.5)
-    assert model.edges[(model.neurons[a], model.neurons[b], 0)]["weight"] == pytest.approx(1.8)
+    assert model.edges[(model.neurons[a], model.neurons[b], 0)][
+        "weight"
+    ] == pytest.approx(1.8)
 
 
 def test_dynamic_weight_matrix_matches_edge_direction(small_graph):
@@ -537,9 +570,13 @@ def test_dkb_parameter_update_contract_includes_velocity_terms(small_graph):
             "target": {},
         }
     )
-    model.set_edge_parameters({"weight": {(model.neurons[a], model.neurons[b], 0): 1.3}})
+    model.set_edge_parameters(
+        {"weight": {(model.neurons[a], model.neurons[b], 0): 1.3}}
+    )
 
     assert model.neurons[b].damping == pytest.approx(2.2)
     assert model.neurons[b].stiffness == pytest.approx(1.7)
     assert model.neurons[a].input_weight == pytest.approx(1.4)
-    assert model.edges[(model.neurons[a], model.neurons[b], 0)]["weight"] == pytest.approx(1.3)
+    assert model.edges[(model.neurons[a], model.neurons[b], 0)][
+        "weight"
+    ] == pytest.approx(1.3)

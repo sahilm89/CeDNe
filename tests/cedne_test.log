@@ -35,13 +35,13 @@ tmpdir = local('/private/var/folders/j8/lrv376sd73l_40xn8sj9cwbh0000gn/T/pytest-
         chem_synapses = tmpdir.join('chem_synapses.pkl')
         elec_synapses = tmpdir.join('elec_synapses.pkl')
         positions = tmpdir.join('positions.pkl')
-    
+
         # Check if the files exist before writing to them
         assert not neuron_data.exists()
         assert not chem_synapses.exists()
         assert not elec_synapses.exists()
         assert not positions.exists()
-    
+
         # Check if the files exist after writing to them
 >       assert neuron_data.exists()
 E       AssertionError: assert False
@@ -64,8 +64,8 @@ tmpdir = local('/private/var/folders/j8/lrv376sd73l_40xn8sj9cwbh0000gn/T/pytest-
         label = 'test'
 >       nervous_system.build_network(str(neurons), adj, label)
 
-test_cedne.py:105: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:105:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.NervousSystem object at 0x1340a7140>
 neurons = '/private/var/folders/j8/lrv376sd73l_40xn8sj9cwbh0000gn/T/pytest-of-sahilmoza/pytest-1/test_build_network0/neuron_data.pkl'
@@ -110,8 +110,8 @@ nervous_system = <cedne.cedne.NervousSystem object at 0x1341e4440>
         adjacency_matrix = {0: {1: {'weight': 1}}}
 >       nervous_system.setup_connections(adjacency_matrix, 'test')
 
-test_cedne.py:121: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:121:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.NervousSystem object at 0x1341e4440>
 adjacency_matrix = {0: {1: {'weight': 1}}}, connection_type = 'test'
@@ -139,8 +139,8 @@ nervous_system = <cedne.cedne.NervousSystem object at 0x1341e6870>
         chemical_adjacency = {0: {1: {'weight': 1}}}
 >       nervous_system.setup_chemical_connections(chemical_adjacency)
 
-test_cedne.py:137: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:137:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.NervousSystem object at 0x1341e6870>
 chemical_adjacency = {0: {1: {'weight': 1}}}
@@ -148,21 +148,21 @@ chemical_adjacency = {0: {1: {'weight': 1}}}
     def setup_chemical_connections(self, chemical_adjacency):
         """
         Set up chemical connections in the network based on the given adjacency dictionary.
-    
+
         Parameters:
             chemical_adjacency (dict): A dictionary representing the adjacency of chemical synapses.
                 The keys are source neurons and the values are dictionaries where the keys are
                 target neurons and the values are dictionaries containing the connection data.
-    
+
         Returns:
             None
-    
+
         This function iterates over the `chemical_adjacency` dictionary and adds chemical synapse
         edges between source neurons and target neurons if the connection weight is greater than 0.
         It uses the `add_edge` method to add the edge to the network and creates a `Connection`
         object to store the connection details. The created connection is added to the `connections`
         dictionary using a tuple of the source neuron, target neuron, and edge key as the key.
-    
+
         Note:
             - The `add_edge` method is assumed to be defined in the class.
             - The `Connection` class is assumed to be defined in the class.
@@ -194,8 +194,8 @@ nervous_system = <cedne.cedne.NervousSystem object at 0x1341e7260>
         gap_junction_adjacency = {0: {1: {'weight': 1}}}
 >       nervous_system.setup_gap_junctions(gap_junction_adjacency)
 
-test_cedne.py:145: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:145:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.NervousSystem object at 0x1341e7260>
 gap_junction_adjacency = {0: {1: {'weight': 1}}}
@@ -203,21 +203,21 @@ gap_junction_adjacency = {0: {1: {'weight': 1}}}
     def setup_gap_junctions(self, gap_junction_adjacency):
         """
         Set up gap junctions in the network based on the given adjacency dictionary.
-    
+
         Parameters:
             gap_junction_adjacency (dict): A dictionary representing the adjacency of gap junctions.
                 The keys are source neurons and the values are dictionaries where the keys are \
                     target neurons and the values are dictionaries containing the connection data.
-    
+
         Returns:
             None
-    
+
         This function iterates over the `gap_junction_adjacency` dictionary and adds gap junction
         edges between source neurons and target neurons if the connection weight is greater than 0.
         It uses the `add_edge` method to add the edge to the network and creates a `Connection`
         object to store the connection details. The created connection is added to the `connections`
         dictionary using a tuple of the source neuron, target neuron, and edge key as the key.
-    
+
         Note:
             - The `add_edge` method is assumed to be defined in the class.
             - The `Connection` class is assumed to be defined in the class.
@@ -249,8 +249,8 @@ nervous_system = <cedne.cedne.NervousSystem object at 0x110e34d70>
         neuron_names = ['test']
 >       subnetwork = nervous_system.subnetwork(neuron_names)
 
-test_cedne.py:153: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:153:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.NervousSystem object at 0x110e34d70>
 neuron_names = ['test']
@@ -258,10 +258,10 @@ neuron_names = ['test']
     def subnetwork(self, neuron_names):
         """
         Generates a subgraph of the network based on the given list of neuron names.
-    
+
         Args:
             neuron_names (List[str]): List of neuron names to include in the subgraph.
-    
+
         Returns:
             NervousSystem: A deep copy of the subgraph generated from the neuron_names.
                 The subgraph contains a dictionary of neurons with their names as keys.
@@ -297,8 +297,8 @@ nervous_system = <cedne.cedne.NervousSystem object at 0x1340a6d50>
         """
 >       nervous_system.contract_neurons(('test', 'test'))
 
-test_cedne.py:167: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:167:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.NervousSystem object at 0x1340a6d50>
 pair = ('test', 'test'), copy_graph = False
@@ -306,12 +306,12 @@ pair = ('test', 'test'), copy_graph = False
     def contract_neurons(self, pair, copy_graph=False):
         """
         Contract two neurons together.
-    
+
         Args:
             pair (tuple): Pair of neuron names to contract.
             copy_graph (bool): If True, returns a new graph with the contraction.
                 Otherwise, modifies the current graph.
-    
+
         Returns:
             NervousSystem: A deep copy of the subgraph generated from the neuron_names.
                 The subgraph contains a dictionary of neurons with their names as keys.
@@ -339,8 +339,8 @@ nervous_system = <cedne.cedne.NervousSystem object at 0x1341e77a0>
         """
 >       copied_nervous_system = nervous_system.copy()
 
-test_cedne.py:181: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:181:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 ../src/cedne/cedne.py:545: in copy
     return self.copy(as_view=as_view)
 ../src/cedne/cedne.py:545: in copy
@@ -361,7 +361,7 @@ self = <test_cedne.TestNeuron object at 0x13407bc80>
         network.add_edge(neuron1, neuron2)
 >       assert neuron1.get_all_connections() == [(neuron1, neuron2)]
 E       assert [(<cedne.cedn...340a6870>, 0)] == [(<cedne.cedn...0x1340a6870>)]
-E         
+E
 E         At index 0 diff: (<cedne.cedne.Neuron object at 0x1340a67e0>, <cedne.cedne.Neuron object at 0x1340a6870>, 0) != (<cedne.cedne.Neuron object at 0x1340a67e0>, <cedne.cedne.Neuron object at 0x1340a6870>)
 E         Use -v to get more diff
 
@@ -380,7 +380,7 @@ self = <test_cedne.TestNeuron object at 0x13407bc20>
         network.add_edge(neuron1, neuron2)
 >       assert neuron1.outgoing() == []
 E       assert {} == []
-E         
+E
 E         Use -v to get more diff
 
 test_cedne.py:233: AssertionError
@@ -398,7 +398,7 @@ self = <test_cedne.TestNeuron object at 0x13407b7d0>
         network.add_edge(neuron1, neuron2)
 >       assert neuron1.incoming() == [(neuron1, neuron2)]
 E       assert {} == [(<cedne.cedn...0x1341819d0>)]
-E         
+E
 E         Use -v to get more diff
 
 test_cedne.py:244: AssertionError
@@ -413,8 +413,8 @@ self = <test_cedne.TestTrial object at 0x13407a990>
         trial = Trial(None, 0)
 >       trial.recording = np.array([1, 2, 3, 4, 5]), 2
 
-test_cedne.py:272: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:272:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.Trial object at 0x134180ef0>
 _data = (array([1, 2, 3, 4, 5]), 2), discard = 0
@@ -423,13 +423,13 @@ _data = (array([1, 2, 3, 4, 5]), 2), discard = 0
     def recording(self, _data, discard=0):
         """
         Set the recording data for the Trial object.
-    
+
         Parameters:
             signal (array-like): The timecourse signal to be recorded.
-    
+
         Raises:
             ValueError: If the length of the signal is not 451 or 601.
-    
+
         Returns:
             None
         """
@@ -464,8 +464,8 @@ self = <test_cedne.TestTrial object at 0x13407bdd0>
         with pytest.raises(ValueError):
 >           trial.recording = np.array([1, 2, 3]), -1
 
-test_cedne.py:290: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:290:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.Trial object at 0x1341826c0>, _data = (array([1, 2, 3]), -1)
 discard = 0
@@ -474,13 +474,13 @@ discard = 0
     def recording(self, _data, discard=0):
         """
         Set the recording data for the Trial object.
-    
+
         Parameters:
             signal (array-like): The timecourse signal to be recorded.
-    
+
         Raises:
             ValueError: If the length of the signal is not 451 or 601.
-    
+
         Returns:
             None
         """
@@ -497,8 +497,8 @@ self = <test_cedne.TestStimResponse object at 0x13407bf80>
     def test_extract_feature_0(self):
 >       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
 
-test_cedne.py:295: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:295:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.StimResponse object at 0x134183500>, trial = None
 stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
@@ -506,13 +506,13 @@ stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
     def __init__(self, trial, stimulus, response, baseline) -> None:
         """
         Initializes a StimResponse object.
-    
+
         Parameters:
             trial (Trial): The trial object associated with the stimulus and response.
             stimulus (array-like): The stimulus signal.
             response (array-like): The response signal.
             baseline (int): The number of baseline samples to consider for the response.
-    
+
         Returns:
             None
         """
@@ -530,8 +530,8 @@ self = <test_cedne.TestStimResponse object at 0x1340a4140>
     def test_extract_feature_1(self):
 >       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
 
-test_cedne.py:299: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:299:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.StimResponse object at 0x1341c6120>, trial = None
 stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
@@ -539,13 +539,13 @@ stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
     def __init__(self, trial, stimulus, response, baseline) -> None:
         """
         Initializes a StimResponse object.
-    
+
         Parameters:
             trial (Trial): The trial object associated with the stimulus and response.
             stimulus (array-like): The stimulus signal.
             response (array-like): The response signal.
             baseline (int): The number of baseline samples to consider for the response.
-    
+
         Returns:
             None
         """
@@ -563,8 +563,8 @@ self = <test_cedne.TestStimResponse object at 0x1340a42c0>
     def test_extract_feature_2(self):
 >       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
 
-test_cedne.py:303: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:303:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.StimResponse object at 0x134183890>, trial = None
 stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
@@ -572,13 +572,13 @@ stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
     def __init__(self, trial, stimulus, response, baseline) -> None:
         """
         Initializes a StimResponse object.
-    
+
         Parameters:
             trial (Trial): The trial object associated with the stimulus and response.
             stimulus (array-like): The stimulus signal.
             response (array-like): The response signal.
             baseline (int): The number of baseline samples to consider for the response.
-    
+
         Returns:
             None
         """
@@ -596,8 +596,8 @@ self = <test_cedne.TestStimResponse object at 0x1340a4440>
     def test_extract_feature_3(self):
 >       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
 
-test_cedne.py:307: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:307:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.StimResponse object at 0x134182cf0>, trial = None
 stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
@@ -605,13 +605,13 @@ stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
     def __init__(self, trial, stimulus, response, baseline) -> None:
         """
         Initializes a StimResponse object.
-    
+
         Parameters:
             trial (Trial): The trial object associated with the stimulus and response.
             stimulus (array-like): The stimulus signal.
             response (array-like): The response signal.
             baseline (int): The number of baseline samples to consider for the response.
-    
+
         Returns:
             None
         """
@@ -629,8 +629,8 @@ self = <test_cedne.TestStimResponse object at 0x1340a45c0>
     def test_extract_feature_4(self):
 >       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
 
-test_cedne.py:311: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:311:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.StimResponse object at 0x134180ef0>, trial = None
 stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
@@ -638,13 +638,13 @@ stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
     def __init__(self, trial, stimulus, response, baseline) -> None:
         """
         Initializes a StimResponse object.
-    
+
         Parameters:
             trial (Trial): The trial object associated with the stimulus and response.
             stimulus (array-like): The stimulus signal.
             response (array-like): The response signal.
             baseline (int): The number of baseline samples to consider for the response.
-    
+
         Returns:
             None
         """
@@ -662,8 +662,8 @@ self = <test_cedne.TestStimResponse object at 0x1340a4740>
     def test_extract_feature_5(self):
 >       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
 
-test_cedne.py:315: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:315:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.StimResponse object at 0x13407b5c0>, trial = None
 stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
@@ -671,13 +671,13 @@ stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
     def __init__(self, trial, stimulus, response, baseline) -> None:
         """
         Initializes a StimResponse object.
-    
+
         Parameters:
             trial (Trial): The trial object associated with the stimulus and response.
             stimulus (array-like): The stimulus signal.
             response (array-like): The response signal.
             baseline (int): The number of baseline samples to consider for the response.
-    
+
         Returns:
             None
         """
@@ -695,8 +695,8 @@ self = <test_cedne.TestStimResponse object at 0x1340a48c0>
     def test_extract_feature_6(self):
 >       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
 
-test_cedne.py:319: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:319:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.StimResponse object at 0x1340a7f20>, trial = None
 stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
@@ -704,13 +704,13 @@ stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
     def __init__(self, trial, stimulus, response, baseline) -> None:
         """
         Initializes a StimResponse object.
-    
+
         Parameters:
             trial (Trial): The trial object associated with the stimulus and response.
             stimulus (array-like): The stimulus signal.
             response (array-like): The response signal.
             baseline (int): The number of baseline samples to consider for the response.
-    
+
         Returns:
             None
         """
@@ -728,8 +728,8 @@ self = <test_cedne.TestStimResponse object at 0x1340a4a40>
     def test_extract_feature_7(self):
 >       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
 
-test_cedne.py:323: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:323:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.StimResponse object at 0x1341c6300>, trial = None
 stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
@@ -737,13 +737,13 @@ stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
     def __init__(self, trial, stimulus, response, baseline) -> None:
         """
         Initializes a StimResponse object.
-    
+
         Parameters:
             trial (Trial): The trial object associated with the stimulus and response.
             stimulus (array-like): The stimulus signal.
             response (array-like): The response signal.
             baseline (int): The number of baseline samples to consider for the response.
-    
+
         Returns:
             None
         """
@@ -761,8 +761,8 @@ self = <test_cedne.TestStimResponse object at 0x1340a4bc0>
     def test_extract_feature_8(self):
 >       stim_response = StimResponse(None, np.array([1, 2, 3]), np.array([1, 2, 3]), 0)
 
-test_cedne.py:327: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:327:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.StimResponse object at 0x1340a75f0>, trial = None
 stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
@@ -770,13 +770,13 @@ stimulus = array([1, 2, 3]), response = array([1, 2, 3]), baseline = 0
     def __init__(self, trial, stimulus, response, baseline) -> None:
         """
         Initializes a StimResponse object.
-    
+
         Parameters:
             trial (Trial): The trial object associated with the stimulus and response.
             stimulus (array-like): The stimulus signal.
             response (array-like): The response signal.
             baseline (int): The number of baseline samples to consider for the response.
-    
+
         Returns:
             None
         """
@@ -794,8 +794,8 @@ self = <test_cedne.TestConnection object at 0x1340a4d70>
     def test_init(self):
 >       pre_neuron = Neuron(None, 0, 'regular')
 
-test_cedne.py:333: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:333:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.Neuron object at 0x1341816d0>, name = None, network = 0
 neuron_type = 'regular', category = '', modality = '', position = None
@@ -805,7 +805,7 @@ presynapse = None, postsynapse = None
          position=None, presynapse=None, postsynapse=None):
         """
         Initializes a new instance of the Neuron class.
-    
+
         Args:
             name (str): The name of the neuron.
             network (NeuronalNetwork): The neuronal network to which the neuron belongs.
@@ -844,8 +844,8 @@ self = <test_cedne.TestConnection object at 0x1340a4ef0>
     def test_update_weight(self):
 >       pre_neuron = Neuron(None, 0, 'regular')
 
-test_cedne.py:343: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:343:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.Neuron object at 0x134183950>, name = None, network = 0
 neuron_type = 'regular', category = '', modality = '', position = None
@@ -855,7 +855,7 @@ presynapse = None, postsynapse = None
          position=None, presynapse=None, postsynapse=None):
         """
         Initializes a new instance of the Neuron class.
-    
+
         Args:
             name (str): The name of the neuron.
             network (NeuronalNetwork): The neuronal network to which the neuron belongs.
@@ -894,8 +894,8 @@ self = <test_cedne.TestConnection object at 0x1340a5070>
     def test_set_property(self):
 >       pre_neuron = Neuron(None, 0, 'regular')
 
-test_cedne.py:352: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+test_cedne.py:352:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <cedne.cedne.Neuron object at 0x1341c63f0>, name = None, network = 0
 neuron_type = 'regular', category = '', modality = '', position = None
@@ -905,7 +905,7 @@ presynapse = None, postsynapse = None
          position=None, presynapse=None, postsynapse=None):
         """
         Initializes a new instance of the Neuron class.
-    
+
         Args:
             name (str): The name of the neuron.
             network (NeuronalNetwork): The neuronal network to which the neuron belongs.

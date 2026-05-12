@@ -33,7 +33,7 @@
 
 - [ ] !!! Jax based optimization.
 - [ ] !!! Latin hypercube sampling for hyperparameter optimization.
-- [ ] !! Expose some tools via MCP server 
+- [ ] !! Expose some tools via MCP server
 
 ## Utility functions
 

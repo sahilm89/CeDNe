@@ -40,6 +40,7 @@ from typing import Any, Callable, Dict, List, Optional
 def _cedne_version() -> Optional[str]:
     try:
         from importlib.metadata import version
+
         return version("cedne")
     except Exception:
         return None

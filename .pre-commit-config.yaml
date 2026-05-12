@@ -9,6 +9,12 @@
 # Ruff rule selection here is intentionally minimal (defaults: E4, E7, E9, F).
 # Ratchet up to E,F,W,I,N,UP,B,SIM,RUF,S in Week 2 of the pre-release hardening
 # (see CeDNe_web/notes/audit/risk_register.csv and the plan file).
+#
+# ``examples/notebooks/archive/`` is excluded everywhere: it contains older
+# experimental scripts that target Python >=3.12 syntax and are not part of
+# the current codebase. They live there as historical reference only.
+exclude: ^examples/notebooks/archive/
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0

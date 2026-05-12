@@ -15,7 +15,6 @@ import pytest
 from cedne.core.animal import Worm
 from cedne.core.connection import (
     ChemicalSynapse,
-    Connection,
     ConnectionGroup,
 )
 from cedne.core.network import NervousSystem
@@ -32,6 +31,7 @@ from cedne.core.source import (
 # ---------------------------------------------------------------------------
 # Citation dataclass
 # ---------------------------------------------------------------------------
+
 
 class TestCitation:
     def test_minimal_construction(self):
@@ -73,6 +73,7 @@ class TestCitation:
 # serialize_citations helper
 # ---------------------------------------------------------------------------
 
+
 class TestSerializeCitations:
     def test_empty(self):
         assert serialize_citations({}) == {}
@@ -99,6 +100,7 @@ class TestSerializeCitations:
 # ---------------------------------------------------------------------------
 # Citable standalone
 # ---------------------------------------------------------------------------
+
 
 class TestCitableStandalone:
     def test_init_creates_empty_citations(self):
@@ -134,6 +136,7 @@ class TestCitableStandalone:
 # Fixtures: build a small worm with neurons, connections, and groups
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def worm_with_circuit():
     """A minimal Worm -> NervousSystem -> Neurons + Connection setup."""
@@ -150,6 +153,7 @@ def worm_with_circuit():
 # Backward compatibility: existing loader pattern must keep working
 # ---------------------------------------------------------------------------
 
+
 class TestBackwardCompat:
     def test_worm_citations_initially_have_only_cedne_self_citation(
         self, worm_with_circuit
@@ -158,17 +162,14 @@ class TestBackwardCompat:
 
         Loaders / users add further citations on top of this baseline.
         """
-        assert (
-            list(worm_with_circuit["worm"].citations.keys())
-            == [CEDNE_SOFTWARE_CITATION_KEY]
-        )
+        assert list(worm_with_circuit["worm"].citations.keys()) == [
+            CEDNE_SOFTWARE_CITATION_KEY
+        ]
 
     def test_legacy_update_pattern(self, worm_with_circuit):
         """loader.py does: w.citations.update({'cook_connectome': {...}})."""
         w = worm_with_circuit["worm"]
-        w.citations.update(
-            {"cook_connectome": {"authors": ["Cook"], "year": 2019}}
-        )
+        w.citations.update({"cook_connectome": {"authors": ["Cook"], "year": 2019}})
         assert w.citations["cook_connectome"]["year"] == 2019
 
     def test_all_structural_classes_have_citations(self, worm_with_circuit):
@@ -192,9 +193,7 @@ class TestCedneSelfCitation:
         assert CEDNE_SOFTWARE_CITATION.doi == "10.1101/2025.11.03.683805"
         assert CEDNE_SOFTWARE_CITATION.url.startswith("https://")
 
-    def test_cedne_citation_surfaces_in_neuron_effective_walk(
-        self, worm_with_circuit
-    ):
+    def test_cedne_citation_surfaces_in_neuron_effective_walk(self, worm_with_circuit):
         n1 = worm_with_circuit["n1"]
         keys = [k for _, k, _ in n1.effective_citations()]
         assert CEDNE_SOFTWARE_CITATION_KEY in keys
@@ -216,6 +215,7 @@ class TestCedneSelfCitation:
 # Hierarchical resolution: the heart of Phase 0
 # ---------------------------------------------------------------------------
 
+
 class TestHierarchy:
     def test_neuron_walks_to_network_and_worm(self, worm_with_circuit):
         w = worm_with_circuit["worm"]
@@ -230,7 +230,10 @@ class TestHierarchy:
         # Worm carries an auto-attached CeDNe self-citation in addition to the
         # ones we add explicitly.
         assert set(keys) == {
-            "NeuronCite", "NetworkCite", "WormCite", CEDNE_SOFTWARE_CITATION_KEY
+            "NeuronCite",
+            "NetworkCite",
+            "WormCite",
+            CEDNE_SOFTWARE_CITATION_KEY,
         }
 
     def test_connection_walks_to_network_and_worm(self, worm_with_circuit):
@@ -244,7 +247,10 @@ class TestHierarchy:
 
         keys = [k for _, k, _ in c.effective_citations()]
         assert set(keys) == {
-            "ConnCite", "NetworkCite", "WormCite", CEDNE_SOFTWARE_CITATION_KEY
+            "ConnCite",
+            "NetworkCite",
+            "WormCite",
+            CEDNE_SOFTWARE_CITATION_KEY,
         }
 
     def test_neuron_group_citation_reaches_member(self, worm_with_circuit):
@@ -315,9 +321,7 @@ class TestHierarchy:
         w = worm_with_circuit["worm"]
         n1 = worm_with_circuit["n1"]
 
-        w.citations.update(
-            {"cook_connectome": {"authors": ["Cook"], "year": 2019}}
-        )
+        w.citations.update({"cook_connectome": {"authors": ["Cook"], "year": 2019}})
         eff = n1.effective_citations()
         keys = [k for _, k, _ in eff]
         assert "cook_connectome" in keys
@@ -329,6 +333,7 @@ class TestHierarchy:
 # ---------------------------------------------------------------------------
 # to_dict integration
 # ---------------------------------------------------------------------------
+
 
 class TestToDictIntegration:
     def test_neuron_to_dict_includes_citations(self, worm_with_circuit):
@@ -350,9 +355,7 @@ class TestToDictIntegration:
         assert "citations" in d
         assert d["citations"]["K"] == {"key": "K", "title": "T"}
 
-    def test_connection_to_dict_omits_citations_when_empty(
-        self, worm_with_circuit
-    ):
+    def test_connection_to_dict_omits_citations_when_empty(self, worm_with_circuit):
         c = worm_with_circuit["conn"]
         d = c.to_dict()
         assert "citations" not in d

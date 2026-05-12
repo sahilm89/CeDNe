@@ -4,6 +4,7 @@ Tests for new NeuronGroup and ConnectionGroup set operations
 
 Extends the existing test_cedne.py suite.
 """
+
 import pytest
 from cedne.core.network import NervousSystem
 from cedne.core.neuron import Neuron, NeuronGroup
@@ -13,6 +14,7 @@ from cedne.core.connection import Connection, ConnectionGroup
 # ===========================================================================
 # NeuronGroup set operations
 # ===========================================================================
+
 
 class TestNeuronGroupSetOperations:
     @pytest.fixture
@@ -114,6 +116,7 @@ class TestNeuronGroupSetOperations:
 # ===========================================================================
 # ConnectionGroup set operations
 # ===========================================================================
+
 
 class TestConnectionGroupSetOperations:
     @pytest.fixture

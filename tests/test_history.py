@@ -17,7 +17,7 @@ import pickle
 
 import pytest
 
-from cedne.core.animal import Animal, Worm
+from cedne.core.animal import Worm
 from cedne.core.network import NervousSystem
 from cedne.core.history import (
     Event,
@@ -32,6 +32,7 @@ from cedne.core.history import (
 # ---------------------------------------------------------------------------
 # Event
 # ---------------------------------------------------------------------------
+
 
 class TestEvent:
     def _make(self, **overrides):
@@ -70,6 +71,7 @@ class TestEvent:
 # Resolution helpers
 # ---------------------------------------------------------------------------
 
+
 class TestResolveAnimal:
     def test_animal_passes_through(self):
         w = Worm()
@@ -107,6 +109,7 @@ class TestTargetOf:
 # ---------------------------------------------------------------------------
 # Decorator
 # ---------------------------------------------------------------------------
+
 
 class TestRecordDecorator:
     def test_records_kwargs_against_animal(self):
@@ -206,6 +209,7 @@ class TestRecordDecorator:
 # Serialization
 # ---------------------------------------------------------------------------
 
+
 class TestSerialization:
     def test_json_round_trip(self):
         w = Worm()
@@ -265,6 +269,7 @@ class TestPickleRoundTrip:
 # ---------------------------------------------------------------------------
 # Integration with real loader-style mutations
 # ---------------------------------------------------------------------------
+
 
 class TestBuiltinDecoration:
     def test_fold_network_logs(self):
