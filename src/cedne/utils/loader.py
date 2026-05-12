@@ -1871,7 +1871,22 @@ def _case_insensitive_child(parent, name):
 
 def _cengen_threshold_paths(sex=None, stage=None, dataset="auto"):
     root = DOWNLOAD_DIR / prefix_CENGEN
-    legacy = [thres_1, thres_2, thres_3, thres_4]
+    legacy_flat = [thres_1, thres_2, thres_3, thres_4]
+    # New canonical default: CENGEN/hermaphrodite/L4/*.csv. The original
+    # CeNGEN release lives at the CENGEN/ root as flat files (legacy_flat
+    # above); we now ship and CI-mirror the same data under the explicit
+    # sex/stage subdirectory layout, which is what loaders / docs reference
+    # from now on. Error messages should point here so contributors set up
+    # the right path on a fresh checkout.
+    new_default = [
+        root / "hermaphrodite" / "L4" / fname
+        for fname in (
+            "liberal_threshold1.csv",
+            "medium_threshold2.csv",
+            "conservative_threshold3.csv",
+            "stringent_threshold4.csv",
+        )
+    ]
 
     if dataset and dataset != "auto":
         rel = Path(str(dataset).split(":", 1)[-1])
@@ -1892,7 +1907,14 @@ def _cengen_threshold_paths(sex=None, stage=None, dataset="auto"):
         paths = [_cengen_threshold_file(candidate, i) for i in range(1, 5)]
         if all(paths):
             return paths
-    return legacy
+    # Fall back to the new canonical default. If that's also missing, fall
+    # back to the legacy flat layout (very old installs). The require_dataset_file
+    # error then points the contributor at the new path first.
+    if all(p.exists() for p in new_default):
+        return new_default
+    if all(p.exists() for p in legacy_flat):
+        return legacy_flat
+    return new_default
 
 
 def listTranscriptomeDatasets():

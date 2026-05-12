@@ -795,7 +795,9 @@ def test_load_atanas_populates_trials_and_behavior_with_existing_network(
     assert nn.neurons["AVCL"].citations == {}
 
 
-def test_loadNeurotransmitters_populates_edges_and_preserves_gap_junctions(monkeypatch):
+def test_loadNeurotransmitters_populates_edges_and_preserves_gap_junctions(
+    monkeypatch, tmp_path
+):
     worm = Worm("test-worm")
     nn = NervousSystem(worm, network="Neutral")
     nn.create_neurons(["AVAL", "AVBL", "AVCL"])
@@ -812,6 +814,24 @@ def test_loadNeurotransmitters_populates_edges_and_preserves_gap_junctions(monke
         input_type="edge",
     )
     nn.setup_gap_junctions({"AVBL": {"AVCL": {"weight": 1}}})
+
+    # Stub the CeNGEN CSV under the new canonical layout (hermaphrodite/L4/)
+    # so the test is independent of whether the data is staged on disk in CI.
+    # require_dataset_file checks Path.exists, so we write a real file instead
+    # of monkey-patching the path resolver.
+    cengen_dir = tmp_path / "CENGEN" / "hermaphrodite" / "L4"
+    cengen_dir.mkdir(parents=True)
+    stub_paths = []
+    for fname in (
+        "liberal_threshold1.csv",
+        "medium_threshold2.csv",
+        "conservative_threshold3.csv",
+        "stringent_threshold4.csv",
+    ):
+        p = cengen_dir / fname
+        p.write_text("gene_name,AVB,AVC\nacr-1,True,False\n")
+        stub_paths.append(p)
+    monkeypatch.setattr(loader, "_cengen_threshold_paths", lambda **_kw: stub_paths)
 
     tables = iter(
         [
