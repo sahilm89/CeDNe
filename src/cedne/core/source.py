@@ -1,5 +1,4 @@
-"""Provenance and citation infrastructure for CeDNe.
-"""
+"""Provenance and citation infrastructure for CeDNe."""
 
 from dataclasses import dataclass, asdict, fields
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -46,10 +45,10 @@ CEDNE_SOFTWARE_CITATION_KEY = "CeDNe_2025"
 CEDNE_SOFTWARE_CITATION = Citation(
     key=CEDNE_SOFTWARE_CITATION_KEY,
     title=(
-        "CeDNe: A unified framework for analysis and modeling of integrated "
-        "cross-modality neural data"
+        "CeDNe: A multi-scale computational framework for modeling "
+        "structure-function relationships in the C. elegans nervous system"
     ),
-    authors=["Moza, Sahil"],
+    authors=["Moza, Sahil", "Zhang, Yun"],
     year=2025,
     doi="10.1101/2025.11.03.683805",
     url="https://www.biorxiv.org/content/10.1101/2025.11.03.683805v1",

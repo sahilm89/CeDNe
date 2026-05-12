@@ -48,8 +48,12 @@ cedne = "cedne.serve:cli"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q --cov=cedne --cov-report=xml --cov-report=term-missing"
+addopts = "-ra -q --cov=cedne --cov-branch --cov-report=xml --cov-report=term-missing"
 testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["cedne"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.2"

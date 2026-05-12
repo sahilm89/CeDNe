@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use CeDNe in your work, please cite the preprint below."
+title: "CeDNe: A unified framework for analysis and modeling of integrated cross-modality neural data"
+authors:
+  - family-names: Moza
+    given-names: Sahil
+    email: sahil.moza@gmail.com
+type: software
+version: "0.1.0"
+date-released: "2026-05-12"
+license: MIT
+repository-code: "https://github.com/sahilm89/cedne"
+url: "https://cedne.org"
+# DOI placeholder. Mint via GitHub-Zenodo integration in Week 2 of the pre-release stress test
+# and replace this value with the concept DOI. Keep this file in sync with the
+# CEDNE_SOFTWARE_CITATION constant in src/cedne/core/source.py (single source of truth).
+doi: "10.5281/zenodo.PLACEHOLDER"
+preferred-citation:
+  type: article
+  title: "CeDNe: A multi-scale computational framework for modeling structure-function relationships in the C. elegans nervous system"
+  authors:
+    - family-names: Moza
+      given-names: Sahil
+
+    - family-names: Zhang
+      given-names: Yun
+  year: 2025
+  journal: "bioRxiv"
+  doi: "10.1101/2025.11.03.683805"
+  url: "https://www.biorxiv.org/content/10.1101/2025.11.03.683805v1"
+  notes: "Preprint. Update DOI and journal fields after Nature Methods acceptance."

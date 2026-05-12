@@ -5,6 +5,7 @@ through ``require_dataset_file``, and the resulting failure carries a
 structured ``dataset_key`` so the web backend can render an actionable
 banner instead of a raw ``[Errno 2]``.
 """
+
 import hashlib
 import io
 import zipfile
@@ -17,9 +18,7 @@ from cedne.utils.datasets import (
     DATASET_REGISTRY,
     DatasetSpec,
     DownloadSpec,
-    DownloadResult,
     MissingDatasetError,
-    download_all_public,
     download_dataset,
     require_dataset_file,
 )
@@ -43,10 +42,21 @@ def test_registry_covers_loader_dataset_keys():
     metadata for any error that escapes a loader.
     """
     expected_keys = {
-        "cengen", "cook_2019", "witvliet_2020", "white_1986", "fly_wire",
-        "winding_2023", "ryan_2016", "bumbarger_2013", "veraszto_2025",
-        "brittin_2018", "ripoll_sanchez_2023", "randi_2023", "wang_2024",
-        "atanas_2023", "worm_atlas_lineage",
+        "cengen",
+        "cook_2019",
+        "witvliet_2020",
+        "white_1986",
+        "fly_wire",
+        "winding_2023",
+        "ryan_2016",
+        "bumbarger_2013",
+        "veraszto_2025",
+        "brittin_2018",
+        "ripoll_sanchez_2023",
+        "randi_2023",
+        "wang_2024",
+        "atanas_2023",
+        "worm_atlas_lineage",
     }
     assert expected_keys.issubset(DATASET_REGISTRY.keys())
 
@@ -110,8 +120,13 @@ def test_loader_raises_missing_dataset_error_with_correct_key(tmp_path, monkeypa
     """Smoke test the wrapping for a representative loader: redirect the
     Cook connectome path to an empty tmpdir, expect a MissingDatasetError
     with key='cook_2019' rather than a raw FileNotFoundError.
+
+    The Cook male branch consults ``cook_male_cache`` before falling through
+    to ``require_dataset_file``; on a dev machine that cache often exists, so
+    we redirect both paths to make the test independent of local state.
     """
     monkeypatch.setattr(loader, "cook_connectome", tmp_path / "empty_cook")
+    monkeypatch.setattr(loader, "cook_male_cache", tmp_path / "no_cook_male_cache.pkl")
 
     with pytest.raises(MissingDatasetError) as exc_info:
         loader.makeWorm(
@@ -198,11 +213,13 @@ def test_download_dataset_writes_files_and_records_status(tmp_path, monkeypatch)
         key="test_ok",
         title="Test dataset",
         expected_dir=tmp_path / "test_ok",
-        download_specs=(DownloadSpec(
-            url="https://example.com/data.csv",
-            target_relpath="data.csv",
-            sha256=expected_sha,
-        ),),
+        download_specs=(
+            DownloadSpec(
+                url="https://example.com/data.csv",
+                target_relpath="data.csv",
+                sha256=expected_sha,
+            ),
+        ),
     )
     monkeypatch.setitem(DATASET_REGISTRY, "test_ok", spec)
     _patch_requests_get(monkeypatch, {spec.download_specs[0].url: payload})
@@ -227,11 +244,13 @@ def test_download_dataset_rejects_sha256_mismatch(tmp_path, monkeypatch):
         key="test_bad_sha",
         title="Test dataset",
         expected_dir=tmp_path / "bad",
-        download_specs=(DownloadSpec(
-            url="https://example.com/x.csv",
-            target_relpath="x.csv",
-            sha256=wrong_sha,
-        ),),
+        download_specs=(
+            DownloadSpec(
+                url="https://example.com/x.csv",
+                target_relpath="x.csv",
+                sha256=wrong_sha,
+            ),
+        ),
     )
     monkeypatch.setitem(DATASET_REGISTRY, "test_bad_sha", spec)
     _patch_requests_get(monkeypatch, {spec.download_specs[0].url: payload})
@@ -257,17 +276,20 @@ def test_download_dataset_skips_when_sha256_already_matches(tmp_path, monkeypatc
         key="test_skip",
         title="Test dataset",
         expected_dir=target_dir,
-        download_specs=(DownloadSpec(
-            url="https://example.com/x.csv",
-            target_relpath="x.csv",
-            sha256=sha,
-        ),),
+        download_specs=(
+            DownloadSpec(
+                url="https://example.com/x.csv",
+                target_relpath="x.csv",
+                sha256=sha,
+            ),
+        ),
     )
     monkeypatch.setitem(DATASET_REGISTRY, "test_skip", spec)
 
     # If `requests.get` is hit, fail loudly — we expect zero network calls.
     def boom(*_a, **_k):
         raise AssertionError("requests.get should not be called for skip path")
+
     fake_requests = MagicMock()
     fake_requests.get = boom
     monkeypatch.setitem(__import__("sys").modules, "requests", fake_requests)
@@ -290,11 +312,13 @@ def test_download_dataset_force_redownloads(tmp_path, monkeypatch):
         key="test_force",
         title="Test dataset",
         expected_dir=target_dir,
-        download_specs=(DownloadSpec(
-            url="https://example.com/f.csv",
-            target_relpath="f.csv",
-            sha256=sha,
-        ),),
+        download_specs=(
+            DownloadSpec(
+                url="https://example.com/f.csv",
+                target_relpath="f.csv",
+                sha256=sha,
+            ),
+        ),
     )
     monkeypatch.setitem(DATASET_REGISTRY, "test_force", spec)
     calls = {"n": 0}
@@ -302,7 +326,9 @@ def test_download_dataset_force_redownloads(tmp_path, monkeypatch):
     def fake_get(url, **_k):
         calls["n"] += 1
         return _fake_response(payload)
-    fake_requests = MagicMock(); fake_requests.get = fake_get
+
+    fake_requests = MagicMock()
+    fake_requests.get = fake_get
     monkeypatch.setitem(__import__("sys").modules, "requests", fake_requests)
 
     download_dataset("test_force", force=True, progress=lambda _: None)
@@ -330,14 +356,16 @@ def test_download_dataset_extracts_zip_with_archive_keep_under(tmp_path, monkeyp
         key="test_keep_under",
         title="t",
         expected_dir=tmp_path / "kept",
-        download_specs=(DownloadSpec(
-            url="https://example.com/repo.zip",
-            target_relpath="_archive.zip",
-            sha256=sha,
-            extract_to="new",
-            strip_prefix=1,
-            archive_keep_under="Adjacency matrices for networks/",
-        ),),
+        download_specs=(
+            DownloadSpec(
+                url="https://example.com/repo.zip",
+                target_relpath="_archive.zip",
+                sha256=sha,
+                extract_to="new",
+                strip_prefix=1,
+                archive_keep_under="Adjacency matrices for networks/",
+            ),
+        ),
     )
     monkeypatch.setitem(DATASET_REGISTRY, "test_keep_under", spec)
     _patch_requests_get(monkeypatch, {spec.download_specs[0].url: archive_bytes})
@@ -371,13 +399,15 @@ def test_download_dataset_extracts_zip_with_strip_prefix(tmp_path, monkeypatch):
         key="test_zip",
         title="Test zip dataset",
         expected_dir=tmp_path / "zipdest",
-        download_specs=(DownloadSpec(
-            url="https://example.com/data.zip",
-            target_relpath="data.zip",
-            sha256=sha,
-            extract_to="",
-            strip_prefix=1,
-        ),),
+        download_specs=(
+            DownloadSpec(
+                url="https://example.com/data.zip",
+                target_relpath="data.zip",
+                sha256=sha,
+                extract_to="",
+                strip_prefix=1,
+            ),
+        ),
     )
     monkeypatch.setitem(DATASET_REGISTRY, "test_zip", spec)
     _patch_requests_get(monkeypatch, {spec.download_specs[0].url: archive_bytes})
@@ -420,14 +450,21 @@ def test_download_all_public_iterates_only_specs_with_urls(tmp_path, monkeypatch
     sha = hashlib.sha256(payload).hexdigest()
     fake_registry = {
         "with_specs": DatasetSpec(
-            key="with_specs", title="t", expected_dir=tmp_path / "a",
-            download_specs=(DownloadSpec(
-                url="https://example.com/a.csv",
-                target_relpath="a.csv", sha256=sha,
-            ),),
+            key="with_specs",
+            title="t",
+            expected_dir=tmp_path / "a",
+            download_specs=(
+                DownloadSpec(
+                    url="https://example.com/a.csv",
+                    target_relpath="a.csv",
+                    sha256=sha,
+                ),
+            ),
         ),
         "no_specs": DatasetSpec(
-            key="no_specs", title="t", expected_dir=tmp_path / "b",
+            key="no_specs",
+            title="t",
+            expected_dir=tmp_path / "b",
             source_url="https://example.com/manual",
         ),
     }
@@ -450,13 +487,19 @@ def test_download_datasets_legacy_alias(tmp_path, monkeypatch):
     payload = b"json:{}"
     sha = hashlib.sha256(payload).hexdigest()
     monkeypatch.setitem(
-        DATASET_REGISTRY, "atanas_2023",
+        DATASET_REGISTRY,
+        "atanas_2023",
         DatasetSpec(
-            key="atanas_2023", title="t", expected_dir=tmp_path / "atanas",
-            download_specs=(DownloadSpec(
-                url="https://example.com/x.json",
-                target_relpath="Control/x.json", sha256=sha,
-            ),),
+            key="atanas_2023",
+            title="t",
+            expected_dir=tmp_path / "atanas",
+            download_specs=(
+                DownloadSpec(
+                    url="https://example.com/x.json",
+                    target_relpath="Control/x.json",
+                    sha256=sha,
+                ),
+            ),
         ),
     )
     _patch_requests_get(monkeypatch, {"https://example.com/x.json": payload})
@@ -467,7 +510,9 @@ def test_download_datasets_legacy_alias(tmp_path, monkeypatch):
     assert (tmp_path / "atanas" / "Control" / "x.json").exists()
 
 
-def test_ripoll_sanchez_archive_extracts_to_layout_loader_expects(tmp_path, monkeypatch):
+def test_ripoll_sanchez_archive_extracts_to_layout_loader_expects(
+    tmp_path, monkeypatch
+):
     """End-to-end check: the registered Ripoll-Sanchez archive spec, when
     downloaded + extracted, must produce a directory layout that
     ``loader._neuropeptide_new_root()`` recognises as a valid ``new/``
@@ -482,7 +527,9 @@ def test_ripoll_sanchez_archive_extracts_to_layout_loader_expects(tmp_path, monk
         kept = "Adjacency matrices for networks/"
         # Pairs file — the marker `_neuropeptide_new_root()` looks for.
         z.writestr(
-            wrap + kept + "neuropeptide_pairs (network identities for Individual_net folders).csv",
+            wrap
+            + kept
+            + "neuropeptide_pairs (network identities for Individual_net folders).csv",
             "ligand,gpcr\nNPP-1,GPCR-1\n",
         )
         # One representative network from each range model.
@@ -492,7 +539,12 @@ def test_ripoll_sanchez_archive_extracts_to_layout_loader_expects(tmp_path, monk
             ("Individual NPP-GPCR networks SR", "short"),
         ]:
             z.writestr(
-                wrap + kept + folder + "/01022024_neuropeptide_network001_" + suffix + "_range_model.csv",
+                wrap
+                + kept
+                + folder
+                + "/01022024_neuropeptide_network001_"
+                + suffix
+                + "_range_model.csv",
                 "0,1\n1,0\n",
             )
         # Sibling directory we explicitly want filtered out.
@@ -507,19 +559,23 @@ def test_ripoll_sanchez_archive_extracts_to_layout_loader_expects(tmp_path, monk
     new_dir = tmp_path / "ripoll"
     real_spec = real.download_specs[0]
     patched_spec = DatasetSpec(
-        key=real.key, title=real.title,
+        key=real.key,
+        title=real.title,
         expected_dir=new_dir,
-        citation=real.citation, source_url=real.source_url,
+        citation=real.citation,
+        source_url=real.source_url,
         license_note=real.license_note,
-        download_specs=(DownloadSpec(
-            url=real_spec.url,
-            target_relpath=real_spec.target_relpath,
-            sha256=sha,  # match the synthetic bytes, not the real archive
-            description=real_spec.description,
-            extract_to=real_spec.extract_to,
-            strip_prefix=real_spec.strip_prefix,
-            archive_keep_under=real_spec.archive_keep_under,
-        ),),
+        download_specs=(
+            DownloadSpec(
+                url=real_spec.url,
+                target_relpath=real_spec.target_relpath,
+                sha256=sha,  # match the synthetic bytes, not the real archive
+                description=real_spec.description,
+                extract_to=real_spec.extract_to,
+                strip_prefix=real_spec.strip_prefix,
+                archive_keep_under=real_spec.archive_keep_under,
+            ),
+        ),
     )
     monkeypatch.setitem(DATASET_REGISTRY, "ripoll_sanchez_2023", patched_spec)
     _patch_requests_get(monkeypatch, {real_spec.url: archive_bytes})
@@ -536,13 +592,24 @@ def test_ripoll_sanchez_archive_extracts_to_layout_loader_expects(tmp_path, monk
     monkeypatch.setattr(loader, "TOPDIR", tmp_path / "nonexistent")
 
     found = loader._neuropeptide_new_root()
-    assert (found / "neuropeptide_pairs (network identities for Individual_net folders).csv").exists()
-    assert (found / "Individual NPP-GPCR networks LR" /
-            "01022024_neuropeptide_network001_long_range_model.csv").exists()
-    assert (found / "Individual NPP-GPCR networks MR" /
-            "01022024_neuropeptide_network001_mid_range_model.csv").exists()
-    assert (found / "Individual NPP-GPCR networks SR" /
-            "01022024_neuropeptide_network001_short_range_model.csv").exists()
+    assert (
+        found / "neuropeptide_pairs (network identities for Individual_net folders).csv"
+    ).exists()
+    assert (
+        found
+        / "Individual NPP-GPCR networks LR"
+        / "01022024_neuropeptide_network001_long_range_model.csv"
+    ).exists()
+    assert (
+        found
+        / "Individual NPP-GPCR networks MR"
+        / "01022024_neuropeptide_network001_mid_range_model.csv"
+    ).exists()
+    assert (
+        found
+        / "Individual NPP-GPCR networks SR"
+        / "01022024_neuropeptide_network001_short_range_model.csv"
+    ).exists()
     # The sibling directory we filtered out must not be under the new/ tree.
     assert not (found / "Scripts & data").exists()
 
@@ -556,6 +623,6 @@ def test_registered_specs_have_consistent_target_paths():
     """
     for key, spec in DATASET_REGISTRY.items():
         for ds in spec.download_specs:
-            assert ds.target_relpath, (
-                f"Dataset '{key}' spec for {ds.url} has empty target_relpath"
-            )
+            assert (
+                ds.target_relpath
+            ), f"Dataset '{key}' spec for {ds.url} has empty target_relpath"

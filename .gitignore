@@ -35,7 +35,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 
-# Outputs from 
+# Outputs from
 Output/
 tmp/
 examples/notebooks/*.pkl
@@ -161,3 +161,4 @@ examples/notebooks/benchmarking.ipynb
 examples/python/tool_comparison_audit_2026_build.py
 examples/python/*.csv
 examples/python/*.md
+examples/notebooks/20-seq-hierarchy-NT-L4-vs-adult.ipynb
