@@ -787,10 +787,10 @@ def test_load_atanas_populates_trials_and_behavior_with_existing_network(
     assert np.array_equal(aval_trial.recording, np.array([1.0, 2.0]))
     assert aval_trial.behavior is session.behavior
     assert aval_trial.metadata["source_file"] == "recording.json"
-    assert set(nn.neurons["AVAL"].citations) == {"Atanas2023"}
-    assert set(nn.neurons["AVBL"].citations) == {"Atanas2023"}
+    assert set(nn.neurons["AVAL"].citations) == {"atanas2023"}
+    assert set(nn.neurons["AVBL"].citations) == {"atanas2023"}
     assert (
-        nn.neurons["AVAL"].citations["Atanas2023"].doi == "10.1016/j.cell.2023.07.035"
+        nn.neurons["AVAL"].citations["atanas2023"].doi == "10.1016/j.cell.2023.07.035"
     )
     assert nn.neurons["AVCL"].citations == {}
 
