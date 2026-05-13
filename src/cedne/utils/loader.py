@@ -108,14 +108,16 @@ def _attach_neuropal_position_citations(nn):
 
 
 def _atanas_recording_citation():
-    """Structured citation for Atanas et al. whole-brain recordings."""
-    return Citation(
-        key="Atanas2023",
-        authors=["Atanas et al."],
-        year=2023,
-        doi="10.1016/j.cell.2023.07.035",
-        notes="Whole-brain calcium imaging recordings loaded from atanas_whole_brain.",
-    )
+    """Canonical citation for Atanas et al. whole-brain recordings.
+
+    Returns the shared entry from the central ``citations`` registry in
+    ``cedne.utils.config`` so the recording-level citation carries the same
+    key, title, authors, year, and doi as the dataset-panel citation.
+    Keeping a separate Citation copy in this module previously caused the
+    UI to fall back to a bare ``doi:...`` label because the local copy was
+    missing the ``title`` field.
+    """
+    return citations["atanas_whole_brain"][0]
 
 
 def _celegans_canonical_types():
