@@ -1,0 +1,875 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>cedne.core.fold_policy &#8212; CeDNe 0.1.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../../../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/cedne/core/fold_policy';</script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">CeDNe 0.1.0 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">cedne.core.fold_policy</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for cedne.core.fold_policy</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Fold policies: how to aggregate constituent attributes during a fold.</span>
+
+<span class="sd">Folding (``Network.fold_network`` / ``Network.contract_neurons`` /</span>
+<span class="sd">``Network.contract_connections``) collapses N entities into one supernode</span>
+<span class="sd">or supernedge. Each entity carries attributes (type, recording, ligands,</span>
+<span class="sd">receptor dicts, etc.); the question is *how the supernode should</span>
+<span class="sd">represent that attribute*. Historically this was handled ad-hoc inside</span>
+<span class="sd">``contract_connections`` for a small set of known fields (set-union for</span>
+<span class="sd">ligands, sum for weight, etc.) — fine for two papers&#39; worth of fields,</span>
+<span class="sd">brittle as the dataset menu grows.</span>
+
+<span class="sd">This module formalizes the choice as a per-attribute ``FoldPolicy``:</span>
+
+<span class="sd">    FoldPolicy(name=&quot;recording&quot;, kind=&quot;timeseries&quot;, aggregator=&quot;timeseries_mean&quot;)</span>
+
+<span class="sd">A ``FoldPolicySet`` is a mapping of attribute-name to policy that gets</span>
+<span class="sd">applied during a single fold and **stored on the resulting network** so</span>
+<span class="sd">the choice is reproducible. The default aggregator for an unregistered</span>
+<span class="sd">attribute is ``drop`` — silent semantic drift on un-thought-about fields</span>
+<span class="sd">is worse than missing data.</span>
+
+<span class="sd">Aggregator menu (see ``apply_policy`` for semantics):</span>
+
+<span class="sd">    Scalar (int/float):     mean | median | max | min | mode</span>
+<span class="sd">    Time series:            timeseries_mean | timeseries_median | timeseries_max</span>
+<span class="sd">    List:                   mode_count | keep_all | set_union</span>
+<span class="sd">    Dict:                   dict_union | dict_intersection | dict_collated</span>
+<span class="sd">    Categorical:            mode | keep_all</span>
+<span class="sd">    Any kind:               drop  (return None — attribute not copied)</span>
+
+<span class="sd">Time-series aggregators truncate to the shortest constituent&#39;s length</span>
+<span class="sd">(common defensive choice for recording data with motion-rejected frames</span>
+<span class="sd">or differing trial lengths).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">statistics</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s2">&quot;Sahil Moza&quot;</span>
+<span class="n">__date__</span> <span class="o">=</span> <span class="s2">&quot;2026-05-12&quot;</span>
+<span class="n">__license__</span> <span class="o">=</span> <span class="s2">&quot;MIT&quot;</span>
+
+
+<span class="c1"># Aggregator names per kind. Keeping the kinds open as plain strings lets</span>
+<span class="c1"># downstream code register custom kinds without editing this module.</span>
+<span class="n">ScalarAgg</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;sum&quot;</span><span class="p">,</span> <span class="s2">&quot;mean&quot;</span><span class="p">,</span> <span class="s2">&quot;median&quot;</span><span class="p">,</span> <span class="s2">&quot;max&quot;</span><span class="p">,</span> <span class="s2">&quot;min&quot;</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">]</span>
+<span class="n">TimeseriesAgg</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;timeseries_mean&quot;</span><span class="p">,</span> <span class="s2">&quot;timeseries_median&quot;</span><span class="p">,</span> <span class="s2">&quot;timeseries_max&quot;</span><span class="p">]</span>
+<span class="n">ListAgg</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;mode_count&quot;</span><span class="p">,</span> <span class="s2">&quot;keep_all&quot;</span><span class="p">,</span> <span class="s2">&quot;set_union&quot;</span><span class="p">]</span>
+<span class="n">DictAgg</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;dict_union&quot;</span><span class="p">,</span> <span class="s2">&quot;dict_intersection&quot;</span><span class="p">,</span> <span class="s2">&quot;dict_collated&quot;</span><span class="p">]</span>
+<span class="n">CategoricalAgg</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="s2">&quot;keep_all&quot;</span><span class="p">]</span>
+
+<span class="c1"># Sentinel meaning &quot;don&#39;t copy this attribute to the supernode&quot;. Works on</span>
+<span class="c1"># every kind; equivalent to the historical default of &quot;not registered =</span>
+<span class="c1"># not folded&quot;.</span>
+<span class="n">DROP</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;drop&quot;</span>
+
+<span class="n">ALL_AGGREGATORS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="s2">&quot;sum&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;mean&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;median&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;max&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;min&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;mode&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;timeseries_mean&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;timeseries_median&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;timeseries_max&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;mode_count&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;keep_all&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;set_union&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;dict_union&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;dict_intersection&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;dict_collated&quot;</span><span class="p">,</span>
+        <span class="n">DROP</span><span class="p">,</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+
+<span class="c1"># Canonical menu order (UI-facing): drives both the picker layout and the</span>
+<span class="c1"># ``valid_aggregators(kind)`` public helper. _VALID_AGGREGATORS_BY_KIND is</span>
+<span class="c1"># the membership-check companion (frozenset for O(1) lookup in</span>
+<span class="c1"># ``__post_init__``) and is derived from this tuple-of-tuples so the two</span>
+<span class="c1"># can never drift.</span>
+<span class="n">_AGGREGATOR_MENUS</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;scalar&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;sum&quot;</span><span class="p">,</span> <span class="s2">&quot;mean&quot;</span><span class="p">,</span> <span class="s2">&quot;median&quot;</span><span class="p">,</span> <span class="s2">&quot;max&quot;</span><span class="p">,</span> <span class="s2">&quot;min&quot;</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="n">DROP</span><span class="p">),</span>
+    <span class="s2">&quot;timeseries&quot;</span><span class="p">:</span> <span class="p">(</span>
+        <span class="s2">&quot;timeseries_mean&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;timeseries_median&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;timeseries_max&quot;</span><span class="p">,</span>
+        <span class="n">DROP</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;list&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;mode_count&quot;</span><span class="p">,</span> <span class="s2">&quot;keep_all&quot;</span><span class="p">,</span> <span class="s2">&quot;set_union&quot;</span><span class="p">,</span> <span class="n">DROP</span><span class="p">),</span>
+    <span class="s2">&quot;dict&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;dict_union&quot;</span><span class="p">,</span> <span class="s2">&quot;dict_intersection&quot;</span><span class="p">,</span> <span class="s2">&quot;dict_collated&quot;</span><span class="p">,</span> <span class="n">DROP</span><span class="p">),</span>
+    <span class="s2">&quot;categorical&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="s2">&quot;keep_all&quot;</span><span class="p">,</span> <span class="s2">&quot;same_or_merged&quot;</span><span class="p">,</span> <span class="n">DROP</span><span class="p">),</span>
+<span class="p">}</span>
+
+<span class="n">_VALID_AGGREGATORS_BY_KIND</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">frozenset</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">menu</span><span class="p">)</span> <span class="k">for</span> <span class="n">kind</span><span class="p">,</span> <span class="n">menu</span> <span class="ow">in</span> <span class="n">_AGGREGATOR_MENUS</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">valid_aggregators</span><span class="p">(</span><span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Aggregator names valid for ``kind``, in canonical UI menu order.</span>
+
+<span class="sd">    Public discovery helper for callers (e.g. backend endpoints, picker</span>
+<span class="sd">    UIs) that need the per-kind menu without depending on the private</span>
+<span class="sd">    ``_VALID_AGGREGATORS_BY_KIND`` table. Raises KeyError on unknown kind.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">_AGGREGATOR_MENUS</span><span class="p">[</span><span class="n">kind</span><span class="p">])</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">valid_kinds</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;All kinds the policy system understands, in declaration order.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">_AGGREGATOR_MENUS</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+
+<span class="c1"># Sentinel returned by the ``same_or_merged`` categorical aggregator when</span>
+<span class="c1"># constituents disagree on a categorical attribute. Mirrored to</span>
+<span class="c1"># cedne/core/neuron.py&#39;s MERGED_TYPE (same string, defined twice to</span>
+<span class="c1"># avoid a fold_policy → neuron import cycle).</span>
+<span class="n">SAME_OR_MERGED_SENTINEL</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;merged&quot;</span>
+
+
+<div class="viewcode-block" id="FoldPolicy">
+<a class="viewcode-back" href="../../../index.html#cedne.FoldPolicy">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">FoldPolicy</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;How to aggregate one named attribute across constituents.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        name:       The attribute key (e.g. ``&quot;recording&quot;`` for time</span>
+<span class="sd">                    series, ``&quot;type&quot;`` for categorical, ``&quot;ligands&quot;`` for</span>
+<span class="sd">                    list-valued connection metadata). Used by callers as</span>
+<span class="sd">                    the lookup key against the live attribute on each</span>
+<span class="sd">                    constituent.</span>
+<span class="sd">        kind:       The shape of the attribute. Determines which</span>
+<span class="sd">                    aggregators are valid; ``apply_policy`` raises if a</span>
+<span class="sd">                    kind/aggregator combination doesn&#39;t make sense.</span>
+<span class="sd">        aggregator: How to combine N constituent values into one.</span>
+<span class="sd">                    Default ``&quot;drop&quot;`` means the attribute isn&#39;t copied</span>
+<span class="sd">                    to the supernode (safe default — no silent merge).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;scalar&quot;</span><span class="p">,</span> <span class="s2">&quot;timeseries&quot;</span><span class="p">,</span> <span class="s2">&quot;list&quot;</span><span class="p">,</span> <span class="s2">&quot;dict&quot;</span><span class="p">,</span> <span class="s2">&quot;categorical&quot;</span><span class="p">]</span>
+    <span class="n">aggregator</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DROP</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">valid</span> <span class="o">=</span> <span class="n">_VALID_AGGREGATORS_BY_KIND</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">valid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Unknown FoldPolicy kind: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="si">!r}</span><span class="s2">. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Expected one of </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">_VALID_AGGREGATORS_BY_KIND</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">aggregator</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Aggregator </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">aggregator</span><span class="si">!r}</span><span class="s2"> is not valid for kind &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="si">!r}</span><span class="s2">. Valid: </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">valid</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span>
+
+<div class="viewcode-block" id="FoldPolicy.to_dict">
+<a class="viewcode-back" href="../../../index.html#cedne.FoldPolicy.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="p">,</span>
+            <span class="s2">&quot;aggregator&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">aggregator</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="FoldPolicy.from_dict">
+<a class="viewcode-back" href="../../../index.html#cedne.FoldPolicy.from_dict">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">d</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;FoldPolicy&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span> <span class="n">kind</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;kind&quot;</span><span class="p">],</span> <span class="n">aggregator</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;aggregator&quot;</span><span class="p">,</span> <span class="n">DROP</span><span class="p">))</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="FoldPolicySet">
+<a class="viewcode-back" href="../../../index.html#cedne.FoldPolicySet">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">FoldPolicySet</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A bundle of per-attribute policies + a default for unregistered attrs.</span>
+
+<span class="sd">    Attached to the resulting network after a fold so the choices that</span>
+<span class="sd">    produced it are part of the provenance record (alongside the</span>
+<span class="sd">    constituent subgraphs already captured by ``fold_network``).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">policies</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">FoldPolicy</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="c1"># Fallback for any attribute the caller didn&#39;t explicitly register.</span>
+    <span class="c1"># ``drop`` is the safe default — see module docstring.</span>
+    <span class="n">default_aggregator</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DROP</span>
+
+<div class="viewcode-block" id="FoldPolicySet.add">
+<a class="viewcode-back" href="../../../index.html#cedne.FoldPolicySet.add">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">policy</span><span class="p">:</span> <span class="n">FoldPolicy</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;FoldPolicySet&quot;</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">policies</span><span class="p">[</span><span class="n">policy</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">policy</span>
+        <span class="k">return</span> <span class="bp">self</span></div>
+
+
+<div class="viewcode-block" id="FoldPolicySet.get">
+<a class="viewcode-back" href="../../../index.html#cedne.FoldPolicySet.get">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FoldPolicy</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the policy for ``name`` or a drop policy of the given kind.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">policies</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">policies</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">FoldPolicy</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">kind</span><span class="o">=</span><span class="n">kind</span><span class="p">,</span> <span class="n">aggregator</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">default_aggregator</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FoldPolicySet.to_dict">
+<a class="viewcode-back" href="../../../index.html#cedne.FoldPolicySet.to_dict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;policies&quot;</span><span class="p">:</span> <span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">policies</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+            <span class="s2">&quot;default_aggregator&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_aggregator</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="FoldPolicySet.from_dict">
+<a class="viewcode-back" href="../../../index.html#cedne.FoldPolicySet.from_dict">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">d</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;FoldPolicySet&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">policies</span><span class="o">=</span><span class="p">{</span>
+                <span class="n">n</span><span class="p">:</span> <span class="n">FoldPolicy</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;policies&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="p">},</span>
+            <span class="n">default_aggregator</span><span class="o">=</span><span class="n">d</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;default_aggregator&quot;</span><span class="p">,</span> <span class="n">DROP</span><span class="p">),</span>
+        <span class="p">)</span></div>
+</div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Aggregator implementations</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_coerce_numeric</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Pull numeric-looking values out of a heterogeneous list.&quot;&quot;&quot;</span>
+    <span class="n">out</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">f</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_agg_scalar</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+    <span class="n">arr</span> <span class="o">=</span> <span class="n">_coerce_numeric</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">arr</span><span class="p">:</span>
+        <span class="c1"># ``sum`` of nothing is conventionally 0; the historical</span>
+        <span class="c1"># contract_connections behavior initialized weight=0 even for</span>
+        <span class="c1"># empty constituent lists, so we match that here.</span>
+        <span class="k">return</span> <span class="mf">0.0</span> <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;sum&quot;</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;sum&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">arr</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;mean&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">arr</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;median&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">arr</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;max&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">arr</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;min&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">arr</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;mode&quot;</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">statistics</span><span class="o">.</span><span class="n">mode</span><span class="p">(</span><span class="n">arr</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">statistics</span><span class="o">.</span><span class="n">StatisticsError</span><span class="p">:</span>
+            <span class="c1"># Ties — pick the first multimode value, deterministic.</span>
+            <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">statistics</span><span class="o">.</span><span class="n">multimode</span><span class="p">(</span><span class="n">arr</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown scalar aggregator: </span><span class="si">{</span><span class="n">op</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_agg_timeseries</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Aggregate constituent time-series, truncating to the shortest length.&quot;&quot;&quot;</span>
+    <span class="n">arrays</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">arr</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">arrays</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">arrays</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">min_len</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arrays</span><span class="p">))</span>
+    <span class="n">stacked</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">a</span><span class="p">[:</span><span class="n">min_len</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arrays</span><span class="p">])</span>  <span class="c1"># (N, min_len)</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;timeseries_mean&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">stacked</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;timeseries_median&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">stacked</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;timeseries_max&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">stacked</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown timeseries aggregator: </span><span class="si">{</span><span class="n">op</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_agg_categorical</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Combine categorical values (e.g. neuron type). Always preserves identity.&quot;&quot;&quot;</span>
+    <span class="n">arr</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">v</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">arr</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;mode&quot;</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">statistics</span><span class="o">.</span><span class="n">mode</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">statistics</span><span class="o">.</span><span class="n">StatisticsError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">statistics</span><span class="o">.</span><span class="n">multimode</span><span class="p">(</span><span class="n">arr</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;keep_all&quot;</span><span class="p">:</span>
+        <span class="c1"># preserve first-occurrence order</span>
+        <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">arr</span><span class="p">:</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">v</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">bool</span><span class="p">))</span> <span class="k">else</span> <span class="nb">repr</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+                <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;same_or_merged&quot;</span><span class="p">:</span>
+        <span class="c1"># The historical neuron type-merge policy: if every constituent</span>
+        <span class="c1"># agrees on the value, preserve it; if they disagree, return the</span>
+        <span class="c1"># SAME_OR_MERGED_SENTINEL (&quot;merged&quot;) so analyses that switch on</span>
+        <span class="c1"># type can detect the merged case explicitly. Empty input</span>
+        <span class="c1"># returns None — the caller is expected to skip setting the</span>
+        <span class="c1"># attribute, matching contract_neurons&#39;s prior behavior of</span>
+        <span class="c1"># leaving the attribute unchanged when no constituent had a</span>
+        <span class="c1"># usable value.</span>
+        <span class="n">distinct</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">distinct</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">distinct</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">SAME_OR_MERGED_SENTINEL</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown categorical aggregator: </span><span class="si">{</span><span class="n">op</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_set_key</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Hashable key for set-union dedup. Matches the legacy contract:</span>
+<span class="sd">    lists are coerced to tuples (so ``[a, b]`` and ``(a, b)`` count as</span>
+<span class="sd">    the same element); primitives pass through; anything else is</span>
+<span class="sd">    repr-stringified so non-hashable containers still dedupe.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">bool</span><span class="p">))</span> <span class="ow">or</span> <span class="n">x</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">x</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="nb">hash</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span>
+    <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">repr</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_agg_list</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Combine list-valued attributes (ligands, receptors, etc.).&quot;&quot;&quot;</span>
+    <span class="n">flat</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="nb">set</span><span class="p">)):</span>
+            <span class="n">flat</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">flat</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">flat</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">op</span> <span class="o">!=</span> <span class="s2">&quot;mode_count&quot;</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;keep_all&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">flat</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;set_union&quot;</span><span class="p">:</span>
+        <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">out</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">flat</span><span class="p">:</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">_set_key</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+                <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;mode_count&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Counter</span><span class="p">(</span><span class="n">_hashable_only</span><span class="p">(</span><span class="n">flat</span><span class="p">))</span><span class="o">.</span><span class="n">most_common</span><span class="p">(</span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown list aggregator: </span><span class="si">{</span><span class="n">op</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_hashable_only</span><span class="p">(</span><span class="n">seq</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Counter requires hashable values; cast complex objects via repr.&quot;&quot;&quot;</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">seq</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">hash</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_agg_dict</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">op</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Combine dict-valued attributes.</span>
+
+<span class="sd">    union           — every key from every constituent. When the same</span>
+<span class="sd">                      key appears in multiple constituents, the *first</span>
+<span class="sd">                      observed* value wins. Output is ``{k: v}``, i.e.</span>
+<span class="sd">                      same shape as a single-constituent dict. This is</span>
+<span class="sd">                      the deterministic, non-arbitrary replacement for</span>
+<span class="sd">                      what contract_connections historically did via a</span>
+<span class="sd">                      manual ``if k not in merged_receptors`` loop.</span>
+<span class="sd">    intersection    — only keys present in *every* constituent dict.</span>
+<span class="sd">                      Value is the first observed value per key. Same</span>
+<span class="sd">                      shape as ``union``.</span>
+<span class="sd">    collated        — every key from every constituent. Value is a</span>
+<span class="sd">                      list of all observed values (richer form for</span>
+<span class="sd">                      callers that want to see every observation,</span>
+<span class="sd">                      possibly to compute summary statistics off-line).</span>
+<span class="sd">                      Output is ``{k: [v0, v1, ...]}``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dicts</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">dicts</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;dict_union&quot;</span><span class="p">:</span>
+        <span class="n">out</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dicts</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">d</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">out</span><span class="p">:</span>
+                    <span class="n">out</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="k">return</span> <span class="n">out</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;dict_intersection&quot;</span><span class="p">:</span>
+        <span class="n">common</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">dicts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dicts</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">common</span> <span class="o">&amp;=</span> <span class="nb">set</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">out_int</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">common</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dicts</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">d</span><span class="p">:</span>
+                    <span class="n">out_int</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+                    <span class="k">break</span>
+        <span class="k">return</span> <span class="n">out_int</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;dict_collated&quot;</span><span class="p">:</span>
+        <span class="n">out_col</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dicts</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">d</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">out_col</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out_col</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown dict aggregator: </span><span class="si">{</span><span class="n">op</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Default policy sets for known dataset shapes</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1">#</span>
+<span class="c1"># DEFAULT_CONNECTION_FOLD_POLICY captures the behavior that</span>
+<span class="c1"># ``Network.contract_connections`` had before Phase 2 — weights sum,</span>
+<span class="c1"># transmitter / ligand / receptor list-valued metadata set-union, and</span>
+<span class="c1"># receptor dicts merge with first-observed-value semantics. Phase 2</span>
+<span class="c1"># refactors contract_connections to drive its merge logic through this</span>
+<span class="c1"># policy set instead of inlining the rules. Callers that pass a custom</span>
+<span class="c1"># policy set override this; callers that pass nothing get current</span>
+<span class="c1"># behavior.</span>
+<span class="c1">#</span>
+<span class="c1"># Receptors note: pre-Phase-2 contract_connections did &quot;first key wins&quot;</span>
+<span class="c1"># via ``if rk not in merged_receptors``. ``dict_union`` here means the</span>
+<span class="c1"># same thing — first observed value per key — chosen to keep parity.</span>
+
+<span class="n">DEFAULT_CONNECTION_FOLD_POLICY</span> <span class="o">=</span> <span class="n">FoldPolicySet</span><span class="p">(</span>
+    <span class="n">policies</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;weight&quot;</span><span class="p">:</span> <span class="n">FoldPolicy</span><span class="p">(</span><span class="s2">&quot;weight&quot;</span><span class="p">,</span> <span class="s2">&quot;scalar&quot;</span><span class="p">,</span> <span class="s2">&quot;sum&quot;</span><span class="p">),</span>
+        <span class="s2">&quot;ligands&quot;</span><span class="p">:</span> <span class="n">FoldPolicy</span><span class="p">(</span><span class="s2">&quot;ligands&quot;</span><span class="p">,</span> <span class="s2">&quot;list&quot;</span><span class="p">,</span> <span class="s2">&quot;set_union&quot;</span><span class="p">),</span>
+        <span class="s2">&quot;neurotransmitters&quot;</span><span class="p">:</span> <span class="n">FoldPolicy</span><span class="p">(</span><span class="s2">&quot;neurotransmitters&quot;</span><span class="p">,</span> <span class="s2">&quot;list&quot;</span><span class="p">,</span> <span class="s2">&quot;set_union&quot;</span><span class="p">),</span>
+        <span class="s2">&quot;putative_neurotrasmitter_receptors&quot;</span><span class="p">:</span> <span class="n">FoldPolicy</span><span class="p">(</span>
+            <span class="s2">&quot;putative_neurotrasmitter_receptors&quot;</span><span class="p">,</span> <span class="s2">&quot;list&quot;</span><span class="p">,</span> <span class="s2">&quot;set_union&quot;</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;receptors&quot;</span><span class="p">:</span> <span class="n">FoldPolicy</span><span class="p">(</span><span class="s2">&quot;receptors&quot;</span><span class="p">,</span> <span class="s2">&quot;dict&quot;</span><span class="p">,</span> <span class="s2">&quot;dict_union&quot;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">default_aggregator</span><span class="o">=</span><span class="n">DROP</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="c1"># DEFAULT_NEURON_FOLD_POLICY captures the historical contract_neurons /</span>
+<span class="c1"># fold_network behavior for the three &quot;bounded categorical label&quot;</span>
+<span class="c1"># attributes that have always been merged via the all-same-or-MERGED-</span>
+<span class="c1"># sentinel rule (the MERGE_TRACK_ATTRS list in cedne/core/neuron.py).</span>
+<span class="c1"># Phase 2.2 refactors contract_neurons + the batch path&#39;s neuron merge</span>
+<span class="c1"># to drive that decision through this policy set; parity tests pin the</span>
+<span class="c1"># behavior on identical inputs.</span>
+<span class="c1">#</span>
+<span class="c1"># Numeric properties (degree, length, transcript counts) and time-series</span>
+<span class="c1"># properties (recordings) are NOT registered here — the historical code</span>
+<span class="c1"># didn&#39;t aggregate them onto the supernode at all; their values stay on</span>
+<span class="c1"># the constituent neurons (reachable via constituent_subgraph). Callers</span>
+<span class="c1"># that want a per-fold aggregate (e.g. timeseries_mean on recording)</span>
+<span class="c1"># should pass a custom FoldPolicySet that extends this one.</span>
+<span class="n">DEFAULT_NEURON_FOLD_POLICY</span> <span class="o">=</span> <span class="n">FoldPolicySet</span><span class="p">(</span>
+    <span class="n">policies</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">FoldPolicy</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">,</span> <span class="s2">&quot;categorical&quot;</span><span class="p">,</span> <span class="s2">&quot;same_or_merged&quot;</span><span class="p">),</span>
+        <span class="s2">&quot;category&quot;</span><span class="p">:</span> <span class="n">FoldPolicy</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">,</span> <span class="s2">&quot;categorical&quot;</span><span class="p">,</span> <span class="s2">&quot;same_or_merged&quot;</span><span class="p">),</span>
+        <span class="s2">&quot;modality&quot;</span><span class="p">:</span> <span class="n">FoldPolicy</span><span class="p">(</span><span class="s2">&quot;modality&quot;</span><span class="p">,</span> <span class="s2">&quot;categorical&quot;</span><span class="p">,</span> <span class="s2">&quot;same_or_merged&quot;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">default_aggregator</span><span class="o">=</span><span class="n">DROP</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="apply_policy">
+<a class="viewcode-back" href="../../../index.html#cedne.apply_policy">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">apply_policy</span><span class="p">(</span><span class="n">policy</span><span class="p">:</span> <span class="n">FoldPolicy</span><span class="p">,</span> <span class="n">values</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Apply a policy to a list of constituent values.</span>
+
+<span class="sd">    Returns the merged value, or ``None`` for the drop sentinel / empty</span>
+<span class="sd">    input. Never raises on empty/missing data — that&#39;s the caller&#39;s</span>
+<span class="sd">    cue to skip copying the attribute to the supernode.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">policy</span><span class="o">.</span><span class="n">aggregator</span> <span class="o">==</span> <span class="n">DROP</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">policy</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;scalar&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_agg_scalar</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">policy</span><span class="o">.</span><span class="n">aggregator</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">policy</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;timeseries&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_agg_timeseries</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">policy</span><span class="o">.</span><span class="n">aggregator</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">policy</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;list&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_agg_list</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">policy</span><span class="o">.</span><span class="n">aggregator</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">policy</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;dict&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_agg_dict</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">policy</span><span class="o">.</span><span class="n">aggregator</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">policy</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;categorical&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_agg_categorical</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">policy</span><span class="o">.</span><span class="n">aggregator</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown FoldPolicy kind: </span><span class="si">{</span><span class="n">policy</span><span class="o">.</span><span class="n">kind</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024, Sahil Moza.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.4.7.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
