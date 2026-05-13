@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, pre-release]
   pull_request:
-    branches: [main]
+    branches: [main, pre-release]
 
 jobs:
   # Code quality — runs ruff (lint + format check) as an informational signal.
