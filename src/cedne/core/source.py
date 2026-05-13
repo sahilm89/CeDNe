@@ -56,19 +56,29 @@ CEDNE_SOFTWARE_CITATION = Citation(
 )
 
 
+def _normalize_citation_value(val: Any) -> Any:
+    """Recursively normalize a citation value to JSON-friendly form.
+
+    Citation instances become dicts; lists are walked element-wise; dicts,
+    strings, and other primitives are passed through unchanged so legacy
+    loader payloads (raw URLs, ad-hoc dicts) keep working.
+    """
+    if isinstance(val, Citation):
+        return val.to_dict()
+    if isinstance(val, list):
+        return [_normalize_citation_value(item) for item in val]
+    return val
+
+
 def serialize_citations(citations: Dict[str, Any]) -> Dict[str, Any]:
     """Convert a citations dict to JSON-friendly form.
 
     Citation instances are flattened via ``Citation.to_dict``; any other value
-    (e.g. legacy loader dicts, strings) is passed through unchanged.
+    (e.g. legacy loader dicts, strings) is passed through unchanged. Lists are
+    walked recursively so a list of ``Citation`` objects inside the dict
+    serializes properly.
     """
-    out: Dict[str, Any] = {}
-    for key, val in citations.items():
-        if isinstance(val, Citation):
-            out[key] = val.to_dict()
-        else:
-            out[key] = val
-    return out
+    return {key: _normalize_citation_value(val) for key, val in citations.items()}
 
 
 class Citable:

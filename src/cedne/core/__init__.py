@@ -26,6 +26,19 @@ from .connection import (
 # Provenance / citations
 from .source import Citation, Citable, serialize_citations
 
+# Fold policy — how to aggregate constituent attributes during a fold.
+# Phase 1: types + aggregators + serialization. Phase 2 wires these into
+# Network.fold_network / contract_connections.
+from .fold_policy import (
+    FoldPolicy,
+    FoldPolicySet,
+    apply_policy,
+    valid_aggregators,
+    valid_kinds,
+    DEFAULT_CONNECTION_FOLD_POLICY,
+    DEFAULT_NEURON_FOLD_POLICY,
+)
+
 # Experimental trial recordings and features
 from .recordings import Trial, StimResponse
 from .session import Session
@@ -61,6 +74,14 @@ __all__ = [
     "Citation",
     "Citable",
     "serialize_citations",
+    # Fold policy
+    "FoldPolicy",
+    "FoldPolicySet",
+    "apply_policy",
+    "valid_aggregators",
+    "valid_kinds",
+    "DEFAULT_CONNECTION_FOLD_POLICY",
+    "DEFAULT_NEURON_FOLD_POLICY",
     # Recordings
     "Trial",
     "StimResponse",

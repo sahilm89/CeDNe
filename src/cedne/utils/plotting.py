@@ -27,6 +27,15 @@ import textalloc as ta
 
 import warnings
 from cedne import Neuron
+from cedne.random import get_rng
+
+# Single Generator for cosmetic plot jitter (annotation offsets etc.).
+# Spawned from the package root SeedSequence at import time, so the same
+# script produces identical plot layouts across runs (independent of any
+# other get_rng() call in the process). Annotated as private; if a caller
+# ever wants reproducible-but-varying jitter, pass an explicit seed to a
+# new local rng instead of touching this.
+_plot_rng = get_rng()
 
 try:
     from cedne import simulator
@@ -1523,7 +1532,7 @@ def plot_position_3D(
                 s=n,
                 xyz=(x[i], y[i], z[i]),
                 fontsize=10,
-                xytext=(np.random.uniform(-30, 30), lr_sign * 30),
+                xytext=(_plot_rng.uniform(-30, 30), lr_sign * 30),
                 textcoords="offset points",
                 ha="right",
                 va="bottom",
@@ -1535,7 +1544,7 @@ def plot_position_3D(
                 s=n,
                 xyz=(x[i], y[i], z[i]),
                 fontsize=10,
-                xytext=(np.random.uniform(-30, 30), lr_sign * 30),
+                xytext=(_plot_rng.uniform(-30, 30), lr_sign * 30),
                 textcoords="offset points",
                 ha="right",
                 va="bottom",

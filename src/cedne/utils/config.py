@@ -7,6 +7,7 @@ __license__ = "MIT"
 
 import datetime
 import cedne as ced
+from cedne.core.source import Citation
 from pathlib import Path
 
 root_path = Path(ced.__path__[0])
@@ -140,11 +141,53 @@ atanas_link_prefix = (
 neuropeptide_atlas_links = ["01022024_neuropeptide_connectome_long_range_model.csv"]
 
 ## Citation Tables
+# Where titles are known with confidence, citations are stored as structured
+# ``Citation`` objects so the web UI renders them as "Title (Year)". Bare URL
+# strings fall back to "doi:..." rendering in the UI — promote them to
+# Citation(...) when a confident title is available.
+_white1986 = Citation(
+    key="white1986",
+    title="The structure of the nervous system of the nematode Caenorhabditis elegans",
+    authors=["White JG", "Southgate E", "Thomson JN", "Brenner S"],
+    year=1986,
+    doi="10.1098/rstb.1986.0056",
+    url="https://doi.org/10.1098/rstb.1986.0056",
+)
+_yemini2021_neuropal = Citation(
+    key="yemini2021_neuropal",
+    title="NeuroPAL: A Multicolor Atlas for Whole-Brain Neuronal Identification in C. elegans",
+    authors=["Yemini E", "Lin A", "Nejatbakhsh A", "et al."],
+    year=2021,
+    doi="10.1016/j.cell.2020.12.012",
+    url="https://doi.org/10.1016/j.cell.2020.12.012",
+)
+
 citations = {
     "cengen": [
-        "https://doi.org/10.1016/j.neuron.2018.07.042",
-        "https://doi.org/10.1016/j.cell.2021.06.023",
-        "https://doi.org/10.1101/2025.11.21.689793",
+        Citation(
+            key="hammarlund2018_cengen",
+            title="The CeNGEN Project (Caenorhabditis elegans Neuronal Gene Expression Network)",
+            authors=["Hammarlund M", "Hobert O", "Miller DM III", "Sestan N"],
+            year=2018,
+            doi="10.1016/j.neuron.2018.07.042",
+            url="https://doi.org/10.1016/j.neuron.2018.07.042",
+        ),
+        Citation(
+            key="taylor2021_cengen",
+            title="Molecular topography of an entire nervous system",
+            authors=["Taylor SR", "Santpere G", "Weinreb A", "et al."],
+            year=2021,
+            doi="10.1016/j.cell.2021.06.023",
+            url="https://doi.org/10.1016/j.cell.2021.06.023",
+        ),
+        Citation(
+            key="taylor2025_cengen",
+            title="A gene expression atlas of a juvenile nervous system",
+            authors=["Taylor SR", "Olson Claire", "Ripoll-Sanchez Lidia", "et al."],
+            year=2025,
+            doi="10.1101/2025.11.21.689793",
+            url="https://doi.org/10.1101/2025.11.21.689793",
+        ),
     ],
     "fly_wire": [
         "https://doi.org/10.1038/s41586-024-07558-y",
@@ -158,30 +201,179 @@ citations = {
         "https://www.biorxiv.org/content/10.1101/2025.06.10.658788",
     ],
     "cook_connectome": [
-        "https://doi.org/10.1038/s41586-019-1352-7",  # Cook et al. 2019 Nature — main reconstruction
-        "https://doi.org/10.1098/rstb.1986.0056",  # White et al. 1986 — upstream somatic EM
-        "https://doi.org/10.1098/rstb.1976.0085",  # Albertson & Thomson 1976 — upstream pharyngeal EM
-        "https://doi.org/10.1002/cne.24932",  # Cook et al. 2020 JCN — pharynx re-analysis
+        Citation(
+            key="cook2019",
+            title="Whole-animal connectomes of both Caenorhabditis elegans sexes",
+            authors=["Cook SJ", "Jarrell TA", "Brittin CA", "et al."],
+            year=2019,
+            doi="10.1038/s41586-019-1352-7",
+            url="https://doi.org/10.1038/s41586-019-1352-7",
+            notes="Main reconstruction",
+        ),
+        _white1986,
+        Citation(
+            key="albertson1976",
+            title="The pharynx of Caenorhabditis elegans",
+            authors=["Albertson DG", "Thomson JN"],
+            year=1976,
+            doi="10.1098/rstb.1976.0085",
+            url="https://doi.org/10.1098/rstb.1976.0085",
+            notes="Upstream pharyngeal EM",
+        ),
+        Citation(
+            key="cook2020_pharynx",
+            title="The connectome of the Caenorhabditis elegans pharynx",
+            authors=[
+                "Cook SJ",
+                "Crouse CM",
+                "Yemini E",
+                "Hall DH",
+                "Emmons SW",
+                "Hobert O",
+            ],
+            year=2020,
+            doi="10.1002/cne.24932",
+            url="https://doi.org/10.1002/cne.24932",
+            notes="Pharynx re-analysis",
+        ),
     ],
-    "witvliet_connectome": ["https://doi.org/10.1038/s41586-021-03778-8"],
-    "sig_prop_atlas": ["https://doi.org/10.1038/s41586-023-06683-4"],
-    "neuropeptide_atlas": ["https://doi.org/10.1016/j.neuron.2023.09.043"],
-    "neurotransmitter_atlas": ["https://doi.org/10.7554/eLife.95402.3"],
-    "atanas_whole_brain": ["https://doi.org/10.1016/j.cell.2023.07.035"],
+    "witvliet_connectome": [
+        Citation(
+            key="witvliet2021",
+            title="Connectomes across development reveal principles of brain maturation",
+            authors=["Witvliet D", "Mulcahy B", "Mitchell JK", "et al."],
+            year=2021,
+            doi="10.1038/s41586-021-03778-8",
+            url="https://doi.org/10.1038/s41586-021-03778-8",
+        ),
+    ],
+    "sig_prop_atlas": [
+        Citation(
+            key="randi2023",
+            title="Neural signal propagation atlas of Caenorhabditis elegans",
+            authors=["Randi F", "Sharma AK", "Dvali S", "Leifer AM"],
+            year=2023,
+            doi="10.1038/s41586-023-06683-4",
+            url="https://doi.org/10.1038/s41586-023-06683-4",
+        ),
+    ],
+    "neuropeptide_atlas": [
+        Citation(
+            key="ripollsanchez2023",
+            title="The neuropeptidergic connectome of C. elegans",
+            authors=["Ripoll-Sanchez L", "Watteyne J", "Sun H", "et al."],
+            year=2023,
+            doi="10.1016/j.neuron.2023.09.043",
+            url="https://doi.org/10.1016/j.neuron.2023.09.043",
+        ),
+    ],
+    "neurotransmitter_atlas": [
+        Citation(
+            key="wang2024_nt_atlas",
+            title="A neurotransmitter atlas of C. elegans males and hermaphrodites",
+            authors=["Wang C", "Vidal B", "Sural S", "et al."],
+            year=2023,
+            doi="10.7554/eLife.95402.3",
+            url="https://doi.org/10.7554/eLife.95402.3",
+        ),
+    ],
+    "atanas_whole_brain": [
+        Citation(
+            key="atanas2023",
+            title="Brain-wide representations of behavior spanning multiple timescales and states in C. elegans",
+            authors=["Atanas AA", "Kim J", "Wang Z", "et al."],
+            year=2023,
+            doi="10.1016/j.cell.2023.07.035",
+            url="https://doi.org/10.1016/j.cell.2023.07.035",
+        ),
+    ],
     "neuropal_positions": [
+        # Two papers in this entry; the canonical NeuroPAL paper is Yemini 2021.
         "https://doi.org/10.1186/s12859-022-04738-3",
-        "https://doi.org/10.1016/j.cell.2020.12.012",
+        _yemini2021_neuropal,
     ],
-    "altun_neurotransmitters_receptors": ["https://doi.org/10.3908/wormatlas.5.202"],
+    "altun_neurotransmitters_receptors": [
+        Citation(
+            key="altun_wormatlas_nt_receptors",
+            title="Nervous System, Neurotransmitter Receptors",
+            authors=["Altun ZF", "Hall DH"],
+            year=2011,
+            doi="10.3908/wormatlas.5.202",
+            url="https://doi.org/10.3908/wormatlas.5.202",
+            notes="WormAtlas chapter",
+        ),
+    ],
     # Back-compat alias for the historical misspelling.
-    "altun_neurotrasmitters_receptors": ["https://doi.org/10.3908/wormatlas.5.202"],
-    "worm_lineage": ["https://doi.org/10.1016/0012-1606(77)90158-0"],
-    "winding_connectome": ["https://doi.org/10.1126/science.add9330"],
-    "ciona_connectome": ["https://doi.org/10.7554/eLife.16962"],
-    "bumbarger_pharynx": ["https://doi.org/10.1016/j.cell.2012.12.013"],
-    "white_connectome": ["https://doi.org/10.1098/rstb.1986.0056"],
-    "veraszto_connectome": ["https://doi.org/10.7554/eLife.97964"],
-    "brittin_contactome": ["https://doi.org/10.1038/s41586-021-03284-x"],
+    "altun_neurotrasmitters_receptors": [
+        Citation(
+            key="altun_wormatlas_nt_receptors",
+            title="Nervous System, Neurotransmitter Receptors",
+            authors=["Altun ZF", "Hall DH"],
+            year=2011,
+            doi="10.3908/wormatlas.5.202",
+            url="https://doi.org/10.3908/wormatlas.5.202",
+            notes="WormAtlas chapter",
+        ),
+    ],
+    "worm_lineage": [
+        Citation(
+            key="sulston1977",
+            title="Post-embryonic cell lineages of the nematode, Caenorhabditis elegans",
+            authors=["Sulston JE", "Horvitz HR"],
+            year=1977,
+            doi="10.1016/0012-1606(77)90158-0",
+            url="https://doi.org/10.1016/0012-1606(77)90158-0",
+        ),
+    ],
+    "winding_connectome": [
+        Citation(
+            key="winding2023",
+            title="The connectome of an insect brain",
+            authors=["Winding M", "Pedigo BD", "Barnes CL", "et al."],
+            year=2023,
+            doi="10.1126/science.add9330",
+            url="https://doi.org/10.1126/science.add9330",
+        ),
+    ],
+    "ciona_connectome": [
+        Citation(
+            key="ryan2016_ciona",
+            title="The CNS connectome of a tadpole larva of Ciona intestinalis (L.) highlights sidedness in the brain of a chordate sibling",
+            authors=["Ryan K", "Lu Z", "Meinertzhagen IA"],
+            year=2016,
+            doi="10.7554/eLife.16962",
+            url="https://doi.org/10.7554/eLife.16962",
+        ),
+    ],
+    "bumbarger_pharynx": [
+        Citation(
+            key="bumbarger2013",
+            title="System-wide Rewiring Underlies Behavioral Differences in Predatory and Bacterial-Feeding Nematodes",
+            authors=["Bumbarger DJ", "Riebesell M", "Rödelsperger C", "Sommer RJ"],
+            year=2013,
+            doi="10.1016/j.cell.2012.12.013",
+            url="https://doi.org/10.1016/j.cell.2012.12.013",
+        ),
+    ],
+    "white_connectome": [_white1986],
+    "veraszto_connectome": Citation(
+        key="veraszto2025",
+        title="Whole-body connectome of a segmented annelid larva",
+        authors=["Verasztó C", "Jasek S", "Gühmann M", "et al."],
+        year=2025,
+        doi="10.7554/eLife.97964",
+        url="https://doi.org/10.7554/eLife.97964",
+    ),
+    "brittin_contactome": [
+        Citation(
+            key="brittin2021",
+            title="A multi-scale brain map derived from whole-brain volumetric reconstructions",
+            authors=["Brittin CA", "Cook SJ", "Hall DH", "Emmons SW", "Cohen N"],
+            year=2021,
+            doi="10.1038/s41586-021-03284-x",
+            url="https://doi.org/10.1038/s41586-021-03284-x",
+        ),
+    ],
 }
 
 # Per-dataset capability matrix. A "dataset" is a specific

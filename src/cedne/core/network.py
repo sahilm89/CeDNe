@@ -656,6 +656,7 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         exceptions=None,
         self_loops=True,
         legacy=False,
+        fold_policy=None,
     ):
         """
         Fold the network based on a partition.
@@ -693,6 +694,17 @@ class NervousSystem(nx.MultiDiGraph, Citable):
                 scale). Preserved during the rollout so callers can
                 bisect parity issues, and scheduled for removal once
                 the fast path has soaked.
+            fold_policy (FoldPolicySet, optional):
+                Per-attribute aggregation policy applied when merging
+                parallel edges in ``data='clean'`` mode. ``None``
+                (default) → use ``DEFAULT_CONNECTION_FOLD_POLICY``,
+                which encodes the historical contract (weights sum,
+                list-valued metadata set-union, receptor dicts merge
+                with first-observed-value semantics). Both the batch
+                and legacy fold paths honor the policy (Phase 2.1);
+                strict parity tests pin behavior on identical inputs
+                across both. The applied policy is stamped onto the
+                result as ``folded.fold_policy`` for provenance.
 
         Returns:
             NervousSystem: The folded graph. Each merged neuron carries
@@ -746,23 +758,50 @@ class NervousSystem(nx.MultiDiGraph, Citable):
                     )
                 seen_assignments[n] = merged_nodename
 
+        # Both legacy and batch paths now honor fold_policy (Phase 2 +
+        # 2.1). The default ``None`` means use DEFAULT_CONNECTION_FOLD_POLICY,
+        # which encodes the pre-Phase-2 contract — strict parity tests
+        # in test_fold_policy_parity.py pin behavior on identical
+        # inputs across both paths.
         if legacy:
-            return self._fold_network_legacy(
+            result = self._fold_network_legacy(
                 fold_by,
                 name,
                 data,
                 exceptions,
                 self_loops,
+                fold_policy=fold_policy,
             )
-        return self._fold_network_batch(
-            fold_by,
-            name,
-            data,
-            exceptions,
-            self_loops,
-        )
+        else:
+            result = self._fold_network_batch(
+                fold_by,
+                name,
+                data,
+                exceptions,
+                self_loops,
+                fold_policy=fold_policy,
+            )
 
-    def _fold_network_legacy(self, fold_by, name, data, exceptions, self_loops):
+        # Always stamp the fold policy on the result so provenance is
+        # universal — even in 'collect' mode (no merging) callers can
+        # introspect that this network came from a fold. We import
+        # lazily to avoid a circular import at module load.
+        from .fold_policy import DEFAULT_CONNECTION_FOLD_POLICY, FoldPolicySet
+
+        if fold_policy is not None:
+            result.fold_policy = fold_policy
+        elif data == "clean":
+            result.fold_policy = DEFAULT_CONNECTION_FOLD_POLICY
+        else:
+            # 'collect' folds don't merge edges; record an empty
+            # policy set so the attribute is always present and
+            # downstream code can branch on its emptiness.
+            result.fold_policy = FoldPolicySet()
+        return result
+
+    def _fold_network_legacy(
+        self, fold_by, name, data, exceptions, self_loops, fold_policy=None
+    ):
         """Pre-batch fold: pair-wise ``contract_neurons`` for every class
         member after the first, then optional ``contract_connections``.
 
@@ -820,6 +859,7 @@ class NervousSystem(nx.MultiDiGraph, Citable):
                             merged_nodename,
                             data=data,
                             self_loops=self_loops,
+                            fold_policy=fold_policy,
                             _silent=True,
                         )
                         merged_node = merged_nodename
@@ -848,12 +888,14 @@ class NervousSystem(nx.MultiDiGraph, Citable):
                     parsed_conns[(e[0], e[1], conn.connection_type)] = []
                 parsed_conns[(e[0], e[1], conn.connection_type)].append(conn)
             contracted_graph = graph_copy.contract_connections(
-                parsed_conns, _silent=True
+                parsed_conns, fold_policy=fold_policy, _silent=True
             )
             _attach_constituent_subgraphs(contracted_graph)
             return contracted_graph
 
-    def _fold_network_batch(self, fold_by, name, data, exceptions, self_loops):
+    def _fold_network_batch(
+        self, fold_by, name, data, exceptions, self_loops, fold_policy=None
+    ):
         """Batch fold: construct the folded NervousSystem directly from
         the partition map in O(V + E + Σ class_internal_edges).
 
@@ -1007,6 +1049,18 @@ class NervousSystem(nx.MultiDiGraph, Citable):
                 snap[attr] = getattr(neuron, attr, "")
             return snap
 
+        # Phase 2.2: drive the per-attribute merge through apply_policy
+        # (DEFAULT_NEURON_FOLD_POLICY by default). Same source of truth
+        # as the legacy contract_neurons path.
+        from .fold_policy import (
+            DEFAULT_NEURON_FOLD_POLICY,
+            apply_policy as _apply_policy_neuron,
+        )
+
+        neuron_policy_set = (
+            fold_policy if fold_policy is not None else DEFAULT_NEURON_FOLD_POLICY
+        )
+
         merged_class_snapshots = {}  # cname -> {orig_name: snapshot}
         merged_class_resolved_attrs = {}  # cname -> {merge-policy attrs}
         for merged_nodename in constituent_subgraphs:
@@ -1026,15 +1080,15 @@ class NervousSystem(nx.MultiDiGraph, Citable):
             merged_class_snapshots[merged_nodename] = snapshots
 
             resolved = {}
-            for attr in MERGE_TRACK_ATTRS:
-                values = {meta.get(attr) for meta in snapshots.values()}
-                values.discard(None)
-                values.discard("")
-                if len(values) == 1:
-                    resolved[attr] = next(iter(values))
-                elif len(values) > 1:
-                    resolved[attr] = MERGED_TYPE
-                # else: leave attr unset
+            for policy in neuron_policy_set.policies.values():
+                values = [meta.get(policy.name) for meta in snapshots.values()]
+                merged = _apply_policy_neuron(policy, values)
+                if merged is None:
+                    # No usable constituent values for this attribute —
+                    # leave it unset on the resolved dict (matches the
+                    # pre-Phase-2.2 "else: leave attr unset" branch).
+                    continue
+                resolved[policy.name] = merged
             merged_class_resolved_attrs[merged_nodename] = resolved
 
         # ---------------------------------------------------------------
@@ -1083,72 +1137,83 @@ class NervousSystem(nx.MultiDiGraph, Citable):
                 folded.connections[(src, dst, conn.uid)] = conn
         elif data == "clean":
             # Aggregate parallels per (folded_pre, folded_post, type).
-            # Mirrors the union-metadata logic in ``contract_connections``.
+            # Phase 2.1: drive the merge through the fold-policy system
+            # so this code path and ``contract_connections`` share one
+            # source of truth for "how do constituent attributes
+            # combine". The default policy (DEFAULT_CONNECTION_FOLD_POLICY)
+            # encodes the pre-Phase-2 contract — strict parity tests
+            # in test_fold_policy_parity.py pin the behavior.
+            #
+            # Unlike contract_connections (which iterates explicit
+            # ``Connection`` objects the caller supplies), the batch
+            # path iterates ``self.edges(data=True)`` and reads
+            # constituent attributes from the networkx edge_data dict.
+            # That's because ``self.connections`` isn't always populated
+            # for fresh edges constructed directly via ``Connection(...)``
+            # — only the nx graph is canonical. We collect lists of
+            # edge_data dicts per bucket and feed those to apply_policy.
             from collections import defaultdict
-
-            bucket = defaultdict(
-                lambda: {
-                    "weight": 0.0,
-                    "contraction_data": {},  # orig_id -> orig Connection
-                    "ligands": [],
-                    "lig_seen": set(),
-                    "nts": [],
-                    "nt_seen": set(),
-                    "putative": [],
-                    "put_seen": set(),
-                    "receptors": {},
-                }
+            from .fold_policy import (
+                DEFAULT_CONNECTION_FOLD_POLICY,
+                FoldPolicy,
+                apply_policy,
             )
+
+            policy_set = (
+                fold_policy
+                if fold_policy is not None
+                else DEFAULT_CONNECTION_FOLD_POLICY
+            )
+            weight_policy = policy_set.policies.get(
+                "weight", FoldPolicy("weight", "scalar", "sum")
+            )
+            other_policies = [
+                p for p in policy_set.policies.values() if p.name != "weight"
+            ]
+
+            # Step A: bucket edge_data dicts by their FOLDED endpoint
+            # triple. Separately track any backing Connection objects so
+            # we can preserve ``contraction_data`` provenance for
+            # ConnectionGroup-registered edges.
+            edge_buckets: dict = defaultdict(list)
+            contraction_data_per_bucket: dict = defaultdict(dict)
             for u, v, k, edge_data in self.edges(keys=True, data=True):
                 fu = rename_map.get(u.name, u.name)
                 fv = rename_map.get(v.name, v.name)
                 if fu == fv and not self_loops:
                     continue
                 ct = edge_data.get("connection_type", "chemical-synapse")
-                b = bucket[(fu, fv, ct)]
-                b["weight"] += float(edge_data.get("weight", 1) or 0)
-                # The connections dict on a NervousSystem is a custom
-                # ``ConnectionGroup`` and has no ``.get`` method — fall
-                # back to membership-check + bracket lookup.
+                bucket_key = (fu, fv, ct)
+                edge_buckets[bucket_key].append(edge_data)
                 if (u, v, k) in self.connections:
                     orig_conn = self.connections[(u, v, k)]
-                    b["contraction_data"][orig_conn._id] = orig_conn
-                # Union list-valued edge metadata (order-preserving dedupe).
-                for lig in edge_data.get("ligands") or []:
-                    key = lig if isinstance(lig, str) else repr(lig)
-                    if key not in b["lig_seen"]:
-                        b["lig_seen"].add(key)
-                        b["ligands"].append(lig)
-                for nt in edge_data.get("neurotransmitters") or []:
-                    key = nt if isinstance(nt, str) else repr(nt)
-                    if key not in b["nt_seen"]:
-                        b["nt_seen"].add(key)
-                        b["nts"].append(nt)
-                for pair in edge_data.get("putative_neurotrasmitter_receptors") or []:
-                    key = tuple(pair) if isinstance(pair, (list, tuple)) else pair
-                    if key not in b["put_seen"]:
-                        b["put_seen"].add(key)
-                        b["putative"].append(pair)
-                receptors = edge_data.get("receptors")
-                if isinstance(receptors, dict):
-                    for rk, rv in receptors.items():
-                        b["receptors"].setdefault(rk, rv)
+                    contraction_data_per_bucket[bucket_key][orig_conn._id] = orig_conn
 
-            for (fu, fv, ct), b in bucket.items():
+            # Step B: apply policy per bucket and construct the merged
+            # Connection on the folded view.
+            for (fu, fv, ct), edge_data_list in edge_buckets.items():
+                weights = [d.get("weight", 0) or 0 for d in edge_data_list]
+                weight = apply_policy(weight_policy, weights)
+                if weight is None:
+                    weight = 0
+
                 src = folded.neurons[fu]
                 dst = folded.neurons[fv]
-                new_conn = Connection(src, dst, connection_type=ct, weight=b["weight"])
-                new_conn.set_property("contraction_data", dict(b["contraction_data"]))
-                if b["ligands"]:
-                    new_conn.set_property("ligands", list(b["ligands"]))
-                if b["nts"]:
-                    new_conn.set_property("neurotransmitters", list(b["nts"]))
-                if b["putative"]:
-                    new_conn.set_property(
-                        "putative_neurotrasmitter_receptors", list(b["putative"])
-                    )
-                if b["receptors"]:
-                    new_conn.set_property("receptors", dict(b["receptors"]))
+                new_conn = Connection(src, dst, connection_type=ct, weight=weight)
+                new_conn.set_property(
+                    "contraction_data",
+                    dict(contraction_data_per_bucket[(fu, fv, ct)]),
+                )
+
+                for policy in other_policies:
+                    values = [d.get(policy.name) for d in edge_data_list]
+                    merged = apply_policy(policy, values)
+                    # Skip empty results — matches the pre-Phase-2
+                    # ``if b["ligands"]:`` guards.
+                    if merged is None or merged == [] or merged == {}:
+                        continue
+                    new_conn.set_property(policy.name, merged)
+
                 folded.connections[(src, dst, new_conn.uid)] = new_conn
         else:
             raise ValueError(f"Unknown data mode for fold_network: {data!r}")
@@ -1294,7 +1359,13 @@ class NervousSystem(nx.MultiDiGraph, Citable):
 
     @record("contract_neurons")
     def contract_neurons(
-        self, pair, contracted_name, data="collect", copy_graph=False, self_loops=True
+        self,
+        pair,
+        contracted_name,
+        data="collect",
+        copy_graph=False,
+        self_loops=True,
+        fold_policy=None,
     ):
         """
         Contract ``target`` into ``source``, redirecting target's edges
@@ -1432,21 +1503,36 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         # we still record for traceability).
         src.constituents.setdefault(target_name, _snapshot(tgt, target_name))
 
-        # Apply the merge policy across every tracked enum-like attribute:
-        # all-same → keep that value; mixed → set to the MERGED_TYPE
-        # sentinel; no usable values → leave the attribute alone. type,
-        # category, and modality all need this — silent inheritance from
-        # the source neuron was the bug Issue 10 fixed for type, and the
-        # same fix needs to apply to category/modality (which are
-        # equally enum-like and equally susceptible to silent overwrite).
-        for attr in MERGE_TRACK_ATTRS:
-            values = {meta.get(attr) for meta in src.constituents.values()}
-            values.discard(None)
-            values.discard("")
-            if len(values) == 1:
-                setattr(src, attr, next(iter(values)))
-            elif len(values) > 1:
-                setattr(src, attr, MERGED_TYPE)
+        # Apply the per-attribute fold policy across every constituent's
+        # snapshot. The default policy (DEFAULT_NEURON_FOLD_POLICY) maps
+        # type/category/modality → categorical same_or_merged, which is
+        # exactly what the pre-Phase-2.2 inline loop did (all-same →
+        # keep; mixed → MERGED_TYPE sentinel; empty → skip setattr).
+        # Phase 2.2 routes that decision through apply_policy so callers
+        # can override per fold (e.g. mode/keep_all on a categorical, or
+        # add policies for new categorical attrs).
+        from .fold_policy import (
+            DEFAULT_NEURON_FOLD_POLICY,
+            apply_policy,
+        )
+
+        neuron_policy_set = (
+            fold_policy if fold_policy is not None else DEFAULT_NEURON_FOLD_POLICY
+        )
+        # The historical loop iterated MERGE_TRACK_ATTRS; the policy set
+        # is now the source of truth. We still iterate MERGE_TRACK_ATTRS
+        # for the nx-mirror step below so paths that reconstruct neurons
+        # via ``create_neurons_from(data=True)`` see every tracked attr
+        # — even un-registered ones — propagated to the node dict.
+        for policy in neuron_policy_set.policies.values():
+            values = [meta.get(policy.name) for meta in src.constituents.values()]
+            merged = apply_policy(policy, values)
+            if merged is None:
+                # Empty constituent values → leave the attribute alone
+                # (matches the pre-Phase-2.2 "if len(values) == 0:
+                # do nothing" branch).
+                continue
+            setattr(src, policy.name, merged)
 
         # Mirror `constituents` and any updated tracked attributes to
         # the networkx node attribute dict so paths that reconstruct
@@ -1477,71 +1563,89 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         self.update_neurons()
 
     @record("contract_connections")
-    def contract_connections(self, contraction_dict):
+    def contract_connections(self, contraction_dict, fold_policy=None):
+        """Contract parallel connections into one supernode-edge per group.
+
+        Args:
+            contraction_dict: Mapping of ``(neuron_a, neuron_b, conn_type)``
+                tuples to the list of constituent ``Connection`` objects
+                that should be folded into a single supernode-edge.
+            fold_policy (FoldPolicySet, optional):
+                Per-attribute aggregation policy. When ``None`` (default)
+                the historical contract is used (weights sum;
+                ligands / neurotransmitters / putative pairs set-union;
+                receptors dict-union with first-observed-value semantics).
+                Pass a custom ``FoldPolicySet`` to override aggregators
+                or add new dataset shapes.
+
+        Returns:
+            NervousSystem: The folded graph. The applied policy is
+            attached as ``result.fold_policy`` so consumers (and
+            re-fold operations) can read back exactly how the merge
+            decisions were made.
         """
-        Contracts the connections into a single connection and modifies the graph accordingly.
-        """
-        # empty_graph_copy = nx.create_empty_copy(self, with_data=True)
+        # Lazy import: fold_policy lives in the same package but
+        # importing at module load could create a cycle through
+        # neuron/connection if those start importing policy types.
+        from .fold_policy import (
+            DEFAULT_CONNECTION_FOLD_POLICY,
+            FoldPolicy,
+            apply_policy,
+        )
+
+        policy_set = (
+            fold_policy if fold_policy is not None else DEFAULT_CONNECTION_FOLD_POLICY
+        )
+        # Weight is a Connection-constructor argument, not a generic
+        # property, so it's pulled out and handled separately. The
+        # rest of the registered policies drive set_property calls.
+        weight_policy = policy_set.policies.get(
+            "weight", FoldPolicy("weight", "scalar", "sum")
+        )
+        other_policies = [p for p in policy_set.policies.values() if p.name != "weight"]
+
         empty_graph_copy = NervousSystem(self.worm, self.name + "_copy")
         empty_graph_copy.create_neurons_from(self, data=True)
         _connections = {}
+
         for contraction, conns in contraction_dict.items():
-            contraction_data = {}
-            weight = 0
-            # Union semantic edge metadata across the constituent connections
-            # so folding / merging does not silently drop it. Order-preserving
-            # dedupe for list-valued properties; dict merge for receptors.
-            merged_ligands = []
-            merged_nts = []
-            merged_putative = []
-            merged_receptors = {}
-            lig_seen, nt_seen, put_seen = set(), set(), set()
-            for conn in conns:
-                weight += conn.weight
-                contraction_data[conn._id] = conn
-                for lig in getattr(conn, "ligands", []) or []:
-                    key = lig if isinstance(lig, str) else repr(lig)
-                    if key not in lig_seen:
-                        lig_seen.add(key)
-                        merged_ligands.append(lig)
-                for nt in getattr(conn, "neurotransmitters", []) or []:
-                    key = nt if isinstance(nt, str) else repr(nt)
-                    if key not in nt_seen:
-                        nt_seen.add(key)
-                        merged_nts.append(nt)
-                for pair in (
-                    getattr(conn, "putative_neurotrasmitter_receptors", []) or []
-                ):
-                    key = tuple(pair) if isinstance(pair, (list, tuple)) else pair
-                    if key not in put_seen:
-                        put_seen.add(key)
-                        merged_putative.append(pair)
-                receptors = getattr(conn, "receptors", None)
-                if isinstance(receptors, dict):
-                    for rk, rv in receptors.items():
-                        if rk not in merged_receptors:
-                            merged_receptors[rk] = rv
+            # contraction_data preserves the original Connection objects
+            # so downstream code can introspect what was merged. Not
+            # policy-driven — it's bookkeeping, always carried.
+            contraction_data = {conn._id: conn for conn in conns}
+
+            weights = [getattr(c, "weight", 0) for c in conns]
+            weight = apply_policy(weight_policy, weights)
+            if weight is None:
+                weight = 0  # Connection() requires a numeric weight
 
             n1 = empty_graph_copy.neurons[contraction[0].name]
             n2 = empty_graph_copy.neurons[contraction[1].name]
             new_conn = Connection(n1, n2, connection_type=contraction[2], weight=weight)
             new_conn.set_property("contraction_data", copy.copy(contraction_data))
-            if merged_ligands:
-                new_conn.set_property("ligands", merged_ligands)
-            if merged_nts:
-                new_conn.set_property("neurotransmitters", merged_nts)
-            if merged_putative:
-                new_conn.set_property(
-                    "putative_neurotrasmitter_receptors", merged_putative
-                )
-            if merged_receptors:
-                new_conn.set_property("receptors", merged_receptors)
+
+            for policy in other_policies:
+                values = [getattr(c, policy.name, None) for c in conns]
+                merged = apply_policy(policy, values)
+                # Skip empty results to match the pre-Phase-2 behavior
+                # of only setting these properties when there's actually
+                # something to record.
+                if merged is None or merged == [] or merged == {}:
+                    continue
+                new_conn.set_property(policy.name, merged)
+
             _connections[(n1, n2, new_conn.uid)] = new_conn
         empty_graph_copy.connections = _connections
 
         empty_graph_copy.update_network()
         empty_graph_copy.update_connections()
         empty_graph_copy.update_neurons()
+
+        # Stamp the policy on the result. Per-fold provenance — re-folding
+        # later can read this back, the UI can surface it, and the
+        # exported NWB / pickle carries the merge contract alongside the
+        # data it produced.
+        empty_graph_copy.fold_policy = policy_set
 
         return empty_graph_copy
 

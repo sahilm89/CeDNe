@@ -61,6 +61,7 @@ def compute_state_space(
     method: str = "svd",
     n_components: int = 3,
     neuron_names: Optional[List[str]] = None,
+    random_state: Optional[int] = 42,
 ) -> Dict[str, Any]:
     """Compute low-dimensional neural state representation.
 
@@ -128,7 +129,11 @@ def compute_state_space(
         # NMF requires non-negative input
         X = activity_matrix.T  # (T × N) — sklearn convention
         X_nn = np.clip(X, 0, None)
-        model = NMF(n_components=n_components, max_iter=500, random_state=42)
+        # random_state is caller-controllable so scientists can probe
+        # initialization sensitivity (NMF is a non-convex factorization;
+        # different seeds give different local optima). Default 42 keeps
+        # historical behavior for tests and demos.
+        model = NMF(n_components=n_components, max_iter=500, random_state=random_state)
         projections = model.fit_transform(X_nn)  # T × K
         loadings = model.components_.T  # N × K
         # Approximate explained variance via reconstruction error

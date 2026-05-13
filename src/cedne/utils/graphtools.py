@@ -92,12 +92,16 @@ def joinLRNodes(nn_old):
     return nn_new
 
 
-def foldByNeuronType(nn_old, exceptions=[], self_loops=True, data="clean"):
+def foldByNeuronType(
+    nn_old, exceptions=[], self_loops=True, data="clean", fold_policy=None
+):
     """
     Folds neurons in the given neural network based on the neuron type.
 
     Args:
         nn_old (NeuralNetwork): The original neural network.
+        fold_policy: Optional FoldPolicySet. Forwarded to ``fold_network``;
+            when ``None`` cedne falls back to its built-in defaults.
 
     Returns:
         NeuralNetwork: The folded neural network.
@@ -133,7 +137,11 @@ def foldByNeuronType(nn_old, exceptions=[], self_loops=True, data="clean"):
             neuron_class[n] = [n]
     print(neuron_class)
     nn_new = nn_old.fold_network(
-        neuron_class, exceptions=exceptions, self_loops=self_loops, data=data
+        neuron_class,
+        exceptions=exceptions,
+        self_loops=self_loops,
+        data=data,
+        fold_policy=fold_policy,
     )
     return nn_new
 
@@ -187,12 +195,13 @@ def foldByNeuronType(nn_old, exceptions=[], self_loops=True, data="clean"):
 #     return nn_new
 
 
-def foldLeftRight(nn_old, exceptions=[]):
+def foldLeftRight(nn_old, exceptions=[], fold_policy=None):
     """
     This function performs a left-right folding operation on a neural network.
     It takes the old neural network as input and produces a new neural network after the folding operation.
     Parameters:
     - nn_old: The original neural network to be folded dorsoventrally.
+    - fold_policy: Optional FoldPolicySet forwarded to ``fold_network``.
     Returns:
     - nn_new: The new neural network after the dorsoventral folding operation.
     """
@@ -211,16 +220,17 @@ def foldLeftRight(nn_old, exceptions=[]):
                     continue
                 if o not in foldingDict:
                     foldingDict[o] = [m, n]
-    nn_new = nn_old.fold_network(foldingDict)
+    nn_new = nn_old.fold_network(foldingDict, fold_policy=fold_policy)
     return nn_new
 
 
-def foldDorsoVentral(nn_old):
+def foldDorsoVentral(nn_old, fold_policy=None):
     """
     This function performs a dorsoventral folding operation on a neural network.
     It takes the old neural network as input and produces a new neural network after the folding operation.
     Parameters:
     - nn_old: The original neural network to be folded dorsoventrally.
+    - fold_policy: Optional FoldPolicySet forwarded to ``fold_network``.
     Returns:
     - nn_new: The new neural network after the dorsoventral folding operation.
     """
@@ -245,7 +255,7 @@ def foldDorsoVentral(nn_old):
                     continue
                 if o not in foldingDict:
                     foldingDict[o] = [m, n]
-    nn_new = nn_old.fold_network(foldingDict)
+    nn_new = nn_old.fold_network(foldingDict, fold_policy=fold_policy)
     # nn_new = nn_old.copy()
     # for m in nn_new.neurons:
     #     if m[-1] == 'D' and not m in ['RID']:
@@ -366,11 +376,19 @@ def randomize_graph(
     else:
         if not isinstance(multiplier, int):
             raise ValueError("Multiplier must be an integer")
-    if seed is not None:
-        np.random.seed(seed)
-        nx.utils.create_random_state(seed)
-    else:
-        seed = np.random.randint(0, 1000000)
+    # Resolve seed via the package-wide SeedSequence factory so:
+    #   * seed is None → deterministic int spawned from cedne's root
+    #     SeedSequence (so randomize_graph() with no args is reproducible
+    #     across runs, and independent from any other get_rng/get_seed
+    #     call in the process).
+    #   * seed is int  → use that seed directly.
+    # Pass `seed` through to every ``nx.*(seed=seed)`` call below. We
+    # deliberately do NOT mutate ``np.random`` global state here (the old
+    # ``np.random.seed(seed)`` would have silently affected every later
+    # ``np.random.*`` call in the same process).
+    from cedne.random import get_seed
+
+    seed = get_seed(seed)
 
     if edge_subgroups is not None:
         g_copy = G.copy_neurons()

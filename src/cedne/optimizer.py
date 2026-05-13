@@ -58,6 +58,7 @@ class Optimizer:
         edge_parameter_bounds,
         vars_to_fit,
         num_trials=100,
+        seed=None,
         **kwargs,
     ):
         """
@@ -69,8 +70,15 @@ class Optimizer:
             loss_function (callable): A function that calculates the error between simulated and real data.
             parameter_bounds (dict): Bounds for each parameter as {'param1': (min, max), 'param2': (min, max)}.
             vars_to_fit (list): List of variable names to optimize.
+            seed (int, optional): Seed for the optimizer's internal RNG. When
+                ``None`` (default), uses OS entropy — fits are not reproducible
+                run-to-run. Pass an integer (e.g. ``seed=42``) to make the
+                initial guess and Optuna sampler deterministic so scientists
+                can re-run a fit and get the same parameters.
             **kwargs: Additional keyword arguments for the optimizer.
         """
+        from cedne.random import get_rng
+
         self.simulation_model = simulation_model
         self.loss_function = loss_function
         self.neuron_parameter_bounds = neuron_parameter_bounds
@@ -79,6 +87,8 @@ class Optimizer:
         self.sim_data = np.zeros(self.real_data.shape)
         self.vars_to_fit = vars_to_fit
         self.num_trials = num_trials
+        self.seed = seed
+        self._rng = get_rng(seed)
 
     def optimize(self, initial_guess=None, max_iterations=100):
         """
@@ -233,8 +243,10 @@ class ScipyOptimizer(Optimizer):
         for bounds_dict in self.edge_parameter_bounds.values():
             bounds.extend(bounds_dict.values())
 
-        # Initial guess
-        initial_guess = [np.random.uniform(bound[0], bound[1]) for bound in bounds]
+        # Initial guess — drawn from self._rng (seeded via Optimizer(seed=...))
+        # rather than the global np.random state. Caller can repeat a fit by
+        # constructing the optimizer with the same seed.
+        initial_guess = [self._rng.uniform(bound[0], bound[1]) for bound in bounds]
         print(len(initial_guess))
 
         # Run optimization
@@ -313,8 +325,20 @@ class OptunaOptimizer(Optimizer):
             **kwargs,
         )
         self.optimization_method = "optuna"
+        # Resolve the sampler seed via the package factory so:
+        #   * self.seed=None gets a deterministic int spawned from the
+        #     cedne root SeedSequence — Optuna runs are reproducible even
+        #     when the caller didn't explicitly pass a seed.
+        #   * self.seed=42 (or any int) gives that exact seed to Optuna.
+        # Without this, TPESampler() with seed=None picks different
+        # startup trials every run → different posterior → different
+        # "best" parameters for the same input data.
+        from cedne.random import get_seed
+
         sampler = optuna.samplers.TPESampler(
-            multivariate=True, n_startup_trials=num_trials // 3
+            multivariate=True,
+            n_startup_trials=num_trials // 3,
+            seed=get_seed(self.seed),
         )  # , gamma=gamma) #Removing gamma for now.
         self.njobs = njobs
         self.neurons = {}
