@@ -327,11 +327,19 @@
 <span class="n">ListAgg</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;mode_count&quot;</span><span class="p">,</span> <span class="s2">&quot;keep_all&quot;</span><span class="p">,</span> <span class="s2">&quot;set_union&quot;</span><span class="p">]</span>
 <span class="n">DictAgg</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;dict_union&quot;</span><span class="p">,</span> <span class="s2">&quot;dict_intersection&quot;</span><span class="p">,</span> <span class="s2">&quot;dict_collated&quot;</span><span class="p">]</span>
 <span class="n">CategoricalAgg</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="s2">&quot;keep_all&quot;</span><span class="p">]</span>
+<span class="c1"># Vector kind: fixed-shape numeric data per neuron — positions (3-vector</span>
+<span class="c1"># for FlyWire as np.ndarray, dict-of-floats with AP/DV/LR keys for the</span>
+<span class="c1"># C. elegans cook loader), bounding-box centers, etc. Aggregated by</span>
+<span class="c1"># element-wise summary statistics. ``centroid`` is an alias for ``mean``</span>
+<span class="c1"># kept around because the spatial-aggregation literature uses both</span>
+<span class="c1"># words and the picker UI label benefits from the geometric reading.</span>
 
 <span class="c1"># Sentinel meaning &quot;don&#39;t copy this attribute to the supernode&quot;. Works on</span>
 <span class="c1"># every kind; equivalent to the historical default of &quot;not registered =</span>
 <span class="c1"># not folded&quot;.</span>
 <span class="n">DROP</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;drop&quot;</span>
+
+<span class="n">VectorAgg</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;mean&quot;</span><span class="p">,</span> <span class="s2">&quot;median&quot;</span><span class="p">,</span> <span class="s2">&quot;centroid&quot;</span><span class="p">]</span>
 
 <span class="n">ALL_AGGREGATORS</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
     <span class="p">[</span>
@@ -350,6 +358,9 @@
         <span class="s2">&quot;dict_union&quot;</span><span class="p">,</span>
         <span class="s2">&quot;dict_intersection&quot;</span><span class="p">,</span>
         <span class="s2">&quot;dict_collated&quot;</span><span class="p">,</span>
+        <span class="c1"># vector</span>
+        <span class="s2">&quot;centroid&quot;</span><span class="p">,</span>  <span class="c1"># alias for &quot;mean&quot; — kept for geometric readability</span>
+        <span class="c1"># Note: &quot;mean&quot; / &quot;median&quot; already listed under scalar, reused.</span>
         <span class="n">DROP</span><span class="p">,</span>
     <span class="p">]</span>
 <span class="p">)</span>
@@ -370,6 +381,10 @@
     <span class="s2">&quot;list&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;mode_count&quot;</span><span class="p">,</span> <span class="s2">&quot;keep_all&quot;</span><span class="p">,</span> <span class="s2">&quot;set_union&quot;</span><span class="p">,</span> <span class="n">DROP</span><span class="p">),</span>
     <span class="s2">&quot;dict&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;dict_union&quot;</span><span class="p">,</span> <span class="s2">&quot;dict_intersection&quot;</span><span class="p">,</span> <span class="s2">&quot;dict_collated&quot;</span><span class="p">,</span> <span class="n">DROP</span><span class="p">),</span>
     <span class="s2">&quot;categorical&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="s2">&quot;keep_all&quot;</span><span class="p">,</span> <span class="s2">&quot;same_or_merged&quot;</span><span class="p">,</span> <span class="n">DROP</span><span class="p">),</span>
+    <span class="c1"># Fixed-shape numeric per-neuron data (positions, bounding-box</span>
+    <span class="c1"># centers, etc.). Handles both numpy 3-vectors (FlyWire) and dict-</span>
+    <span class="c1"># of-floats (C. elegans cook AP/DV/LR) — apply_policy detects shape.</span>
+    <span class="s2">&quot;vector&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;mean&quot;</span><span class="p">,</span> <span class="s2">&quot;median&quot;</span><span class="p">,</span> <span class="s2">&quot;centroid&quot;</span><span class="p">,</span> <span class="n">DROP</span><span class="p">),</span>
 <span class="p">}</span>
 
 <span class="n">_VALID_AGGREGATORS_BY_KIND</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">frozenset</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
@@ -420,7 +435,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;scalar&quot;</span><span class="p">,</span> <span class="s2">&quot;timeseries&quot;</span><span class="p">,</span> <span class="s2">&quot;list&quot;</span><span class="p">,</span> <span class="s2">&quot;dict&quot;</span><span class="p">,</span> <span class="s2">&quot;categorical&quot;</span><span class="p">]</span>
+    <span class="n">kind</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;scalar&quot;</span><span class="p">,</span> <span class="s2">&quot;timeseries&quot;</span><span class="p">,</span> <span class="s2">&quot;list&quot;</span><span class="p">,</span> <span class="s2">&quot;dict&quot;</span><span class="p">,</span> <span class="s2">&quot;categorical&quot;</span><span class="p">,</span> <span class="s2">&quot;vector&quot;</span><span class="p">]</span>
     <span class="n">aggregator</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DROP</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -771,6 +786,15 @@
         <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">FoldPolicy</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">,</span> <span class="s2">&quot;categorical&quot;</span><span class="p">,</span> <span class="s2">&quot;same_or_merged&quot;</span><span class="p">),</span>
         <span class="s2">&quot;category&quot;</span><span class="p">:</span> <span class="n">FoldPolicy</span><span class="p">(</span><span class="s2">&quot;category&quot;</span><span class="p">,</span> <span class="s2">&quot;categorical&quot;</span><span class="p">,</span> <span class="s2">&quot;same_or_merged&quot;</span><span class="p">),</span>
         <span class="s2">&quot;modality&quot;</span><span class="p">:</span> <span class="n">FoldPolicy</span><span class="p">(</span><span class="s2">&quot;modality&quot;</span><span class="p">,</span> <span class="s2">&quot;categorical&quot;</span><span class="p">,</span> <span class="s2">&quot;same_or_merged&quot;</span><span class="p">),</span>
+        <span class="c1"># Spatial centroid. Both 3D-ndarray (FlyWire) and AP/DV/LR-dict</span>
+        <span class="c1"># (C. elegans cook) shapes are handled by ``_agg_vector``;</span>
+        <span class="c1"># constituents missing a position are excluded from the average</span>
+        <span class="c1"># rather than treated as zero. Pre-Phase-2.2 the historical</span>
+        <span class="c1"># behavior was to drop position on merged neurons entirely;</span>
+        <span class="c1"># taking the centroid is strictly more informative — a fold of</span>
+        <span class="c1"># the LR pair sits halfway between the L and R neuron&#39;s</span>
+        <span class="c1"># positions, which is the value most consumers want.</span>
+        <span class="s2">&quot;position&quot;</span><span class="p">:</span> <span class="n">FoldPolicy</span><span class="p">(</span><span class="s2">&quot;position&quot;</span><span class="p">,</span> <span class="s2">&quot;vector&quot;</span><span class="p">,</span> <span class="s2">&quot;mean&quot;</span><span class="p">),</span>
     <span class="p">},</span>
     <span class="n">default_aggregator</span><span class="o">=</span><span class="n">DROP</span><span class="p">,</span>
 <span class="p">)</span>
@@ -797,8 +821,75 @@
         <span class="k">return</span> <span class="n">_agg_dict</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">policy</span><span class="o">.</span><span class="n">aggregator</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">policy</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;categorical&quot;</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">_agg_categorical</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">policy</span><span class="o">.</span><span class="n">aggregator</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">policy</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">&quot;vector&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_agg_vector</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">policy</span><span class="o">.</span><span class="n">aggregator</span><span class="p">)</span>
     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown FoldPolicy kind: </span><span class="si">{</span><span class="n">policy</span><span class="o">.</span><span class="n">kind</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_agg_vector</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">aggregator</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Element-wise summary of fixed-shape numeric data.</span>
+
+<span class="sd">    Auto-detects two shapes that occur in CeDNe today and keeps the</span>
+<span class="sd">    output in the same shape as the inputs:</span>
+
+<span class="sd">    1. **numpy ndarray / list / tuple** (FlyWire neurons carry 3-vectors</span>
+<span class="sd">       as ``np.ndarray``). Result is a 1-D ``np.ndarray`` of the same</span>
+<span class="sd">       length, element-wise mean/median.</span>
+<span class="sd">    2. **dict of name → number** (C. elegans cook positions:</span>
+<span class="sd">       ``{&quot;AP&quot;: float, &quot;DV&quot;: float, &quot;LR&quot;: float}``). Result is a dict</span>
+<span class="sd">       with the same keys, each value the mean/median across</span>
+<span class="sd">       constituents. Keys missing on a constituent are excluded from</span>
+<span class="sd">       that key&#39;s aggregate (not treated as 0 — a missing measurement</span>
+<span class="sd">       isn&#39;t a measurement of zero).</span>
+
+<span class="sd">    ``centroid`` is an alias for ``mean`` — same arithmetic, different</span>
+<span class="sd">    word for the geometric reading.</span>
+
+<span class="sd">    Missing values (``None``) are filtered out before aggregation; if</span>
+<span class="sd">    every constituent is missing this returns ``None`` so callers know</span>
+<span class="sd">    to skip the attribute entirely (matching DROP semantics).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">real</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">real</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">op</span> <span class="o">=</span> <span class="n">aggregator</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;centroid&quot;</span><span class="p">:</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="s2">&quot;mean&quot;</span>
+
+    <span class="n">first</span> <span class="o">=</span> <span class="n">real</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c1"># Shape 1: dict-of-floats (cook AP/DV/LR style).</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">first</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">real</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)))</span>
+        <span class="n">out</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+            <span class="n">samples</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">real</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">v</span> <span class="ow">and</span> <span class="n">v</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">samples</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;mean&quot;</span><span class="p">:</span>
+                <span class="n">out</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">samples</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;median&quot;</span><span class="p">:</span>
+                <span class="n">out</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">samples</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown vector aggregator: </span><span class="si">{</span><span class="n">aggregator</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span> <span class="k">if</span> <span class="n">out</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="c1"># Shape 2: numpy ndarray / list / tuple. Stack and take element-wise.</span>
+    <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">real</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;mean&quot;</span><span class="p">:</span>
+        <span class="n">out_vec</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;median&quot;</span><span class="p">:</span>
+        <span class="n">out_vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown vector aggregator: </span><span class="si">{</span><span class="n">aggregator</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># Preserve &quot;I came in as np.ndarray&quot; so downstream consumers don&#39;t</span>
+    <span class="c1"># need to handle both shapes. Lists/tuples also come out as ndarray</span>
+    <span class="c1"># (one canonical shape per kind beats lossy round-tripping).</span>
+    <span class="k">return</span> <span class="n">out_vec</span>
 </pre></div>
 
                 </article>

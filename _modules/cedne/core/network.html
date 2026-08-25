@@ -308,7 +308,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.connection</span><span class="w"> </span><span class="kn">import</span> <span class="n">Connection</span><span class="p">,</span> <span class="n">ChemicalSynapse</span><span class="p">,</span> <span class="n">GapJunction</span><span class="p">,</span> <span class="n">ConnectionGroup</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.history</span><span class="w"> </span><span class="kn">import</span> <span class="n">record</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.neuron</span><span class="w"> </span><span class="kn">import</span> <span class="n">Neuron</span><span class="p">,</span> <span class="n">NeuronGroup</span><span class="p">,</span> <span class="n">MERGED_TYPE</span><span class="p">,</span> <span class="n">MERGE_TRACK_ATTRS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.neuron</span><span class="w"> </span><span class="kn">import</span> <span class="n">Neuron</span><span class="p">,</span> <span class="n">NeuronGroup</span><span class="p">,</span> <span class="n">MERGE_TRACK_ATTRS</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.animal</span><span class="w"> </span><span class="kn">import</span> <span class="n">Worm</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.source</span><span class="w"> </span><span class="kn">import</span> <span class="n">Citable</span>
 
@@ -465,13 +465,42 @@
 <div class="viewcode-block" id="NervousSystem.remove_neurons">
 <a class="viewcode-back" href="../../../index.html#cedne.NervousSystem.remove_neurons">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">remove_neurons</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">neurons</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove neurons from the network.&quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">neuron</span> <span class="ow">in</span> <span class="n">neurons</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">neuron</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot; </span><span class="si">{</span><span class="n">neuron</span><span class="si">}</span><span class="s2"> is not a valid neuron name.&quot;</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Remove neurons from the network.</span>
+
+<span class="sd">        Accepts either neuron name strings or ``Neuron`` instances (or a</span>
+<span class="sd">        mix). Unknown names and Neuron objects that don&#39;t belong to this</span>
+<span class="sd">        network raise ``KeyError``; other input types raise ``TypeError``.</span>
+
+<span class="sd">        Resolution happens up-front so a bad element fails the call</span>
+<span class="sd">        atomically rather than leaving the graph half-mutated.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">resolved</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">neurons</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">Neuron</span><span class="p">):</span>
+                <span class="c1"># Membership check by object — a same-named Neuron from</span>
+                <span class="c1"># a different network must not be silently accepted as</span>
+                <span class="c1"># a stand-in.</span>
+                <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Neuron </span><span class="si">{</span><span class="n">n</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2"> is not in this network.&quot;</span><span class="p">)</span>
+                <span class="n">resolved</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No neuron named </span><span class="si">{</span><span class="n">n</span><span class="si">!r}</span><span class="s2"> in this network.&quot;</span><span class="p">)</span>
+                <span class="n">resolved</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">neurons</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="n">neuron</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">update_neurons</span><span class="p">()</span></div>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;remove_neurons expects neuron names or Neuron &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;instances; got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span>
+        <span class="k">for</span> <span class="n">neuron_obj</span> <span class="ow">in</span> <span class="n">resolved</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="n">neuron_obj</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_neurons</span><span class="p">()</span>
+        <span class="c1"># ``remove_node`` prunes incident edges from the underlying</span>
+        <span class="c1"># networkx graph, but ``self.connections`` is a separate cache</span>
+        <span class="c1"># keyed by (pre, post, uid) tuples — sync it so callers don&#39;t</span>
+        <span class="c1"># see stale Connection entries pointing at the now-detached</span>
+        <span class="c1"># neuron.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_connections</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="NervousSystem.create_neurons_from">
@@ -1264,9 +1293,11 @@
 <span class="sd">            object. Note: the legacy ``data=&#39;clean&#39;`` path computes</span>
 <span class="sd">            ``contraction_data`` keyed by the post-pair-wise edge IDs;</span>
 <span class="sd">            keying by pre-fold IDs here is more directly useful for</span>
-<span class="sd">            consumers (e.g. the FlyWire notebook reads</span>
-<span class="sd">            ``conn.contraction_data[k].neurotransmitter`` — the</span>
-<span class="sd">            attribute survives on either set of Connection objects).</span>
+<span class="sd">            consumers that want to walk the un-folded source edges</span>
+<span class="sd">            (e.g. provenance / drill-down). For NT collation specifically,</span>
+<span class="sd">            consumers should read ``conn.neurotransmitters`` directly on</span>
+<span class="sd">            the folded Connection — clean mode&#39;s set_union has already</span>
+<span class="sd">            done the union across all constituents.</span>
 <span class="sd">        - ``self_loops=False`` drops intra-class edges from the folded</span>
 <span class="sd">          view, matching ``nx.contracted_nodes(self_loops=False)``.</span>
 <span class="sd">        - ``exceptions`` members pass through to the folded view under</span>
@@ -1346,7 +1377,9 @@
                         <span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">connection_type</span><span class="o">=</span><span class="n">ct</span><span class="p">,</span> <span class="n">weight</span><span class="o">=</span><span class="n">wt</span><span class="p">,</span> <span class="o">**</span><span class="n">ed</span>
                     <span class="p">)</span>
                     <span class="n">sub</span><span class="o">.</span><span class="n">connections</span><span class="p">[(</span><span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">,</span> <span class="n">new_conn</span><span class="o">.</span><span class="n">uid</span><span class="p">)]</span> <span class="o">=</span> <span class="n">new_conn</span>
-                <span class="n">sub</span><span class="o">.</span><span class="n">visualization_metadata</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">visualization_metadata</span><span class="p">)</span>
+                <span class="n">sub</span><span class="o">.</span><span class="n">visualization_metadata</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span>
+                    <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;visualization_metadata&quot;</span><span class="p">,</span> <span class="p">{})</span>
+                <span class="p">)</span>
                 <span class="n">constituent_subgraphs</span><span class="p">[</span><span class="n">cname</span><span class="p">]</span> <span class="o">=</span> <span class="n">sub</span>
             <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
                 <span class="c1"># Defensive: a single bad class must not block the fold.</span>
@@ -1377,12 +1410,6 @@
         <span class="c1"># &quot;merged&quot; neuron is just the renamed source — its existing</span>
         <span class="c1"># constituents/etc. survive via the nx-node-data copy in step 5).</span>
         <span class="c1"># ---------------------------------------------------------------</span>
-        <span class="k">def</span><span class="w"> </span><span class="nf">_snapshot</span><span class="p">(</span><span class="n">neuron</span><span class="p">,</span> <span class="n">n_name</span><span class="p">):</span>
-            <span class="n">snap</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">n_name</span><span class="p">}</span>
-            <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">MERGE_TRACK_ATTRS</span><span class="p">:</span>
-                <span class="n">snap</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">neuron</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">snap</span>
-
         <span class="c1"># Phase 2.2: drive the per-attribute merge through apply_policy</span>
         <span class="c1"># (DEFAULT_NEURON_FOLD_POLICY by default). Same source of truth</span>
         <span class="c1"># as the legacy contract_neurons path.</span>
@@ -1394,6 +1421,32 @@
         <span class="n">neuron_policy_set</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">fold_policy</span> <span class="k">if</span> <span class="n">fold_policy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">DEFAULT_NEURON_FOLD_POLICY</span>
         <span class="p">)</span>
+
+        <span class="c1"># Snapshot every attribute the policy set knows about, not just</span>
+        <span class="c1"># the historical MERGE_TRACK_ATTRS triplet. ``apply_policy`` later</span>
+        <span class="c1"># consumes these by name, so anything registered (e.g. ``position``</span>
+        <span class="c1"># in the default neuron policy) needs to land in the snapshot.</span>
+        <span class="c1"># MERGE_TRACK_ATTRS stays in the union for back-compat with code</span>
+        <span class="c1"># that still reads ``constituents[&lt;name&gt;][&#39;type&#39;]`` from outside</span>
+        <span class="c1"># the policy system (drill-down menu, hierarchy tooltips).</span>
+        <span class="n">_snapshot_attrs</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="nb">set</span><span class="p">(</span><span class="n">MERGE_TRACK_ATTRS</span><span class="p">)</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span class="n">neuron_policy_set</span><span class="o">.</span><span class="n">policies</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">_snapshot</span><span class="p">(</span><span class="n">neuron</span><span class="p">,</span> <span class="n">n_name</span><span class="p">):</span>
+            <span class="n">snap</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">n_name</span><span class="p">}</span>
+            <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">_snapshot_attrs</span><span class="p">:</span>
+                <span class="c1"># MERGE_TRACK_ATTRS get &quot;&quot; default (matches the historical</span>
+                <span class="c1"># contract_neurons snapshot shape downstream consumers</span>
+                <span class="c1"># expect). Policy-only attrs default to None so apply_policy</span>
+                <span class="c1"># can filter them out — empty string would be a real value</span>
+                <span class="c1"># for some kinds (categorical) but means &quot;missing&quot; for</span>
+                <span class="c1"># others (vector / scalar), and None is unambiguous.</span>
+                <span class="k">if</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">MERGE_TRACK_ATTRS</span><span class="p">:</span>
+                    <span class="n">snap</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">neuron</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">snap</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">neuron</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">snap</span>
 
         <span class="n">merged_class_snapshots</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># cname -&gt; {orig_name: snapshot}</span>
         <span class="n">merged_class_resolved_attrs</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># cname -&gt; {merge-policy attrs}</span>
@@ -1429,7 +1482,9 @@
         <span class="c1"># Step 4: construct the folded NervousSystem and its neurons.</span>
         <span class="c1"># ---------------------------------------------------------------</span>
         <span class="n">folded</span> <span class="o">=</span> <span class="n">NervousSystem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">worm</span><span class="p">,</span> <span class="n">network</span><span class="o">=</span><span class="n">name</span> <span class="ow">or</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_folded&quot;</span><span class="p">))</span>
-        <span class="n">folded</span><span class="o">.</span><span class="n">visualization_metadata</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">visualization_metadata</span><span class="p">)</span>
+        <span class="n">folded</span><span class="o">.</span><span class="n">visualization_metadata</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span>
+            <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;visualization_metadata&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="p">)</span>
 
         <span class="n">created</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="c1"># 4a. Multi-member merged neurons.</span>
@@ -1739,6 +1794,19 @@
 <span class="sd">            NervousSystem | None:</span>
 <span class="sd">                The new graph if ``copy_graph=True``; ``None`` otherwise</span>
 <span class="sd">                (mutates in place).</span>
+
+<span class="sd">        Caller-responsible post-sync:</span>
+<span class="sd">            This method calls ``self.update_neurons()`` after the</span>
+<span class="sd">            contraction but deliberately does **not** call</span>
+<span class="sd">            ``self.update_connections()`` / ``self.reassign_connections()``.</span>
+<span class="sd">            The fold path (``_fold_network_legacy``) makes N-1 pair-wise</span>
+<span class="sd">            contraction calls per class and then issues a *single*</span>
+<span class="sd">            ``reassign_connections()`` at the end — adding the cache</span>
+<span class="sd">            scan inside this hot loop would do O(N × |connections|)</span>
+<span class="sd">            redundant work per fold. Direct callers that read</span>
+<span class="sd">            ``self.connections`` after contracting must call</span>
+<span class="sd">            ``self.update_connections()`` (or</span>
+<span class="sd">            ``self.reassign_connections()`` for full rebuild) themselves.</span>
 
 <span class="sd">        Notes:</span>
 <span class="sd">            Tracks merge provenance on the surviving neuron via three</span>
@@ -2183,7 +2251,7 @@
             <span class="n">deep_copy</span><span class="o">.</span><span class="n">create_neurons_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">deep_copy</span><span class="o">.</span><span class="n">create_connections_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="n">deep_copy</span><span class="o">.</span><span class="n">visualization_metadata</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">visualization_metadata</span>
+                <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;visualization_metadata&quot;</span><span class="p">,</span> <span class="p">{})</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="n">deep_copy</span>
         <span class="k">elif</span> <span class="n">copy_type</span> <span class="o">==</span> <span class="s2">&quot;deep_without_data&quot;</span><span class="p">:</span>
@@ -2191,7 +2259,7 @@
             <span class="n">deep_copy</span><span class="o">.</span><span class="n">create_neurons_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
             <span class="n">deep_copy</span><span class="o">.</span><span class="n">create_connections_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
             <span class="n">deep_copy</span><span class="o">.</span><span class="n">visualization_metadata</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">visualization_metadata</span>
+                <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;visualization_metadata&quot;</span><span class="p">,</span> <span class="p">{})</span>
             <span class="p">)</span>
             <span class="k">return</span> <span class="n">deep_copy</span>
         <span class="k">else</span><span class="p">:</span>

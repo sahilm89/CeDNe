@@ -595,20 +595,43 @@ property_value: The value of the property.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cedne.NeuronGroup.add_neuron">
-<span class="sig-name descname"><span class="pre">add_neuron</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">neuron</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.Neuron" title="cedne.core.neuron.Neuron"><span class="pre">Neuron</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/cedne/core/neuron.html#NeuronGroup.add_neuron"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NeuronGroup.add_neuron" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">add_neuron</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">neuron</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/cedne/core/neuron.html#NeuronGroup.add_neuron"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NeuronGroup.add_neuron" title="Link to this definition">#</a></dt>
 <dd><p>Add a neuron to the group.</p>
-<dl class="simple">
-<dt>Args:</dt><dd><p>neuron: Neuron to add.</p>
+<p>Accepts either a <code class="docutils literal notranslate"><span class="pre">Neuron</span></code> instance or a neuron name string.
+Name-string inputs are resolved against the parent
+<code class="docutils literal notranslate"><span class="pre">NervousSystem</span></code> (same shape as the constructor at
+<code class="docutils literal notranslate"><span class="pre">NeuronGroup.__init__</span></code>). Double-adds are idempotent.</p>
+<dl>
+<dt>Args:</dt><dd><p>neuron: <code class="docutils literal notranslate"><span class="pre">Neuron</span></code> instance or its name string.</p>
+</dd>
+<dt>Raises:</dt><dd><dl class="simple">
+<dt>KeyError: if a name string is passed but the parent</dt><dd><p>network has no neuron by that name.</p>
+</dd>
+</dl>
+<p>TypeError: if <code class="docutils literal notranslate"><span class="pre">neuron</span></code> is neither a Neuron nor a string.</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="cedne.NeuronGroup.remove_neuron">
-<span class="sig-name descname"><span class="pre">remove_neuron</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">neuron</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#cedne.Neuron" title="cedne.core.neuron.Neuron"><span class="pre">Neuron</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/cedne/core/neuron.html#NeuronGroup.remove_neuron"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NeuronGroup.remove_neuron" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">remove_neuron</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">neuron</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/cedne/core/neuron.html#NeuronGroup.remove_neuron"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NeuronGroup.remove_neuron" title="Link to this definition">#</a></dt>
 <dd><p>Remove a neuron from the group.</p>
+<p>Accepts either a <code class="docutils literal notranslate"><span class="pre">Neuron</span></code> instance or a neuron name string.
+Silently no-ops if the neuron is not a member (idempotent —
+matches <code class="docutils literal notranslate"><span class="pre">add_neuron</span></code>’s “no double-add” contract).</p>
+<p>When passed a <code class="docutils literal notranslate"><span class="pre">Neuron</span></code> instance, removal happens only if that
+exact object is the registered member — a foreign Neuron with
+the same name is <em>not</em> accepted as a stand-in. Pass a name
+string explicitly to remove by name regardless of object
+identity.</p>
+<p>Note: <code class="docutils literal notranslate"><span class="pre">NeuronGroup</span></code> tracks group <em>membership</em> only. This does
+not remove the neuron from the underlying <code class="docutils literal notranslate"><span class="pre">NervousSystem</span></code>
+graph — use <code class="docutils literal notranslate"><span class="pre">NervousSystem.remove_neurons</span></code> for that.</p>
 <dl class="simple">
-<dt>Args:</dt><dd><p>neuron: Neuron to remove.</p>
+<dt>Args:</dt><dd><p>neuron: <code class="docutils literal notranslate"><span class="pre">Neuron</span></code> instance or its name string.</p>
+</dd>
+<dt>Raises:</dt><dd><p>TypeError: if <code class="docutils literal notranslate"><span class="pre">neuron</span></code> is neither a Neuron nor a string.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -751,6 +774,11 @@ value: The value of the property.</p>
 <dt class="sig sig-object py" id="cedne.NervousSystem.remove_neurons">
 <span class="sig-name descname"><span class="pre">remove_neurons</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">neurons</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/network.html#NervousSystem.remove_neurons"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.NervousSystem.remove_neurons" title="Link to this definition">#</a></dt>
 <dd><p>Remove neurons from the network.</p>
+<p>Accepts either neuron name strings or <code class="docutils literal notranslate"><span class="pre">Neuron</span></code> instances (or a
+mix). Unknown names and Neuron objects that don’t belong to this
+network raise <code class="docutils literal notranslate"><span class="pre">KeyError</span></code>; other input types raise <code class="docutils literal notranslate"><span class="pre">TypeError</span></code>.</p>
+<p>Resolution happens up-front so a bad element fails the call
+atomically rather than leaving the graph half-mutated.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -1035,6 +1063,18 @@ any self-loop produced by edges between the merged pair.</p>
 (mutates in place).</p>
 </dd>
 </dl>
+</dd>
+<dt>Caller-responsible post-sync:</dt><dd><p>This method calls <code class="docutils literal notranslate"><span class="pre">self.update_neurons()</span></code> after the
+contraction but deliberately does <strong>not</strong> call
+<code class="docutils literal notranslate"><span class="pre">self.update_connections()</span></code> / <code class="docutils literal notranslate"><span class="pre">self.reassign_connections()</span></code>.
+The fold path (<code class="docutils literal notranslate"><span class="pre">_fold_network_legacy</span></code>) makes N-1 pair-wise
+contraction calls per class and then issues a <em>single</em>
+<code class="docutils literal notranslate"><span class="pre">reassign_connections()</span></code> at the end — adding the cache
+scan inside this hot loop would do O(N × <a href="#id1"><span class="problematic" id="id2">|connections|</span></a>)
+redundant work per fold. Direct callers that read
+<code class="docutils literal notranslate"><span class="pre">self.connections</span></code> after contracting must call
+<code class="docutils literal notranslate"><span class="pre">self.update_connections()</span></code> (or
+<code class="docutils literal notranslate"><span class="pre">self.reassign_connections()</span></code> for full rebuild) themselves.</p>
 </dd>
 <dt>Notes:</dt><dd><p>Tracks merge provenance on the surviving neuron via three
 new Neuron API surfaces:</p>
@@ -1787,7 +1827,7 @@ serializes properly.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="cedne.FoldPolicy">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">FoldPolicy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'scalar'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'timeseries'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'list'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'dict'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'categorical'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aggregator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'drop'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/fold_policy.html#FoldPolicy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.FoldPolicy" title="Link to this definition">#</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cedne.</span></span><span class="sig-name descname"><span class="pre">FoldPolicy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'scalar'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'timeseries'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'list'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'dict'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'categorical'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'vector'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aggregator</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'drop'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cedne/core/fold_policy.html#FoldPolicy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cedne.FoldPolicy" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>How to aggregate one named attribute across constituents.</p>
 <dl class="simple">
@@ -1813,7 +1853,7 @@ to the supernode (safe default — no silent merge).</p>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="cedne.FoldPolicy.kind">
-<span class="sig-name descname"><span class="pre">kind</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'scalar'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'timeseries'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'list'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'dict'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'categorical'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#cedne.FoldPolicy.kind" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">kind</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'scalar'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'timeseries'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'list'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'dict'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'categorical'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'vector'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#cedne.FoldPolicy.kind" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
