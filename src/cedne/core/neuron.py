@@ -891,23 +891,88 @@ class NeuronGroup(Citable):
         """
         return [neuron.get_connections() for neuron in self.members]
 
-    def add_neuron(self, neuron: "Neuron") -> None:
+    def add_neuron(self, neuron) -> None:
         """Add a neuron to the group.
 
-        Args:
-            neuron: Neuron to add.
-        """
-        if neuron not in self.neurons:
-            self.neurons[neuron.name] = neuron
+        Accepts either a ``Neuron`` instance or a neuron name string.
+        Name-string inputs are resolved against the parent
+        ``NervousSystem`` (same shape as the constructor at
+        ``NeuronGroup.__init__``). Double-adds are idempotent.
 
-    def remove_neuron(self, neuron: "Neuron") -> None:
+        Args:
+            neuron: ``Neuron`` instance or its name string.
+
+        Raises:
+            KeyError: if a name string is passed but the parent
+                network has no neuron by that name.
+            TypeError: if ``neuron`` is neither a Neuron nor a string.
+        """
+        if isinstance(neuron, Neuron):
+            resolved = neuron
+        elif isinstance(neuron, str):
+            if neuron not in self.network.neurons:
+                raise KeyError(
+                    f"Neuron {neuron!r} not found in network " f"{self.network.name!r}."
+                )
+            resolved = self.network.neurons[neuron]
+        else:
+            raise TypeError(
+                f"add_neuron expects a Neuron instance or a name "
+                f"string; got {type(neuron).__name__}."
+            )
+        if resolved.name not in self.neurons:
+            self.neurons[resolved.name] = resolved
+            # Keep ``self.members`` in sync with ``self.neurons`` — methods
+            # like ``get_property`` / ``get_connections`` iterate
+            # ``self.members`` directly (see lines below). Leaving members
+            # stale would make newly-added neurons invisible to those
+            # accessors.
+            self.members.append(resolved)
+
+    def remove_neuron(self, neuron) -> None:
         """Remove a neuron from the group.
 
+        Accepts either a ``Neuron`` instance or a neuron name string.
+        Silently no-ops if the neuron is not a member (idempotent —
+        matches ``add_neuron``'s "no double-add" contract).
+
+        When passed a ``Neuron`` instance, removal happens only if that
+        exact object is the registered member — a foreign Neuron with
+        the same name is *not* accepted as a stand-in. Pass a name
+        string explicitly to remove by name regardless of object
+        identity.
+
+        Note: ``NeuronGroup`` tracks group *membership* only. This does
+        not remove the neuron from the underlying ``NervousSystem``
+        graph — use ``NervousSystem.remove_neurons`` for that.
+
         Args:
-            neuron: Neuron to remove.
+            neuron: ``Neuron`` instance or its name string.
+
+        Raises:
+            TypeError: if ``neuron`` is neither a Neuron nor a string.
         """
-        if neuron in self.neurons:
-            self.neurons.pop(neuron.name)
+        if isinstance(neuron, Neuron):
+            existing = self.neurons.get(neuron.name)
+            if existing is neuron:
+                self.neurons.pop(neuron.name)
+                self._drop_member(neuron.name)
+            return
+        if isinstance(neuron, str):
+            removed = self.neurons.pop(neuron, None)
+            if removed is not None:
+                self._drop_member(neuron)
+            return
+        raise TypeError(
+            f"remove_neuron expects a Neuron instance or a name "
+            f"string; got {type(neuron).__name__}."
+        )
+
+    def _drop_member(self, name: str) -> None:
+        """Remove the named member from ``self.members`` (the list-shaped
+        mirror of ``self.neurons``). Kept in sync so list-based accessors
+        like ``get_property`` / ``get_connections`` don't see ghosts."""
+        self.members = [m for m in self.members if m.name != name]
 
     def get_neurons_by_type(self, type: str) -> List["Neuron"]:
         """Get all neurons of a specific type.

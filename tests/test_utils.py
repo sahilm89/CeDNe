@@ -17,6 +17,7 @@ from cedne.utils.plotting import simpleaxis, plot_spiral, plot_ciona_anatomical
 from cedne.utils.graphtools import (
     joinLRNodes,
     foldByNeuronType,
+    foldByCategory,
     is_left_neuron,
     getNeuronClass,
 )
@@ -258,6 +259,49 @@ class TestGraphtools:
         new_network = foldByNeuronType(sample_neural_network)
         assert isinstance(new_network, NervousSystem)
         assert len(new_network.neurons) <= len(sample_neural_network.neurons)
+
+    def test_foldByCategory_groups_by_category_and_passes_through_missing(self):
+        """Neurons sharing a category collapse into one node per category;
+        neurons with no category pass through unchanged (matching
+        foldLeftRight's behavior for unpaired neurons)."""
+        worm = Worm("cat_worm")
+        nn = NervousSystem(worm, "cat_net")
+
+        # Two HEAD neurons, two MIDBODY neurons, one neuron with no category.
+        Neuron("AVAL", nn, category="HEAD")
+        Neuron("AVAR", nn, category="HEAD")
+        Neuron("PVCL", nn, category="MIDBODY")
+        Neuron("PVCR", nn, category="MIDBODY")
+        Neuron("RID", nn)  # no category — should pass through
+
+        nn.setup_connections(
+            {
+                "AVAL": {"PVCL": {"weight": 1}},
+                "AVAR": {"PVCR": {"weight": 1}},
+                "RID": {"AVAL": {"weight": 1}},
+            },
+            connection_type="chemical",
+        )
+
+        new_network = foldByCategory(nn)
+        assert isinstance(new_network, NervousSystem)
+        assert "HEAD" in new_network.neurons
+        assert "MIDBODY" in new_network.neurons
+        # No-category neuron passes through under its original name.
+        assert "RID" in new_network.neurons
+        # Categorized neurons are folded away.
+        for n in ("AVAL", "AVAR", "PVCL", "PVCR"):
+            assert n not in new_network.neurons
+
+    def test_foldByCategory_raises_when_no_category(self):
+        """Networks whose neurons carry no category attribute should raise
+        a clear ValueError rather than silently producing an empty fold."""
+        worm = Worm("nocat_worm")
+        nn = NervousSystem(worm, "nocat_net")
+        for name in ("AVAL", "AVAR"):
+            Neuron(name, nn)
+        with pytest.raises(ValueError, match="category"):
+            foldByCategory(nn)
 
     def test_is_left_neuron(self):
         """Test left neuron identification."""

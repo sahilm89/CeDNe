@@ -1,7 +1,7 @@
 """Dataset registry and missing-dataset error for CeDNe loaders.
 
 Each loader in `cedne.utils.loader` reads files staged under
-`data_sources/downloads/<dataset_dir>/...`. When a file is missing,
+`data_sources/<dataset_dir>/...`. When a file is missing,
 the raw `FileNotFoundError` from pandas / pickle / open is hard to act on
 because the message is just a path. The web frontend can't tell the user
 which dataset to download or where to put it.
@@ -15,15 +15,17 @@ in the exception's message.
 
 Adding a new external dataset:
     1. Add a `DatasetSpec` entry to `DATASET_REGISTRY` keyed by a stable
-       `dataset_key` (lowercase, snake_case, matches the directory under
-       `data_sources/downloads/`).
+       `dataset_key` (lowercase, snake_case). The `expected_dir` resolves
+       via a path constant in `config.py` (e.g. `cook_connectome` →
+       `data_sources/Cook_2019/`).
     2. Wrap the loader's `pd.read_*` / `open()` calls with
        `require_dataset_file(path, dataset_key)`.
 
-Bundled-with-the-repo files (e.g. `data_sources/Cell_list.pkl`) live
-under `DATADIR` directly, not `DOWNLOAD_DIR`, and are not in this
-registry — they ship with the source tree and a missing one is a
-packaging bug, not a data-staging gap.
+Bundled-with-the-repo files (e.g. `Cell_list.pkl`, `chem_adj.pkl`,
+`gapjn_symm_adj.pkl`, `cook_male_data.pkl`, `neuronPosition.pkl`)
+live alongside their source dataset (Cook_2019/, Worm_Atlas/) and
+are not in this registry — they ship with the source tree and a
+missing one is a packaging bug, not a data-staging gap.
 """
 
 __author__ = "Sahil Moza"
@@ -273,6 +275,18 @@ DATASET_REGISTRY: dict[str, DatasetSpec] = {
         expected_dir=fly_wire,
         citation="Dorkenwald et al. (2024) Nature 634:124–138",
         source_url="https://codex.flywire.ai/",
+        download_specs=(
+            DownloadSpec(
+                # Schlegel et al. 2024 (Nature 634:139–152) per-neuron annotation
+                # table for FlyWire materialization v783. Adds hemilineage, side,
+                # super_class/class/sub_class hierarchy, verified NT, hemibrain
+                # cross-reference, and ontology IDs on top of the Codex CSVs.
+                url="https://raw.githubusercontent.com/flyconnectome/flywire_annotations/main/supplemental_files/Supplemental_file1_neuron_annotations.tsv",
+                target_relpath="Supplemental_file1_neuron_annotations.tsv",
+                sha256="533db093e12d8de350fd20875a967f8f74acace633ff22118eefff550d5dcbc1",
+                description="Schlegel 2024 — FlyWire v783 per-neuron annotations",
+            ),
+        ),
     ),
     "winding_2023": DatasetSpec(
         key="winding_2023",

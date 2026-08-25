@@ -50,6 +50,7 @@ cedne = "cedne.serve:cli"
 minversion = "7.0"
 addopts = "-ra -q --cov=cedne --cov-branch --cov-report=xml --cov-report=term-missing"
 testpaths = ["tests"]
+markers = ["slow: tests that load full datasets (deselect with '-m \"not slow\"')"]
 
 [tool.coverage.run]
 branch = true

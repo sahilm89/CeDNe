@@ -55,11 +55,19 @@ TimeseriesAgg = Literal["timeseries_mean", "timeseries_median", "timeseries_max"
 ListAgg = Literal["mode_count", "keep_all", "set_union"]
 DictAgg = Literal["dict_union", "dict_intersection", "dict_collated"]
 CategoricalAgg = Literal["mode", "keep_all"]
+# Vector kind: fixed-shape numeric data per neuron — positions (3-vector
+# for FlyWire as np.ndarray, dict-of-floats with AP/DV/LR keys for the
+# C. elegans cook loader), bounding-box centers, etc. Aggregated by
+# element-wise summary statistics. ``centroid`` is an alias for ``mean``
+# kept around because the spatial-aggregation literature uses both
+# words and the picker UI label benefits from the geometric reading.
 
 # Sentinel meaning "don't copy this attribute to the supernode". Works on
 # every kind; equivalent to the historical default of "not registered =
 # not folded".
 DROP: str = "drop"
+
+VectorAgg = Literal["mean", "median", "centroid"]
 
 ALL_AGGREGATORS = frozenset(
     [
@@ -78,6 +86,9 @@ ALL_AGGREGATORS = frozenset(
         "dict_union",
         "dict_intersection",
         "dict_collated",
+        # vector
+        "centroid",  # alias for "mean" — kept for geometric readability
+        # Note: "mean" / "median" already listed under scalar, reused.
         DROP,
     ]
 )
@@ -98,6 +109,10 @@ _AGGREGATOR_MENUS: Dict[str, tuple] = {
     "list": ("mode_count", "keep_all", "set_union", DROP),
     "dict": ("dict_union", "dict_intersection", "dict_collated", DROP),
     "categorical": ("mode", "keep_all", "same_or_merged", DROP),
+    # Fixed-shape numeric per-neuron data (positions, bounding-box
+    # centers, etc.). Handles both numpy 3-vectors (FlyWire) and dict-
+    # of-floats (C. elegans cook AP/DV/LR) — apply_policy detects shape.
+    "vector": ("mean", "median", "centroid", DROP),
 }
 
 _VALID_AGGREGATORS_BY_KIND: Dict[str, frozenset] = {
@@ -146,7 +161,7 @@ class FoldPolicy:
     """
 
     name: str
-    kind: Literal["scalar", "timeseries", "list", "dict", "categorical"]
+    kind: Literal["scalar", "timeseries", "list", "dict", "categorical", "vector"]
     aggregator: str = DROP
 
     def __post_init__(self):
@@ -475,6 +490,15 @@ DEFAULT_NEURON_FOLD_POLICY = FoldPolicySet(
         "type": FoldPolicy("type", "categorical", "same_or_merged"),
         "category": FoldPolicy("category", "categorical", "same_or_merged"),
         "modality": FoldPolicy("modality", "categorical", "same_or_merged"),
+        # Spatial centroid. Both 3D-ndarray (FlyWire) and AP/DV/LR-dict
+        # (C. elegans cook) shapes are handled by ``_agg_vector``;
+        # constituents missing a position are excluded from the average
+        # rather than treated as zero. Pre-Phase-2.2 the historical
+        # behavior was to drop position on merged neurons entirely;
+        # taking the centroid is strictly more informative — a fold of
+        # the LR pair sits halfway between the L and R neuron's
+        # positions, which is the value most consumers want.
+        "position": FoldPolicy("position", "vector", "mean"),
     },
     default_aggregator=DROP,
 )
@@ -499,4 +523,71 @@ def apply_policy(policy: FoldPolicy, values: List[Any]) -> Any:
         return _agg_dict(values, policy.aggregator)
     if policy.kind == "categorical":
         return _agg_categorical(values, policy.aggregator)
+    if policy.kind == "vector":
+        return _agg_vector(values, policy.aggregator)
     raise ValueError(f"Unknown FoldPolicy kind: {policy.kind!r}")
+
+
+def _agg_vector(values: List[Any], aggregator: str) -> Any:
+    """Element-wise summary of fixed-shape numeric data.
+
+    Auto-detects two shapes that occur in CeDNe today and keeps the
+    output in the same shape as the inputs:
+
+    1. **numpy ndarray / list / tuple** (FlyWire neurons carry 3-vectors
+       as ``np.ndarray``). Result is a 1-D ``np.ndarray`` of the same
+       length, element-wise mean/median.
+    2. **dict of name → number** (C. elegans cook positions:
+       ``{"AP": float, "DV": float, "LR": float}``). Result is a dict
+       with the same keys, each value the mean/median across
+       constituents. Keys missing on a constituent are excluded from
+       that key's aggregate (not treated as 0 — a missing measurement
+       isn't a measurement of zero).
+
+    ``centroid`` is an alias for ``mean`` — same arithmetic, different
+    word for the geometric reading.
+
+    Missing values (``None``) are filtered out before aggregation; if
+    every constituent is missing this returns ``None`` so callers know
+    to skip the attribute entirely (matching DROP semantics).
+    """
+    real = [v for v in values if v is not None]
+    if not real:
+        return None
+    op = aggregator
+    if op == "centroid":
+        op = "mean"
+
+    first = real[0]
+    # Shape 1: dict-of-floats (cook AP/DV/LR style).
+    if isinstance(first, dict):
+        keys = set().union(*(v.keys() for v in real if isinstance(v, dict)))
+        out: Dict[str, float] = {}
+        for k in keys:
+            samples = [
+                float(v[k])
+                for v in real
+                if isinstance(v, dict) and k in v and v[k] is not None
+            ]
+            if not samples:
+                continue
+            if op == "mean":
+                out[k] = float(np.mean(samples))
+            elif op == "median":
+                out[k] = float(np.median(samples))
+            else:
+                raise ValueError(f"Unknown vector aggregator: {aggregator!r}")
+        return out if out else None
+
+    # Shape 2: numpy ndarray / list / tuple. Stack and take element-wise.
+    arr = np.array(real, dtype=float)
+    if op == "mean":
+        out_vec = arr.mean(axis=0)
+    elif op == "median":
+        out_vec = np.median(arr, axis=0)
+    else:
+        raise ValueError(f"Unknown vector aggregator: {aggregator!r}")
+    # Preserve "I came in as np.ndarray" so downstream consumers don't
+    # need to handle both shapes. Lists/tuples also come out as ndarray
+    # (one canonical shape per kind beats lossy round-tripping).
+    return out_vec

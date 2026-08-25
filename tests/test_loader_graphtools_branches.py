@@ -350,7 +350,12 @@ def test_make_pristionchus_filters_repeat_header_rows(monkeypatch):
     assert set(nn.neurons) == {"A", "B", "C"}
 
 
-def test_makeFly_fly_wire_loads_metadata_and_connections(monkeypatch):
+def _fake_flywire_read_csv(annotations_df=None):
+    """Build a monkeypatch replacement for `pd.read_csv` covering every file
+    the FlyWire loader touches. Pass an `annotations_df` to inject Schlegel
+    2024 v783 annotations; pass `None` to simulate the file being absent.
+    """
+
     def fake_read_csv(path, *args, **kwargs):
         if path.name == "names.csv":
             return pd.DataFrame(
@@ -376,6 +381,10 @@ def test_makeFly_fly_wire_loads_metadata_and_connections(monkeypatch):
                     "size_nm": [55, 66],
                 }
             )
+        if path.name == "Supplemental_file1_neuron_annotations.tsv":
+            if annotations_df is None:
+                raise FileNotFoundError(path)
+            return annotations_df
         if path.name == "connections_no_threshold.csv":
             return pd.DataFrame(
                 {
@@ -387,9 +396,14 @@ def test_makeFly_fly_wire_loads_metadata_and_connections(monkeypatch):
             )
         raise AssertionError(f"Unexpected csv path {path}")
 
-    monkeypatch.setattr(loader.pd, "read_csv", fake_read_csv)
+    return fake_read_csv
 
-    fly = loader.makeFly("fly-wire", import_parameters={"style": "fly_wire"})
+
+def test_makeFly_fly_wire_loads_metadata_and_connections(monkeypatch):
+    monkeypatch.setattr(loader.pd, "read_csv", _fake_flywire_read_csv())
+
+    with pytest.warns(RuntimeWarning, match="annotations TSV not found"):
+        fly = loader.makeFly("fly-wire", import_parameters={"style": "fly_wire"})
     nn = fly.networks["Neutral"]
 
     assert list(nn.neurons) == ["NeuronA", "NeuronB"]
@@ -400,6 +414,75 @@ def test_makeFly_fly_wire_loads_metadata_and_connections(monkeypatch):
     assert nn.neurons["NeuronB"].volume == 66
     assert fly.citations["fly_wire"] == loader.citations["fly_wire"]
     assert find_connection(nn, "NeuronA", "NeuronB", "chemical-synapse").weight == 5
+
+
+def test_makeFly_fly_wire_attaches_schlegel_annotations(monkeypatch):
+    """Schlegel 2024 v783 annotations should appear as per-neuron properties.
+
+    Covers: NaN -> None handling, root_ids missing from names.csv are skipped,
+    `cell_type` is exposed as `consolidated_type` (not `type`), and partial
+    coverage (only one of two neurons annotated) is tolerated.
+    """
+    annot = pd.DataFrame(
+        {
+            # root_id 2 -> NeuronA (fully annotated); root_id 10 -> NeuronB
+            # (only side/flow); root_id 999 has no matching neuron -> ignored.
+            "root_id": [2, 10, 999],
+            "flow": ["intrinsic", "afferent", "intrinsic"],
+            "super_class": ["central", np.nan, "optic"],
+            "cell_class": ["ALPN", np.nan, "T1"],
+            "cell_sub_class": ["uPN", np.nan, np.nan],
+            "supertype": ["VC5", np.nan, np.nan],
+            "cell_type": ["DA1_lPN", np.nan, "T1_R"],
+            "hemibrain_type": ["DA1_lPN", np.nan, np.nan],
+            "ito_lee_hemilineage": ["ALl1", np.nan, np.nan],
+            "hartenstein_hemilineage": ["BAlc", np.nan, np.nan],
+            "side": ["right", "left", "right"],
+            "nerve": [np.nan, np.nan, np.nan],
+            "top_nt": ["acetylcholine", np.nan, "histamine"],
+            "top_nt_conf": [0.91, np.nan, 0.77],
+            "known_nt": ["acetylcholine", np.nan, np.nan],
+            "vfb_id": ["VFB_00100000", np.nan, np.nan],
+            "fbbt_id": ["FBbt_00067082", np.nan, np.nan],
+            "dimorphism": [np.nan, np.nan, np.nan],
+        }
+    )
+    monkeypatch.setattr(loader.pd, "read_csv", _fake_flywire_read_csv(annot))
+
+    fly = loader.makeFly("fly-wire", import_parameters={"style": "fly_wire"})
+    nn = fly.networks["Neutral"]
+    a = nn.neurons["NeuronA"]
+    b = nn.neurons["NeuronB"]
+
+    # Existing `type` from names.csv preserved; Schlegel's verified cell type
+    # is surfaced separately as `consolidated_type`.
+    assert a.type == "TypeA"
+    assert a.consolidated_type == "DA1_lPN"
+    assert a.flow == "intrinsic"
+    assert a.super_class == "central"
+    assert a.cell_class == "ALPN"
+    assert a.cell_sub_class == "uPN"
+    assert a.ito_lee_hemilineage == "ALl1"
+    assert a.hartenstein_hemilineage == "BAlc"
+    assert a.side == "right"
+    assert a.top_nt == "acetylcholine"
+    assert a.top_nt_conf == pytest.approx(0.91)
+    assert a.known_nt == "acetylcholine"
+    assert a.vfb_id == "VFB_00100000"
+    assert a.fbbt_id == "FBbt_00067082"
+
+    # NeuronB only has side + flow + top_nt populated upstream; the rest must
+    # land as None (not NaN) so downstream code can rely on `is None` checks.
+    assert b.side == "left"
+    assert b.flow == "afferent"
+    assert b.consolidated_type is None
+    assert b.cell_class is None
+    assert b.ito_lee_hemilineage is None
+    assert b.known_nt is None
+    # Columns that are NaN across every annotated row still attach (as None)
+    # because the property is registered when at least one neuron has data.
+    assert a.nerve is None and b.nerve is None
+    assert a.dimorphism is None and b.dimorphism is None
 
 
 def test_makeFly_winding_2023_marks_unannotated_neurons(monkeypatch):

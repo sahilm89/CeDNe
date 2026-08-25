@@ -10,6 +10,7 @@ __date__ = "2025-04-06"
 __license__ = "MIT"
 
 import warnings
+import functools
 import pickle
 import re
 from pathlib import Path
@@ -412,6 +413,72 @@ def makeWorm(name="", import_parameters=None, chem_only=False, gapjn_only=False)
     return w
 
 
+# Columns from Supplemental_file1_neuron_annotations.tsv (Schlegel 2024) that
+# CeDNe surfaces as Neuron properties. Keys are TSV column names; values are
+# the CeDNe property name. `cell_type` is renamed to `consolidated_type` to
+# avoid colliding with the `type` already set from names.csv `group`.
+_FLYWIRE_ANNOTATION_COLUMNS = {
+    "flow": "flow",
+    "super_class": "super_class",
+    "cell_class": "cell_class",
+    "cell_sub_class": "cell_sub_class",
+    "supertype": "supertype",
+    "cell_type": "consolidated_type",
+    "hemibrain_type": "hemibrain_type",
+    "ito_lee_hemilineage": "ito_lee_hemilineage",
+    "hartenstein_hemilineage": "hartenstein_hemilineage",
+    "side": "side",
+    "nerve": "nerve",
+    "top_nt": "top_nt",
+    "top_nt_conf": "top_nt_conf",
+    "known_nt": "known_nt",
+    "vfb_id": "vfb_id",
+    "fbbt_id": "fbbt_id",
+    "dimorphism": "dimorphism",
+}
+
+
+def _load_flywire_annotations(neuron_dict):
+    """Read Schlegel 2024 v783 annotations and return per-neuron property dicts.
+
+    `neuron_dict` maps FlyWire root_id -> CeDNe neuron label. The returned dict
+    maps property name -> {label: value}, with NaN translated to None so it
+    flows cleanly through ``NervousSystem.create_neurons``. If the TSV is not
+    on disk (e.g. older installs), an empty dict is returned and a warning is
+    issued — the caller proceeds without these properties.
+    """
+    annot_path = fly_wire / "Supplemental_file1_neuron_annotations.tsv"
+    try:
+        annot = _read_csv_dataset(
+            annot_path,
+            "fly_wire",
+            sep="\t",
+            low_memory=False,
+        )
+    except MissingDatasetError:
+        warnings.warn(
+            f"FlyWire annotations TSV not found at {annot_path}. Re-run "
+            "`download_datasets('fly_wire')` to fetch Schlegel 2024 v783 "
+            "annotations; loading without hemilineage/side/etc.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return {}
+
+    out: dict = {prop: {} for prop in _FLYWIRE_ANNOTATION_COLUMNS.values()}
+    for _, row in annot.iterrows():
+        rid = row["root_id"]
+        label = neuron_dict.get(rid)
+        if label is None:
+            continue
+        for tsv_col, prop_name in _FLYWIRE_ANNOTATION_COLUMNS.items():
+            value = row.get(tsv_col)
+            if pd.isna(value):
+                continue
+            out[prop_name][label] = value
+    return out
+
+
 @record("make_fly")
 def makeFly(name="", import_parameters=None):
     if import_parameters is not None and import_parameters["style"] == "fly_wire":
@@ -465,6 +532,13 @@ def makeFly(name="", import_parameters=None):
             neuron_dict[rid]: nvol for (rid, nvol) in zip(stats_root_id, nvolume)
         }
 
+        ## Schlegel 2024 per-neuron annotations (FlyWire v783)
+        # Adds hemilineage, side, hierarchical type, verified NT, hemibrain
+        # match, and ontology IDs on top of the Codex CSV bundle. Tolerated
+        # missing so older installs that haven't re-downloaded keep working;
+        # rerun `download_datasets('fly_wire')` to pick it up.
+        annot_dicts = _load_flywire_annotations(neuron_dict)
+
         nn.create_neurons(
             labels,
             type=neuron_types,
@@ -472,6 +546,7 @@ def makeFly(name="", import_parameters=None):
             length=length_dict,
             area=area_dict,
             volume=vol_dict,
+            **annot_dicts,
         )
 
         ## Connections
@@ -489,12 +564,22 @@ def makeFly(name="", import_parameters=None):
                 "post": neuron_dict[post],
                 "weight": weight,
             }
-            neurotransmitter = {"neurotransmitter": nt}
+            # Canonical NT shape on Connection: ``neurotransmitters`` is a
+            # list (kind="list", aggregator="set_union" in
+            # DEFAULT_CONNECTION_FOLD_POLICY). A raw FlyWire synapse
+            # carries exactly one NT call, so the list is a singleton
+            # at load time; the fold then set-unions across constituents.
+            # The earlier nested dict shape (``neurotransmitter={'neurotransmitter': nt}``)
+            # was loader-specific and didn't propagate through the
+            # policy-driven fold; consumers that previously read
+            # ``conn.neurotransmitter['neurotransmitter']`` should now
+            # read ``conn.neurotransmitters[0]`` (or join/iterate for
+            # folded edges that may carry more than one).
             nn.setup_connections(
                 adjacency,
                 connection_type="chemical-synapse",
                 input_type="edge",
-                neurotransmitter=neurotransmitter,
+                neurotransmitters=[nt],
             )
 
     elif import_parameters["style"] == "Winding_2023":
@@ -1360,41 +1445,95 @@ def _readLigandTable(sex="Hermaphrodite"):
     raise ValueError("Sex must be 'Hermaphrodite' or 'Male'")
 
 
+# Excel parsing of the Wang-2024 ligand sheets dominates the cold path of
+# loadNeurotransmitters (~1-3s each via openpyxl), and the call signature is
+# stable across UI clicks. Cache by (path, mtime, sex) so reloading at a
+# different threshold or sex doesn't re-parse work we already did, while a
+# replaced data file still invalidates. _readLigandTable is intentionally
+# *not* routed through this cache — existing tests monkeypatch pd.read_excel
+# and expect each call to hit the patched function.
+@functools.lru_cache(maxsize=8)
+def _cached_ligand_table_df(path_str, mtime, sex):
+    if sex in ("Hermaphrodite", "hermaphrodite"):
+        sheet = "Hermaphrodite, sorted by neuron"
+    elif sex in ("Male", "male"):
+        sheet = "Male neurons, sorted by neuron"
+    else:
+        raise ValueError("Sex must be 'Hermaphrodite' or 'Male'")
+    return pd.read_excel(path_str, sheet_name=sheet, skiprows=7, engine="openpyxl")
+
+
+@functools.lru_cache(maxsize=4)
+def _cached_ligmap_df(path_str, mtime):
+    return pd.read_excel(path_str, sheet_name="ligmap", engine="openpyxl")
+
+
+def _ligmap_lookup(ligmap):
+    """gene → canonicalized-first-ligand dict, memoised on the DataFrame.
+
+    Previously the inner loop of loadNeurotransmitters did a full
+    ``ligmap["ligand"][ligmap["gene"] == r]`` boolean scan once per receptor
+    per neuron-column, i.e. O(receptors × cols) pandas scans. Building the
+    lookup once collapses each lookup to O(1).
+
+    NaN/non-string ligand cells (genes that appear in the ligmap with no
+    associated ligand) are normalised to "" here. The old code passed NaN
+    through ``canonicalizeNT`` unchanged and left ``conn.receptors[gene] =
+    nan`` for downstream consumers, which JSON-serialisers couldn't
+    handle and which carried no information beyond "no ligand mapped".
+    """
+    cached = ligmap.attrs.get("_cedne_ligmap_lookup")
+    if cached is not None:
+        return cached
+    lookup = {}
+    for gene, lig in zip(ligmap["gene"], ligmap["ligand"]):
+        if gene in lookup:
+            continue
+        lookup[gene] = canonicalizeNT(lig) if isinstance(lig, str) else ""
+    ligmap.attrs["_cedne_ligmap_lookup"] = lookup
+    return lookup
+
+
+def _ligtable_index(ligtable):
+    """neuron → (nt1, nt2) dict, memoised on the DataFrame."""
+    cached = ligtable.attrs.get("_cedne_ligtable_index")
+    if cached is not None:
+        return cached
+    index = {}
+    for n, nt1, nt2 in zip(
+        ligtable["Neuron"],
+        ligtable["Neurotransmitter 1"],
+        ligtable["Neurotransmitter 2"],
+    ):
+        index.setdefault(n, (nt1, nt2))
+    ligtable.attrs["_cedne_ligtable_index"] = index
+    return index
+
+
 def getLigands(neuron, sex="Hermaphrodite", ligtable=None):
     """Returns ligand for each neuron"""
     if ligtable is None:
         ligtable = _readLigandTable(sex=sex)
 
-    a, b = (
-        ligtable["Neurotransmitter 1"][ligtable["Neuron"] == neuron].to_list(),
-        ligtable["Neurotransmitter 2"][ligtable["Neuron"] == neuron].to_list(),
-    )
+    nt1, nt2 = _ligtable_index(ligtable).get(neuron, (None, None))
 
     # Only string entries are real transmitter names; NaN / empty cells mean
     # "no known transmitter for this neuron" and must not leak into downstream
     # edge metadata as a NaN float.
     out = []
-    if len(a) and isinstance(a[0], str) and a[0].strip():
-        out.append(canonicalizeNT(a[0]))
-    if len(b) and isinstance(b[0], str) and b[0].strip():
-        out.append(canonicalizeNT(b[0]))
+    if isinstance(nt1, str) and nt1.strip():
+        out.append(canonicalizeNT(nt1))
+    if isinstance(nt2, str) and nt2.strip():
+        out.append(canonicalizeNT(nt2))
     return out
 
 
 def getLigandsAndReceptors(npr, ligmap, col):
     """Returns ligand and receptor for each neuron"""
-    receptor_ligand = {}
-    # print(npr[col])
+    lookup = _ligmap_lookup(ligmap)
     i = npr[col][npr[col]].index
-    # print(i)
     rec = npr["gene_name"][i].to_list()
-    for r in rec:
-        ligands = ligmap["ligand"][ligmap["gene"] == r].to_list()
-        if len(ligands) > 0:
-            receptor_ligand.update({r: canonicalizeNT(ligands[0])})
-        else:
-            receptor_ligand.update({r: ""})
-    return receptor_ligand
+    return {r: lookup.get(r, "") for r in rec}
 
 
 @record("load_neurotransmitters")
@@ -1473,9 +1612,13 @@ def loadNeurotransmitters(
         DOWNLOAD_DIR / prefix_NT / "GenesExpressing-BATCH-thrs4_use.xlsx",
         "wang_2024",
     )
-    ligmap = pd.read_excel(ligmap_file, sheet_name="ligmap", engine="openpyxl")
+    ligmap = _cached_ligmap_df(str(ligmap_file), ligmap_file.stat().st_mtime)
     try:
-        ligtable = _readLigandTable(sex=sex)
+        lig_file = require_dataset_file(
+            DOWNLOAD_DIR / prefix_NT / "ligand-table.xlsx",
+            "wang_2024",
+        )
+        ligtable = _cached_ligand_table_df(str(lig_file), lig_file.stat().st_mtime, sex)
     except (FileNotFoundError, StopIteration):
         ligtable = None
 
@@ -1602,13 +1745,17 @@ def _neuropeptide_data_roots():
 
     # Local CeDNe-web development often keeps the source CeDNe repository next
     # to this app, with freshly downloaded tables that are not staged here.
+    # The historical ``data_sources/downloads/`` intermediate directory was
+    # eliminated; we check the new flat layout first, then fall back to the
+    # legacy path so older local checkouts still resolve.
     for base in (TOPDIR.parent, TOPDIR.parent.parent):
-        sibling_root = (
-            base / "CeDNe" / "data_sources" / "downloads" / "Ripoll-Sanchez_2023"
-        )
-        if sibling_root not in seen:
-            seen.add(sibling_root)
-            yield sibling_root
+        for sibling_root in (
+            base / "CeDNe" / "data_sources" / "Ripoll-Sanchez_2023",
+            base / "CeDNe" / "data_sources" / "downloads" / "Ripoll-Sanchez_2023",
+        ):
+            if sibling_root not in seen:
+                seen.add(sibling_root)
+                yield sibling_root
 
 
 def _neuropeptide_old_root():

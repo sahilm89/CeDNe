@@ -15,13 +15,13 @@ __pycache__/
 build/
 develop-eggs/
 dist/
-data_sources/downloads/CENGEN
-data_sources/downloads/FlyWire
-data_sources/downloads/Atanas_2023
-data_sources/downloads/Winding_2023
-data_sources/downloads/Veraszto_2025
-data_sources/downloads/Ripoll-Sanchez_2023/new
-!data_sources/downloads/Ripoll-Sanchez_2023/old
+data_sources/CENGEN
+data_sources/FlyWire
+data_sources/Atanas_2023
+data_sources/Winding_2023
+data_sources/Veraszto_2025
+data_sources/Ripoll-Sanchez_2023/new
+!data_sources/Ripoll-Sanchez_2023/old
 eggs/
 .eggs/
 lib/
@@ -49,7 +49,7 @@ MANIFEST
 *.txt
 !.binder/requirements.txt
 !.binder/runtime.txt
-!data_sources/downloads/Ripoll-Sanchez_2023/old/26012022_num_neuronID.txt
+!data_sources/Ripoll-Sanchez_2023/old/26012022_num_neuronID.txt
 
 # Installer logs
 pip-log.txt

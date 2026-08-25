@@ -36,6 +36,7 @@ import json
 ALLOWED_CLASSES = {
     # numpy internals
     ("numpy.core.multiarray", "_reconstruct"),
+    ("numpy.core.multiarray", "scalar"),  # 0-d arrays / scalar reduce path
     ("numpy.core.numeric", "_frombuffer"),
     ("numpy", "dtype"),
     ("numpy", "ndarray"),

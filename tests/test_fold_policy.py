@@ -224,3 +224,159 @@ class TestDropAndPolicySet:
     def test_default_aggregator_is_drop(self):
         s = FoldPolicySet()
         assert s.default_aggregator == DROP
+
+
+class TestVectorAggregator:
+    """``vector`` kind: 3D positions and similar fixed-shape numeric data.
+
+    Both shapes that occur in CeDNe today are exercised — numpy 3-vector
+    (FlyWire neurons) and AP/DV/LR dict (C. elegans cook positions).
+    """
+
+    def test_ndarray_mean_is_componentwise(self):
+        from cedne.core.fold_policy import FoldPolicy, apply_policy
+
+        p = FoldPolicy("position", "vector", "mean")
+        result = apply_policy(
+            p,
+            [
+                np.array([0.0, 0.0, 0.0]),
+                np.array([2.0, 4.0, 6.0]),
+                np.array([4.0, 8.0, 12.0]),
+            ],
+        )
+        assert np.allclose(result, [2.0, 4.0, 6.0])
+
+    def test_centroid_is_alias_for_mean(self):
+        from cedne.core.fold_policy import FoldPolicy, apply_policy
+
+        values = [np.array([1.0, 2.0, 3.0]), np.array([5.0, 6.0, 7.0])]
+        mean = apply_policy(FoldPolicy("p", "vector", "mean"), values)
+        centroid = apply_policy(FoldPolicy("p", "vector", "centroid"), values)
+        np.testing.assert_array_equal(mean, centroid)
+
+    def test_dict_position_aggregates_per_key(self):
+        from cedne.core.fold_policy import FoldPolicy, apply_policy
+
+        p = FoldPolicy("position", "vector", "mean")
+        result = apply_policy(
+            p,
+            [
+                {"AP": 0.0, "DV": 0.0, "LR": 0.0},
+                {"AP": 10.0, "DV": 20.0, "LR": 30.0},
+            ],
+        )
+        assert isinstance(result, dict)
+        assert result == {"AP": 5.0, "DV": 10.0, "LR": 15.0}
+
+    def test_dict_missing_keys_excluded_not_zeroed(self):
+        """If a constituent lacks a key, that constituent doesn't pull
+        the other constituents' values toward zero. The aggregate uses
+        only the constituents that actually carry the key."""
+        from cedne.core.fold_policy import FoldPolicy, apply_policy
+
+        p = FoldPolicy("position", "vector", "mean")
+        result = apply_policy(
+            p,
+            [
+                {"AP": 10.0, "DV": 20.0, "LR": 30.0},
+                {"AP": 20.0, "DV": 40.0},  # no LR
+            ],
+        )
+        assert result["AP"] == 15.0
+        assert result["DV"] == 30.0
+        assert result["LR"] == 30.0  # only one constituent had it
+
+    def test_none_values_filtered(self):
+        from cedne.core.fold_policy import FoldPolicy, apply_policy
+
+        p = FoldPolicy("position", "vector", "mean")
+        result = apply_policy(p, [None, np.array([4.0, 4.0, 4.0]), None])
+        np.testing.assert_array_equal(result, [4.0, 4.0, 4.0])
+
+    def test_all_missing_returns_none(self):
+        """When every constituent is missing the attribute, return None
+        so the caller skips copying it to the supernode (matches DROP)."""
+        from cedne.core.fold_policy import FoldPolicy, apply_policy
+
+        p = FoldPolicy("position", "vector", "mean")
+        assert apply_policy(p, [None, None, None]) is None
+        assert apply_policy(p, []) is None
+
+    def test_median_aggregator_resists_outliers(self):
+        from cedne.core.fold_policy import FoldPolicy, apply_policy
+
+        p = FoldPolicy("position", "vector", "median")
+        result = apply_policy(
+            p,
+            [
+                np.array([0.0, 0.0, 0.0]),
+                np.array([1.0, 1.0, 1.0]),
+                np.array([100.0, 100.0, 100.0]),  # outlier
+            ],
+        )
+        # Median tolerates the outlier; mean would land at ~33.7.
+        np.testing.assert_array_equal(result, [1.0, 1.0, 1.0])
+
+    def test_drop_aggregator_works(self):
+        from cedne.core.fold_policy import FoldPolicy, apply_policy, DROP
+
+        p = FoldPolicy("position", "vector", DROP)
+        assert apply_policy(p, [{"AP": 1.0}]) is None
+
+
+class TestPositionInDefaultNeuronPolicy:
+    """``DEFAULT_NEURON_FOLD_POLICY`` now includes a position centroid.
+    Pin the registration so future refactors can't silently drop it."""
+
+    def test_position_is_registered(self):
+        from cedne.core.fold_policy import DEFAULT_NEURON_FOLD_POLICY
+
+        pol = DEFAULT_NEURON_FOLD_POLICY.policies.get("position")
+        assert pol is not None
+        assert pol.kind == "vector"
+        assert pol.aggregator == "mean"
+
+    def test_fold_network_propagates_centroid_to_merged_neuron(self):
+        """Build a tiny fly-style network with numpy 3-vector positions,
+        fold a two-neuron class, and assert the merged neuron carries
+        the midpoint position."""
+        from cedne.core.animal import Worm
+        from cedne.core.network import NervousSystem
+
+        w = Worm()
+        nn = NervousSystem(w)
+        nn.create_neurons(
+            ["a1", "a2"],
+            type={"a1": "A", "a2": "A"},
+            position={
+                "a1": np.array([0.0, 0.0, 0.0]),
+                "a2": np.array([10.0, 20.0, 30.0]),
+            },
+        )
+        folded = nn.fold_network({"A": ["a1", "a2"]})
+        merged_a = folded.neurons["A"]
+        assert hasattr(merged_a, "position")
+        np.testing.assert_allclose(merged_a.position, [5.0, 10.0, 15.0])
+
+    def test_fold_network_propagates_centroid_dict_shape(self):
+        """C. elegans cook shape: position is dict with AP/DV/LR keys."""
+        from cedne.core.animal import Worm
+        from cedne.core.network import NervousSystem
+
+        w = Worm()
+        nn = NervousSystem(w)
+        nn.create_neurons(
+            ["AVAL", "AVAR"],
+            type={"AVAL": "interneuron", "AVAR": "interneuron"},
+            position={
+                "AVAL": {"AP": 10.0, "DV": 5.0, "LR": -5.0},
+                "AVAR": {"AP": 12.0, "DV": 5.0, "LR": +5.0},
+            },
+        )
+        folded = nn.fold_network({"AVA": ["AVAL", "AVAR"]})
+        merged_ava = folded.neurons["AVA"]
+        assert isinstance(merged_ava.position, dict)
+        assert merged_ava.position["AP"] == 11.0
+        assert merged_ava.position["DV"] == 5.0
+        assert merged_ava.position["LR"] == 0.0

@@ -3,7 +3,7 @@ import numpy as np
 import networkx as nx
 from cedne.core.animal import Worm, load_worm
 from cedne.core.network import NervousSystem
-from cedne.core.neuron import Neuron
+from cedne.core.neuron import Neuron, NeuronGroup
 from cedne.core.recordings import Trial, StimResponse
 from cedne.core.connection import (
     Connection,
@@ -433,6 +433,226 @@ class TestNervousSystem:
         nervous_system.clear()
         assert len(nervous_system.nodes()) == 0
         assert len(nervous_system.edges()) == 0
+
+
+class TestRemoveNeurons:
+    """Coverage for ``NervousSystem.remove_neurons``. The previous
+    implementation was broken for both name strings (passed straight to
+    networkx's ``remove_node`` which expects the Neuron object) and
+    Neuron instances (failed the name-keyed membership check up-front);
+    it also left ``self.connections`` cache entries pointing at the
+    removed node. This class pins the new behavior."""
+
+    def _make_net(self):
+        ns = NervousSystem()
+        a = Neuron("A", ns)
+        b = Neuron("B", ns)
+        c = Neuron("C", ns)
+        return ns, a, b, c
+
+    def test_remove_by_name(self):
+        ns, a, b, c = self._make_net()
+        ns.remove_neurons(["A", "C"])
+        assert "A" not in ns.neurons
+        assert "C" not in ns.neurons
+        assert "B" in ns.neurons
+        assert a not in ns.nodes()
+        assert c not in ns.nodes()
+        assert b in ns.nodes()
+
+    def test_remove_by_object(self):
+        ns, a, b, c = self._make_net()
+        ns.remove_neurons([a, c])
+        assert "A" not in ns.neurons
+        assert "C" not in ns.neurons
+        assert "B" in ns.neurons
+        assert a not in ns.nodes()
+        assert b in ns.nodes()
+
+    def test_remove_mixed_names_and_objects(self):
+        ns, a, b, c = self._make_net()
+        ns.remove_neurons(["A", c])
+        assert "A" not in ns.neurons
+        assert "C" not in ns.neurons
+        assert "B" in ns.neurons
+
+    def test_unknown_name_raises_keyerror(self):
+        ns, *_ = self._make_net()
+        with pytest.raises(KeyError, match="NOPE"):
+            ns.remove_neurons(["NOPE"])
+
+    def test_foreign_neuron_object_raises_keyerror(self):
+        """A Neuron instance from a different NervousSystem must not be
+        accepted as a stand-in even if a same-named neuron exists here."""
+        ns, *_ = self._make_net()
+        other = NervousSystem()
+        foreign = Neuron("A", other)  # same name "A" — different network
+        with pytest.raises(KeyError, match="A"):
+            ns.remove_neurons([foreign])
+        # Original "A" untouched.
+        assert "A" in ns.neurons
+
+    def test_wrong_type_raises_typeerror(self):
+        ns, *_ = self._make_net()
+        with pytest.raises(TypeError, match="int"):
+            ns.remove_neurons([42])
+
+    def test_atomic_on_bad_input(self):
+        """A bad element mid-list must abort the whole call without
+        leaving the graph half-mutated."""
+        ns, a, b, c = self._make_net()
+        with pytest.raises(KeyError):
+            ns.remove_neurons(["A", "NOPE"])
+        # "A" must still be present — resolution failed before any
+        # mutation happened.
+        assert "A" in ns.neurons
+        assert a in ns.nodes()
+
+    def test_empty_iterable_is_noop(self):
+        ns, a, b, c = self._make_net()
+        ns.remove_neurons([])
+        assert set(ns.neurons.keys()) == {"A", "B", "C"}
+
+    def test_incident_connections_are_cleaned_up(self):
+        """Removing a neuron must prune its incident Connection cache
+        entries — not just the underlying networkx edges. Regression
+        test for the missing ``update_connections()`` call."""
+        ns = NervousSystem()
+        Neuron("A", ns)
+        Neuron("B", ns)
+        Neuron("C", ns)
+        # ``setup_connections`` is what actually populates
+        # ``ns.connections`` (raw ``Connection(...)`` does not).
+        ns.setup_connections(
+            {
+                "A": {"B": {"weight": 1}, "C": {"weight": 1}},
+                "B": {"C": {"weight": 1}},
+            },
+            connection_type="chemical",
+        )
+        # Sanity: three connections cached pre-removal.
+        assert len(ns.connections) == 3
+
+        ns.remove_neurons(["B"])
+
+        # No surviving entry in the cache may reference B as pre or post.
+        for pre, post, _key in ns.connections:
+            assert pre.name != "B", f"stale connection from B: {pre.name}->{post.name}"
+            assert post.name != "B", f"stale connection to B: {pre.name}->{post.name}"
+        # Only A→C should remain.
+        assert len(ns.connections) == 1
+        only_pre, only_post, _ = next(iter(ns.connections))
+        assert (only_pre.name, only_post.name) == ("A", "C")
+
+
+class TestNeuronGroupRemoveNeuron:
+    """Coverage for ``NeuronGroup.remove_neuron`` (singular). The previous
+    implementation used ``if neuron in self.neurons`` where
+    ``self.neurons`` is a name-keyed dict; a Neuron-object input is never
+    a key, so the body silently no-op'd. Fix accepts names or objects."""
+
+    def _make_group(self):
+        ns = NervousSystem()
+        a = Neuron("A", ns)
+        b = Neuron("B", ns)
+        # User-defined group containing both — group is independent of
+        # the all_neurons group on the network.
+        grp = NeuronGroup(ns, members=[a, b], group_name="pair")
+        return ns, grp, a, b
+
+    def test_remove_by_object(self):
+        ns, grp, a, b = self._make_group()
+        grp.remove_neuron(a)
+        assert "A" not in grp.neurons
+        assert "B" in grp.neurons
+        # The underlying network is untouched — NeuronGroup is a
+        # membership tracker, not a graph mutator.
+        assert "A" in ns.neurons
+
+    def test_remove_by_name(self):
+        ns, grp, a, b = self._make_group()
+        grp.remove_neuron("B")
+        assert "B" not in grp.neurons
+        assert "A" in grp.neurons
+        assert "B" in ns.neurons  # network untouched
+
+    def test_remove_unknown_is_noop(self):
+        """Idempotent: removing a non-member doesn't raise."""
+        ns, grp, a, b = self._make_group()
+        grp.remove_neuron("NOPE")
+        # Also: an unrelated Neuron object should silently no-op.
+        ns2 = NervousSystem()
+        foreign = Neuron("A", ns2)
+        grp.remove_neuron(foreign)
+        # Group state unchanged.
+        assert set(grp.neurons.keys()) == {"A", "B"}
+
+    def test_wrong_type_raises_typeerror(self):
+        ns, grp, *_ = self._make_group()
+        with pytest.raises(TypeError, match="int"):
+            grp.remove_neuron(42)
+
+    def test_remove_keeps_members_list_in_sync(self):
+        """``self.members`` is the list-shaped mirror of ``self.neurons``
+        and is read directly by ``get_property`` / ``get_connections``.
+        It must not retain ghosts after removal."""
+        ns, grp, a, b = self._make_group()
+        grp.remove_neuron("A")
+        assert [m.name for m in grp.members] == ["B"]
+        grp.remove_neuron(b)
+        assert grp.members == []
+
+
+class TestNeuronGroupAddNeuron:
+    """Coverage for ``NeuronGroup.add_neuron`` (singular). Previous
+    implementation typed ``neuron: Neuron`` only; the guard
+    ``if neuron not in self.neurons`` checked Neuron-object against a
+    name-keyed dict — the guard worked correctly only for the
+    *intended* name-string callers, but the signature didn't admit
+    them. Fix accepts both Neuron objects and name strings, resolves
+    strings via the parent network, and keeps ``self.members`` in
+    sync with ``self.neurons``."""
+
+    def _make_setup(self):
+        ns = NervousSystem()
+        a = Neuron("A", ns)
+        b = Neuron("B", ns)
+        c = Neuron("C", ns)
+        # Group starts with just A.
+        grp = NeuronGroup(ns, members=[a], group_name="g")
+        return ns, grp, a, b, c
+
+    def test_add_by_object(self):
+        ns, grp, a, b, c = self._make_setup()
+        grp.add_neuron(b)
+        assert set(grp.neurons.keys()) == {"A", "B"}
+        assert [m.name for m in grp.members] == ["A", "B"]
+
+    def test_add_by_name(self):
+        ns, grp, a, b, c = self._make_setup()
+        grp.add_neuron("C")
+        assert set(grp.neurons.keys()) == {"A", "C"}
+        # Resolved object is the actual one from the parent network.
+        assert grp.neurons["C"] is c
+
+    def test_add_unknown_name_raises_keyerror(self):
+        ns, grp, *_ = self._make_setup()
+        with pytest.raises(KeyError, match="NOPE"):
+            grp.add_neuron("NOPE")
+
+    def test_add_wrong_type_raises_typeerror(self):
+        ns, grp, *_ = self._make_setup()
+        with pytest.raises(TypeError, match="int"):
+            grp.add_neuron(42)
+
+    def test_double_add_is_idempotent(self):
+        ns, grp, a, b, c = self._make_setup()
+        grp.add_neuron(b)
+        grp.add_neuron(b)  # by object
+        grp.add_neuron("B")  # by name
+        # ``members`` must not duplicate.
+        assert [m.name for m in grp.members] == ["A", "B"]
+        assert set(grp.neurons.keys()) == {"A", "B"}
 
 
 class TestNeuron:

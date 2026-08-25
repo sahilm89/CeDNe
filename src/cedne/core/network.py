@@ -36,7 +36,7 @@ import numpy as np
 import networkx as nx
 from .connection import Connection, ChemicalSynapse, GapJunction, ConnectionGroup
 from .history import record
-from .neuron import Neuron, NeuronGroup, MERGED_TYPE, MERGE_TRACK_ATTRS
+from .neuron import Neuron, NeuronGroup, MERGE_TRACK_ATTRS
 from .animal import Worm
 from .source import Citable
 
@@ -180,13 +180,42 @@ class NervousSystem(nx.MultiDiGraph, Citable):
             Neuron(label, self, **neuron_args)
 
     def remove_neurons(self, neurons):
-        """Remove neurons from the network."""
-        for neuron in neurons:
-            if neuron not in self.neurons:
-                raise TypeError(f" {neuron} is not a valid neuron name.")
+        """Remove neurons from the network.
+
+        Accepts either neuron name strings or ``Neuron`` instances (or a
+        mix). Unknown names and Neuron objects that don't belong to this
+        network raise ``KeyError``; other input types raise ``TypeError``.
+
+        Resolution happens up-front so a bad element fails the call
+        atomically rather than leaving the graph half-mutated.
+        """
+        resolved = []
+        for n in neurons:
+            if isinstance(n, Neuron):
+                # Membership check by object — a same-named Neuron from
+                # a different network must not be silently accepted as
+                # a stand-in.
+                if n not in self.nodes:
+                    raise KeyError(f"Neuron {n.name!r} is not in this network.")
+                resolved.append(n)
+            elif isinstance(n, str):
+                if n not in self.neurons:
+                    raise KeyError(f"No neuron named {n!r} in this network.")
+                resolved.append(self.neurons[n])
             else:
-                self.remove_node(neuron)
+                raise TypeError(
+                    f"remove_neurons expects neuron names or Neuron "
+                    f"instances; got {type(n).__name__}."
+                )
+        for neuron_obj in resolved:
+            self.remove_node(neuron_obj)
         self.update_neurons()
+        # ``remove_node`` prunes incident edges from the underlying
+        # networkx graph, but ``self.connections`` is a separate cache
+        # keyed by (pre, post, uid) tuples — sync it so callers don't
+        # see stale Connection entries pointing at the now-detached
+        # neuron.
+        self.update_connections()
 
     def create_neurons_from(self, network, data=False):
         """
@@ -930,9 +959,11 @@ class NervousSystem(nx.MultiDiGraph, Citable):
             object. Note: the legacy ``data='clean'`` path computes
             ``contraction_data`` keyed by the post-pair-wise edge IDs;
             keying by pre-fold IDs here is more directly useful for
-            consumers (e.g. the FlyWire notebook reads
-            ``conn.contraction_data[k].neurotransmitter`` — the
-            attribute survives on either set of Connection objects).
+            consumers that want to walk the un-folded source edges
+            (e.g. provenance / drill-down). For NT collation specifically,
+            consumers should read ``conn.neurotransmitters`` directly on
+            the folded Connection — clean mode's set_union has already
+            done the union across all constituents.
         - ``self_loops=False`` drops intra-class edges from the folded
           view, matching ``nx.contracted_nodes(self_loops=False)``.
         - ``exceptions`` members pass through to the folded view under
@@ -1012,7 +1043,9 @@ class NervousSystem(nx.MultiDiGraph, Citable):
                         src, dst, k, connection_type=ct, weight=wt, **ed
                     )
                     sub.connections[(src, dst, new_conn.uid)] = new_conn
-                sub.visualization_metadata = copy.deepcopy(self.visualization_metadata)
+                sub.visualization_metadata = copy.deepcopy(
+                    getattr(self, "visualization_metadata", {})
+                )
                 constituent_subgraphs[cname] = sub
             except Exception:
                 # Defensive: a single bad class must not block the fold.
@@ -1043,12 +1076,6 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         # "merged" neuron is just the renamed source — its existing
         # constituents/etc. survive via the nx-node-data copy in step 5).
         # ---------------------------------------------------------------
-        def _snapshot(neuron, n_name):
-            snap = {"name": n_name}
-            for attr in MERGE_TRACK_ATTRS:
-                snap[attr] = getattr(neuron, attr, "")
-            return snap
-
         # Phase 2.2: drive the per-attribute merge through apply_policy
         # (DEFAULT_NEURON_FOLD_POLICY by default). Same source of truth
         # as the legacy contract_neurons path.
@@ -1060,6 +1087,32 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         neuron_policy_set = (
             fold_policy if fold_policy is not None else DEFAULT_NEURON_FOLD_POLICY
         )
+
+        # Snapshot every attribute the policy set knows about, not just
+        # the historical MERGE_TRACK_ATTRS triplet. ``apply_policy`` later
+        # consumes these by name, so anything registered (e.g. ``position``
+        # in the default neuron policy) needs to land in the snapshot.
+        # MERGE_TRACK_ATTRS stays in the union for back-compat with code
+        # that still reads ``constituents[<name>]['type']`` from outside
+        # the policy system (drill-down menu, hierarchy tooltips).
+        _snapshot_attrs = tuple(
+            set(MERGE_TRACK_ATTRS) | set(neuron_policy_set.policies)
+        )
+
+        def _snapshot(neuron, n_name):
+            snap = {"name": n_name}
+            for attr in _snapshot_attrs:
+                # MERGE_TRACK_ATTRS get "" default (matches the historical
+                # contract_neurons snapshot shape downstream consumers
+                # expect). Policy-only attrs default to None so apply_policy
+                # can filter them out — empty string would be a real value
+                # for some kinds (categorical) but means "missing" for
+                # others (vector / scalar), and None is unambiguous.
+                if attr in MERGE_TRACK_ATTRS:
+                    snap[attr] = getattr(neuron, attr, "")
+                else:
+                    snap[attr] = getattr(neuron, attr, None)
+            return snap
 
         merged_class_snapshots = {}  # cname -> {orig_name: snapshot}
         merged_class_resolved_attrs = {}  # cname -> {merge-policy attrs}
@@ -1095,7 +1148,9 @@ class NervousSystem(nx.MultiDiGraph, Citable):
         # Step 4: construct the folded NervousSystem and its neurons.
         # ---------------------------------------------------------------
         folded = NervousSystem(self.worm, network=name or (self.name + "_folded"))
-        folded.visualization_metadata = copy.deepcopy(self.visualization_metadata)
+        folded.visualization_metadata = copy.deepcopy(
+            getattr(self, "visualization_metadata", {})
+        )
 
         created = set()
         # 4a. Multi-member merged neurons.
@@ -1397,6 +1452,19 @@ class NervousSystem(nx.MultiDiGraph, Citable):
             NervousSystem | None:
                 The new graph if ``copy_graph=True``; ``None`` otherwise
                 (mutates in place).
+
+        Caller-responsible post-sync:
+            This method calls ``self.update_neurons()`` after the
+            contraction but deliberately does **not** call
+            ``self.update_connections()`` / ``self.reassign_connections()``.
+            The fold path (``_fold_network_legacy``) makes N-1 pair-wise
+            contraction calls per class and then issues a *single*
+            ``reassign_connections()`` at the end — adding the cache
+            scan inside this hot loop would do O(N × |connections|)
+            redundant work per fold. Direct callers that read
+            ``self.connections`` after contracting must call
+            ``self.update_connections()`` (or
+            ``self.reassign_connections()`` for full rebuild) themselves.
 
         Notes:
             Tracks merge provenance on the surviving neuron via three
@@ -1820,7 +1888,7 @@ class NervousSystem(nx.MultiDiGraph, Citable):
             deep_copy.create_neurons_from(self, data=True)
             deep_copy.create_connections_from(self, data=True)
             deep_copy.visualization_metadata = copy.deepcopy(
-                self.visualization_metadata
+                getattr(self, "visualization_metadata", {})
             )
             return deep_copy
         elif copy_type == "deep_without_data":
@@ -1828,7 +1896,7 @@ class NervousSystem(nx.MultiDiGraph, Citable):
             deep_copy.create_neurons_from(self, data=False)
             deep_copy.create_connections_from(self, data=False)
             deep_copy.visualization_metadata = copy.deepcopy(
-                self.visualization_metadata
+                getattr(self, "visualization_metadata", {})
             )
             return deep_copy
         else:

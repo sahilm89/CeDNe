@@ -730,18 +730,29 @@ class TestNeuronPolicyBatchPathParity:
 
 
 class TestNeuronPolicyDefaultsAreRegistered:
-    """Sanity: DEFAULT_NEURON_FOLD_POLICY exposes the three
-    historically-merged attributes with the same_or_merged aggregator.
+    """Sanity: DEFAULT_NEURON_FOLD_POLICY exposes the historically-merged
+    categorical triplet plus the position centroid added in Phase 2.2.
+    Pin the full set so future additions are intentional, not silent.
     """
 
-    def test_type_category_modality_in_default(self):
-        expected = {"type", "category", "modality"}
+    def test_default_policy_attribute_set(self):
+        # ``type``/``category``/``modality`` are the historical three
+        # (categorical, same_or_merged). ``position`` was added when
+        # the vector kind landed — centroid of constituents is strictly
+        # more informative than dropping it entirely (the prior behavior).
+        expected = {"type", "category", "modality", "position"}
         actual = set(DEFAULT_NEURON_FOLD_POLICY.policies.keys())
         assert expected == actual
 
-    def test_all_three_use_same_or_merged(self):
-        for name, policy in DEFAULT_NEURON_FOLD_POLICY.policies.items():
+    def test_categorical_triplet_uses_same_or_merged(self):
+        for name in ("type", "category", "modality"):
+            policy = DEFAULT_NEURON_FOLD_POLICY.policies[name]
             assert policy.kind == "categorical"
             assert (
                 policy.aggregator == "same_or_merged"
             ), f"{name} should default to same_or_merged for parity"
+
+    def test_position_uses_vector_mean(self):
+        policy = DEFAULT_NEURON_FOLD_POLICY.policies["position"]
+        assert policy.kind == "vector"
+        assert policy.aggregator == "mean"

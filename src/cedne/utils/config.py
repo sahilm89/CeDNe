@@ -14,7 +14,13 @@ root_path = Path(ced.__path__[0])
 
 TOPDIR = root_path.parents[1]
 DATADIR = TOPDIR / "data_sources"
-DOWNLOAD_DIR = DATADIR / "downloads"
+# Historically ``DOWNLOAD_DIR`` sat one level below ``DATADIR`` at
+# ``data_sources/downloads/``. The intermediate directory was removed so
+# raw fetches (Cook_2019/, FlyWire/, ...) and derived bakes
+# (FlyWire/baked/, etc.) can share one persistent-volume mount cleanly.
+# The variable name is preserved as an alias so every existing
+# ``DOWNLOAD_DIR / "X"`` reference downstream keeps working unchanged.
+DOWNLOAD_DIR = DATADIR
 OUTPUT_DIR = TOPDIR / "Output" / f'{str(datetime.datetime.now()).split(" ")[0]}'
 
 prefix_NT = "Wang_2024/"
@@ -22,20 +28,27 @@ prefix_CENGEN = "CENGEN/"
 prefix_NP = "Ripoll-Sanchez_2023/"
 prefix_synaptic_weights = "Randi_2023/"  # Signal propagation atlas
 
+# Dataset directories first — order matters because the per-file paths
+# below resolve through ``cook_connectome`` etc.
+cook_connectome = DOWNLOAD_DIR / "Cook_2019"
+
 ## Loading and building functions
-cell_list = DATADIR / "Cell_list.pkl"
-chemsyns = DATADIR / "chem_adj.pkl"
-elecsyns = DATADIR / "gapjn_symm_adj.pkl"
-neuronPositions = DATADIR / "neuronPosition.pkl"
+# Pre-processed C. elegans default-worm bundle. Lives inside Cook_2019/
+# (or Worm_Atlas/ for positions, which are NeuroPAL-derived per
+# Yemini 2021). Previously these sat at the data_sources root as
+# "stray" files; co-locating with their source dataset makes the
+# provenance chain explicit.
+cell_list = cook_connectome / "Cell_list.pkl"
+chemsyns = cook_connectome / "chem_adj.pkl"
+elecsyns = cook_connectome / "gapjn_symm_adj.pkl"
+neuronPositions = DOWNLOAD_DIR / "Worm_Atlas" / "neuronPosition.pkl"
 
 # One-shot cache for the Cook male loader. The raw supplementary workbook is
 # slow to parse (~5s via openpyxl); we preprocess it into a single pickle
 # (labels, type dict, category dict, sparse chem adj, sparse gap-jn adj) the
 # first time makeWorm(style='cook', sex='male') runs, and read from that
 # cache on every subsequent call.
-cook_male_cache = DATADIR / "cook_male_data.pkl"
-
-cook_connectome = DOWNLOAD_DIR / "cook_2019"
+cook_male_cache = cook_connectome / "cook_male_data.pkl"
 witvliet_connectome = DOWNLOAD_DIR / "witvliet_2020"
 white_connectome = DOWNLOAD_DIR / "white_1986"
 
@@ -395,6 +408,18 @@ citations = {
 #   lineage           — developmental lineage (Altun, via load_lineage)
 #   position          — anatomical coordinates per neuron (drives Anatomical /
 #                       2D Map / 3D Map layouts in the web UI)
+#   fold_lr           — Left/Right symmetry fold. graphtools.foldLeftRight
+#                       relies on the C. elegans naming convention (trailing
+#                       L/R suffix), so this is worm-only even though other
+#                       organisms have bilateral symmetry biologically.
+#   fold_dv           — Dorso/Ventral fold (same naming-convention caveat as
+#                       fold_lr).
+#   fold_category     — Fold neurons by their ``neuron.category`` attribute
+#                       (anatomical body region for C. elegans: HEAD,
+#                       MIDBODY, TAIL, PHARYNX, SEX SPECIFIC). Populated only
+#                       by the C. elegans loaders today, so this is worm-only.
+#   atanas_recordings — Calcium recordings from Atanas 2023; the released
+#                       dataset is C. elegans hermaphrodite.
 #
 # Use None for cells whose status has not been verified — please confirm before
 # relying on them.
@@ -415,6 +440,10 @@ organism_datasets = [
             "contactome": True,
             "lineage": True,
             "position": True,
+            "fold_lr": True,
+            "fold_dv": True,
+            "fold_category": True,
+            "atanas_recordings": True,
         },
     },
     # Witvliet 2020 — 8 specimens across 4 stages (L1, L2, L3, adult).
@@ -435,6 +464,10 @@ organism_datasets = [
             "contactome": False,  # Brittin 2018 only released adult + L4 contactomes
             "lineage": True,
             "position": False,
+            "fold_lr": True,
+            "fold_dv": True,
+            "fold_category": True,
+            "atanas_recordings": True,
         },
     },  # witvliet loader does not populate node.position
     {
@@ -451,6 +484,10 @@ organism_datasets = [
             "contactome": False,
             "lineage": True,
             "position": False,
+            "fold_lr": True,
+            "fold_dv": True,
+            "fold_category": True,
+            "atanas_recordings": True,
         },
     },
     {
@@ -467,6 +504,10 @@ organism_datasets = [
             "contactome": False,
             "lineage": True,
             "position": False,
+            "fold_lr": True,
+            "fold_dv": True,
+            "fold_category": True,
+            "atanas_recordings": True,
         },
     },
     {
@@ -483,6 +524,10 @@ organism_datasets = [
             "contactome": True,
             "lineage": True,
             "position": False,
+            "fold_lr": True,
+            "fold_dv": True,
+            "fold_category": True,
+            "atanas_recordings": True,
         },
     },
     {
@@ -499,6 +544,19 @@ organism_datasets = [
             "contactome": False,  # Brittin 2018 sampled hermaphrodites only
             "lineage": None,  # Altun workbook may have a Male sheet — please verify
             "position": False,
+            # Male loader uses the same L/R/D/V naming as hermaphrodite,
+            # so the symmetry folds should work; but the male connectome
+            # is asymmetric (sex-specific neurons on one side only) and
+            # has not been spot-checked. Mark None until verified.
+            "fold_lr": None,
+            "fold_dv": None,
+            # Male cook loader populates ``category`` (from list_2 / l1)
+            # the same way as the hermaphrodite path, so category fold
+            # is structurally supported. The categories ("HEAD" /
+            # "MIDBODY" / "TAIL" / "SEX SPECIFIC") are male-specific in
+            # composition but the fold itself is well-defined.
+            "fold_category": True,
+            "atanas_recordings": False,  # Atanas 2023 is hermaphrodite-only
         },
     },  # cook loader only populates position for hermaphrodite
     # === Drosophila melanogaster ===
@@ -510,12 +568,23 @@ organism_datasets = [
         "style": "fly_wire",
         "capabilities": {
             "connectome": True,
-            "neurotransmitters": True,  # EM-inferred (Eckstein et al.) and shipped via FlyWire
+            # The `neurotransmitters` capability gates the web UI's "Load
+            # Putative Neurotransmitters" button, which calls the worm-
+            # specific Wang 2024 + CENGEN pipeline. FlyWire ships EM-inferred
+            # NT calls (Eckstein et al.) — those are a different pipeline,
+            # not exposed via /load/neurotransmitters today, so the button
+            # would 500 here. Wire them up in a separate capability key if
+            # we ever surface them in the UI.
+            "neurotransmitters": False,
             "neuropeptides": False,
             "transcriptome": False,
             "contactome": False,
             "lineage": False,
             "position": None,
+            "fold_lr": False,  # FlyWire neuron IDs don't follow the L/R suffix convention
+            "fold_dv": False,
+            "fold_category": False,  # FlyWire loader does not populate ``category``
+            "atanas_recordings": False,
         },
     },  # FlyWire ships 3D coords; loader wiring not yet verified
     {
@@ -526,12 +595,20 @@ organism_datasets = [
         "style": "Winding_2023",
         "capabilities": {
             "connectome": True,
-            "neurotransmitters": None,  # please verify whether Winding 2023 ships NT calls
+            # /load/neurotransmitters runs the Wang 2024 + CENGEN pipeline,
+            # which is C. elegans-only. Even if Winding 2023 carries its own
+            # NT calls, they're not loadable through this endpoint, so the
+            # button must stay disabled here.
+            "neurotransmitters": False,
             "neuropeptides": False,
             "transcriptome": False,
             "contactome": False,
             "lineage": False,
             "position": False,
+            "fold_lr": False,
+            "fold_dv": False,
+            "fold_category": False,
+            "atanas_recordings": False,
         },
     },
     # === Other species ===
@@ -549,6 +626,10 @@ organism_datasets = [
             "contactome": False,
             "lineage": False,
             "position": True,
+            "fold_lr": False,
+            "fold_dv": False,
+            "fold_category": False,
+            "atanas_recordings": False,
         },
     },  # ~57% of neurons carry numpy-array coords
     {
@@ -565,6 +646,10 @@ organism_datasets = [
             "contactome": False,
             "lineage": False,
             "position": False,
+            "fold_lr": False,
+            "fold_dv": False,
+            "fold_category": False,
+            "atanas_recordings": False,
         },
     },
     {
@@ -581,6 +666,10 @@ organism_datasets = [
             "contactome": False,
             "lineage": False,
             "position": False,
+            "fold_lr": False,
+            "fold_dv": False,
+            "fold_category": False,
+            "atanas_recordings": False,
         },
     },
 ]

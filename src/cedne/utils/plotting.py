@@ -617,6 +617,8 @@ def plot_layered(
     edge_labels = {}
     neuronTypes = ["motorneuron", "interneuron", "sensory"]
     node_color = {"sensory": [], "interneuron": [], "motorneuron": []}
+    # the scalar node_alpha argument is shadowed by the per-type dict below
+    alpha_scalar = node_alpha if isinstance(node_alpha, (int, float)) else 0.8
     node_alpha = {"sensory": [], "interneuron": [], "motorneuron": []}
 
     edgeList_1, edgeList_2 = [], []
@@ -722,7 +724,7 @@ def plot_layered(
             pos=pos,
             node_color=node_color[type],
             linewidths=1,
-            alpha=node_alpha,
+            alpha=alpha_scalar,
         )  # node_alpha[type]))#, width=weights, font_size=12)
     for node, (x, y) in pos.items():
         label = str(node)

@@ -275,6 +275,58 @@ def foldDorsoVentral(nn_old, fold_policy=None):
     return nn_new
 
 
+def foldByCategory(
+    nn_old, exceptions=[], self_loops=True, data="clean", fold_policy=None
+):
+    """
+    Fold neurons by their ``category`` attribute.
+
+    Each unique ``neuron.category`` value becomes one merged node, named
+    after the category (e.g. ``HEAD``, ``MIDBODY``, ``TAIL``, ``PHARYNX``,
+    ``SEX SPECIFIC``). Neurons whose ``category`` is unset (``None`` or
+    empty string) are *passed through unchanged* to the folded view —
+    same shape as how ``foldLeftRight`` leaves unpaired neurons alone.
+
+    The category attribute is currently populated only by the C. elegans
+    loaders (cook / witvliet), so this fold is meaningful for worms; on
+    organisms whose loader doesn't set ``category`` the result is an
+    empty fold and a ``ValueError`` is raised.
+
+    Args:
+        nn_old (NeuralNetwork): The original neural network.
+        exceptions (list[str]): Neuron names that should pass through
+            under their original name (not folded).
+        self_loops (bool): Forwarded to ``fold_network``.
+        data (str): Forwarded to ``fold_network`` ('collect' / 'clean').
+        fold_policy (FoldPolicySet, optional): Forwarded to
+            ``fold_network``; when ``None`` cedne falls back to defaults.
+
+    Returns:
+        NeuralNetwork: The folded neural network.
+    """
+    category_to_neurons: dict[str, list[str]] = {}
+    for n, neuron in nn_old.neurons.items():
+        cat = getattr(neuron, "category", None)
+        if cat is None or (isinstance(cat, str) and not cat.strip()):
+            continue
+        category_to_neurons.setdefault(str(cat), []).append(n)
+
+    if not category_to_neurons:
+        raise ValueError(
+            "No neurons carry a 'category' attribute on this network — "
+            "nothing to fold. (Category folding is currently meaningful "
+            "for C. elegans datasets.)"
+        )
+
+    return nn_old.fold_network(
+        category_to_neurons,
+        exceptions=exceptions,
+        self_loops=self_loops,
+        data=data,
+        fold_policy=fold_policy,
+    )
+
+
 def is_left_neuron(n):
     """Returns if a neuron is a left neuron. This works for Worms only for now."""
     if n[-1] == "L" and n not in ["ADL", "AVL"]:
@@ -550,3 +602,258 @@ def hierarchical_alignment(conns):
         if (feedforward + feedback + lateral)
         else 0
     )
+
+
+# ---------------------------------------------------------------------------
+# Sampled counting of chained-FFL motifs (sequential hierarchies and
+# intermediate node-chains) on graphs too large for exhaustive VF2 search.
+#
+# Semantics match ``NervousSystem.search_motifs`` (VF2 *induced* subgraph
+# isomorphism) exactly, including its autapse rule: a node carrying a
+# self-loop can never match a motif position, because the induced subgraph
+# on the matched nodes would contain the self-loop that the motif lacks.
+# Validated against exact VF2 counts on the C. elegans chemical connectome
+# (tests/test_chain_sampler.py).
+# ---------------------------------------------------------------------------
+
+
+def remove_autapse_nodes(edges):
+    """Drop self-loops and every edge touching a self-looped node.
+
+    Encodes the VF2-induced autapse rule explicitly so that downstream
+    enumeration can assume a simple loop-free digraph. Returns
+    ``(kept_edges, autapse_nodes)``.
+    """
+    autapse_nodes = {a for a, b in edges if a == b}
+    kept = [
+        (a, b)
+        for a, b in edges
+        if a != b and a not in autapse_nodes and b not in autapse_nodes
+    ]
+    return kept, autapse_nodes
+
+
+def enumerate_induced_ffls(edges):
+    """Enumerate all induced feed-forward-loop instances in an edge list.
+
+    An FFL instance is an ordered node triple ``(input, intermediate,
+    output)`` with edges input->intermediate, input->output,
+    intermediate->output and *no other edges* among the three nodes
+    (induced semantics; reciprocal edges disqualify the triad).
+
+    Edges must be loop-free (see ``remove_autapse_nodes``). Returns
+    ``(ffl_list, edge_set)``.
+    """
+    from collections import defaultdict
+
+    edge_set = set(edges)
+    successors, predecessors = defaultdict(set), defaultdict(set)
+    for a, b in edges:
+        successors[a].add(b)
+        predecessors[b].add(a)
+    ffls = []
+    for i, k in edges:
+        for j in successors[i] & predecessors[k]:
+            if j == i or j == k:
+                continue
+            if (k, i) in edge_set or (j, i) in edge_set or (k, j) in edge_set:
+                continue
+            ffls.append((i, j, k))
+    return ffls, edge_set
+
+
+def _chain_nodes(ffl_list, join_kind):
+    """Ordered node tuple of a chain candidate, or None if nodes collide.
+
+    ``join_kind='seq'`` joins each FFL's output to the next FFL's input
+    (a sequential hierarchy, the ``(3, 1)`` hypermotif mapping);
+    ``join_kind='int'`` joins the intermediate instead (the ``(2, 1)``
+    mapping, an intermediate node-chain).
+    """
+    nodes = list(ffl_list[0])
+    for prev, cur in zip(ffl_list, ffl_list[1:]):
+        shared = prev[2] if join_kind == "seq" else prev[1]
+        if cur[0] != shared:
+            return None
+        nodes.extend([cur[1], cur[2]])
+    return None if len(set(nodes)) != len(nodes) else tuple(nodes)
+
+
+def _is_induced_chain(ffl_list, join_kind, edge_set):
+    """True iff the FFL tuple forms a valid induced chain match.
+
+    Requires distinct nodes and that the induced edge set among them is
+    exactly the union of the constituent FFLs' edges.
+    """
+    nodes = _chain_nodes(ffl_list, join_kind)
+    if nodes is None:
+        return False
+    required = set()
+    for i, j, k in ffl_list:
+        required |= {(i, j), (i, k), (j, k)}
+    for a in nodes:
+        for b in nodes:
+            if a != b and (((a, b) in edge_set) != ((a, b) in required)):
+                return False
+    return True
+
+
+class ChainSampler:
+    """Horvitz-Thompson estimation of chained-FFL counts by uniform
+    sampling over the exact candidate space of FFL joins.
+
+    A chain candidate of length L is an ordered tuple of L induced FFLs
+    joined at shared nodes; the number of candidates is computed exactly
+    from per-node join bookkeeping, candidates are sampled uniformly, and
+    the chain count is estimated as ``candidate_total x acceptance_rate``
+    where acceptance applies the full induced/distinctness check. Accepted
+    candidates form a uniform sample of true chain matches, reusable for
+    composition analyses.
+
+    Chain lengths 1-3 are supported. Edges must be loop-free; apply
+    ``remove_autapse_nodes`` first to match ``search_motifs`` semantics.
+    """
+
+    def __init__(self, edges, seed=0):
+        from collections import defaultdict
+
+        if any(a == b for a, b in edges):
+            raise ValueError(
+                "edge list contains self-loops; apply remove_autapse_nodes first"
+            )
+        self.rng = np.random.default_rng(seed)
+        self.ffls, self.edge_set = enumerate_induced_ffls(edges)
+        self.by_input = defaultdict(list)
+        self.by_intermediate = defaultdict(list)
+        self.by_output = defaultdict(list)
+        for idx, (i, j, k) in enumerate(self.ffls):
+            self.by_input[i].append(idx)
+            self.by_intermediate[j].append(idx)
+            self.by_output[k].append(idx)
+        self._cache = {}
+
+    def _source(self, join_kind):
+        if join_kind not in ("seq", "int"):
+            raise ValueError("join_kind must be 'seq' or 'int'")
+        return self.by_output if join_kind == "seq" else self.by_intermediate
+
+    def _join_node_fn(self, join_kind):
+        return (lambda f: f[2]) if join_kind == "seq" else (lambda f: f[1])
+
+    def candidate_total(self, length, join_kind):
+        """Exact number of ordered FFL tuples satisfying the join constraints."""
+        if length == 1:
+            return len(self.ffls)
+        source = self._source(join_kind)
+        if length == 2:
+            return int(sum(len(source[v]) * len(self.by_input[v]) for v in source))
+        if length == 3:
+            join_node = self._join_node_fn(join_kind)
+            return int(
+                sum(
+                    len(source.get(f2[0], []))
+                    * len(self.by_input.get(join_node(f2), []))
+                    for f2 in self.ffls
+                )
+            )
+        raise ValueError("chain length must be 1, 2 or 3")
+
+    def _iter_candidates(self, length, join_kind, n_samples):
+        # Uniform candidate draws, batched: the weighted first-stage choice is
+        # one cumulative-weight table + searchsorted over all draws (O(log n)
+        # per draw), instead of O(n) per draw — required at millions of FFLs.
+        source = self._source(join_kind)
+        join_node = self._join_node_fn(join_kind)
+        if length == 2:
+            key = ("pair", join_kind)
+            if key not in self._cache:
+                join_vs = [v for v in source if self.by_input.get(v)]
+                weights = np.array(
+                    [len(source[v]) * len(self.by_input[v]) for v in join_vs],
+                    dtype=float,
+                )
+                self._cache[key] = (join_vs, np.cumsum(weights / weights.sum()))
+            join_vs, cumweights = self._cache[key]
+            first_stage = np.searchsorted(
+                cumweights, self.rng.random(n_samples), side="right"
+            )
+            for v_idx in first_stage:
+                v = join_vs[min(v_idx, len(join_vs) - 1)]
+                f1 = self.ffls[source[v][self.rng.integers(len(source[v]))]]
+                f2 = self.ffls[
+                    self.by_input[v][self.rng.integers(len(self.by_input[v]))]
+                ]
+                yield [f1, f2]
+            return
+        key = ("triple", join_kind)
+        if key not in self._cache:
+            weights = np.array(
+                [
+                    len(source.get(f2[0], []))
+                    * len(self.by_input.get(join_node(f2), []))
+                    for f2 in self.ffls
+                ],
+                dtype=float,
+            )
+            self._cache[key] = np.cumsum(weights / weights.sum())
+        cumweights = self._cache[key]
+        first_stage = np.searchsorted(
+            cumweights, self.rng.random(n_samples), side="right"
+        )
+        for f2_idx in first_stage:
+            f2 = self.ffls[min(f2_idx, len(self.ffls) - 1)]
+            pool1 = source[f2[0]]
+            pool3 = self.by_input[join_node(f2)]
+            f1 = self.ffls[pool1[self.rng.integers(len(pool1))]]
+            f3 = self.ffls[pool3[self.rng.integers(len(pool3))]]
+            yield [f1, f2, f3]
+
+    def estimate(self, length, join_kind, n_samples):
+        """Sampled chain count.
+
+        Returns ``(count_estimate, ci95_half_width, accepted_chains)`` where
+        ``accepted_chains`` is a uniform sample of true chain matches as
+        ordered node tuples.
+        """
+        if length == 1:
+            return float(len(self.ffls)), 0.0, [tuple(f) for f in self.ffls]
+        total = self.candidate_total(length, join_kind)
+        if total == 0:
+            return 0.0, 0.0, []
+        hits, accepted = 0, []
+        for candidate in self._iter_candidates(length, join_kind, n_samples):
+            if _is_induced_chain(candidate, join_kind, self.edge_set):
+                hits += 1
+                accepted.append(_chain_nodes(candidate, join_kind))
+        p_hat = hits / n_samples
+        std_err = np.sqrt(max(p_hat * (1 - p_hat), 1e-12) / n_samples)
+        return total * p_hat, total * 1.96 * std_err, accepted
+
+    def exhaustive(self, length, join_kind):
+        """Exact chain count by checking every candidate (small graphs only)."""
+        if length == 1:
+            return len(self.ffls)
+        source = self._source(join_kind)
+        join_node = self._join_node_fn(join_kind)
+        count = 0
+        if length == 2:
+            for v in source:
+                for i1 in source[v]:
+                    for i2 in self.by_input.get(v, []):
+                        if _is_induced_chain(
+                            [self.ffls[i1], self.ffls[i2]], join_kind, self.edge_set
+                        ):
+                            count += 1
+            return count
+        if length == 3:
+            for f2 in self.ffls:
+                for i1 in source.get(f2[0], []):
+                    for i3 in self.by_input.get(join_node(f2), []):
+                        if _is_induced_chain(
+                            [self.ffls[i1], f2, self.ffls[i3]],
+                            join_kind,
+                            self.edge_set,
+                        ):
+                            count += 1
+            return count
+        raise ValueError("chain length must be 1, 2 or 3")
